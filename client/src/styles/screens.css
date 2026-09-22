@@ -1142,3 +1142,35 @@
     display: none;
   }
 }
+
+/* ---------- reveal: both cards fit one phone screen ---------- */
+.rcard {
+  gap: 6px;
+  padding: 12px 14px 10px;
+}
+.rcard .answer-text {
+  font-size: clamp(20px, 6vw, 30px) !important;
+}
+.rcard .vbar {
+  height: 28px;
+}
+.rcard .vbar__count {
+  line-height: 22px;
+  font-size: 14px;
+}
+.rcard__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+}
+.rcard__foot .voters {
+  min-height: 0;
+  justify-content: flex-start;
+}
+.rcard__points {
+  font-size: 26px;
+}
+.reveal .prompt {
+  font-size: clamp(18px, 5vw, 26px);
+}

@@ -72,7 +72,7 @@ export function MatchupReveal({ ctl, room, me }: Props) {
                 <Character
                   characterId={player?.characterId ?? null}
                   state={state}
-                  size={72}
+                  size={60}
                   className="rcard__char"
                 />
                 <span className="rcard__name display" style={{ background: meta?.accent }}>
@@ -94,14 +94,16 @@ export function MatchupReveal({ ctl, room, me }: Props) {
                   {result.voteCounts[index]} {result.voteCounts[index] === 1 ? 'vote' : 'votes'}
                 </span>
               </div>
-              <div className="row row--wrap voters">
-                {voters.map((v) => (
-                  <Character key={v.id} characterId={v.characterId} size={28} />
-                ))}
-              </div>
-              <div className="rcard__points display">
-                {delta >= 0 ? '+' : ''}
-                {delta}
+              <div className="rcard__foot">
+                <div className="row row--wrap voters">
+                  {voters.map((v) => (
+                    <Character key={v.id} characterId={v.characterId} size={26} />
+                  ))}
+                </div>
+                <div className="rcard__points display">
+                  {delta >= 0 ? '+' : ''}
+                  {delta}
+                </div>
               </div>
               <div className="stamps">
                 {stampsFor(matchup, answer.playerId).map((s, i) => (
