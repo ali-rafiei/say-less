@@ -13,9 +13,8 @@ build spec, the deployment runbook, and where to pick up. If you are resuming wo
 fresh session, read this file first, then `ASSETS.md` if you are touching art.
 
 - **Live game:** https://38daf.yeg.rac.sh/ (IPv6-only, see [Hosting](#hosting-on-cybera)).
-  Until Cybera publishes the AAAA record for that name, use the plain-HTTP address
-  `http://[2605:fd00:4:1001:f816:3eff:fe02:e97f]/`; Caddy keeps retrying Let's Encrypt
-  and switches to HTTPS automatically once the name resolves.
+  Cybera published the AAAA record about 50 minutes after the instance was created; the
+  bare address `http://[2605:fd00:4:1001:f816:3eff:fe02:e97f]/` also works over plain HTTP.
 - **Repo:** https://github.com/ali-rafiei/say-less (public; contains no secrets)
 - **Status:** v1 complete through milestone M6 of the spec; placeholder art; see [Roadmap](#roadmap--known-gaps)
 
