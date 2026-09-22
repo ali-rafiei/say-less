@@ -10,6 +10,7 @@ interface Player {
 }
 
 async function shot(page: Page, name: string): Promise<void> {
+  await page.waitForTimeout(500); // let the screen's entry animation finish
   await page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: false });
 }
 
@@ -19,7 +20,7 @@ async function newPlayer(browser: Browser, name: string): Promise<Player> {
   page.on('pageerror', (error) => {
     throw new Error(`[${name}] page error: ${error.message}`);
   });
-  await page.goto('/');
+  await page.goto('./'); // relative so a base path like /say-less/ on GitHub Pages works
   return { name, page };
 }
 
