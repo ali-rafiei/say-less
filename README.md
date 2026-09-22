@@ -439,10 +439,9 @@ Cybera Rapid Access Cloud (OpenStack, region Edmonton). Project quota: 8 instanc
 IPv6, plus an automatic DNS name `<hex>.yeg.rac.sh` (AAAA record only) stored as the
 server property `dns` and readable from the instance metadata service.
 
-| Instance               | Role                                         | Address                                                    |
-| ---------------------- | -------------------------------------------- | ---------------------------------------------------------- |
-| `say-less-prod`        | this game, m1.medium (2 vCPU / 4 GB / 40 GB) | `38daf.yeg.rac.sh`, `2605:fd00:4:1001:f816:3eff:fe02:e97f` |
-| `reeltown-prod-direct` | unrelated production box, do not touch       | `38d14.yeg.rac.sh`                                         |
+| Instance        | Role                                         | Address                                                    |
+| --------------- | -------------------------------------------- | ---------------------------------------------------------- |
+| `say-less-prod` | this game, m1.medium (2 vCPU / 4 GB / 40 GB) | `38daf.yeg.rac.sh`, `2605:fd00:4:1001:f816:3eff:fe02:e97f` |
 
 Consequence of no floating IP: **the game is reachable over IPv6 only.** Canadian mobile
 carriers are IPv6, most home ISPs are too, but a phone on an IPv4-only Wi-Fi network
@@ -516,8 +515,8 @@ flat-vector art direction, one unique character per player.
 
 ## Decisions log
 
-- **2026-09-21** Host on a new m1.medium (`say-less-prod`) rather than beside
-  `reeltown-prod-direct`; this uses the last of the RAM quota. IPv6-only via the rac.sh
+- **2026-09-21** Host on a new dedicated m1.medium (`say-less-prod`); this uses the last
+  of the project's RAM quota. IPv6-only via the rac.sh
   name + Let's Encrypt, chosen over a Cloudflare Tunnel. Public GitHub repo, commits per
   milestone on `main`, no secrets committed (`cloud/secrets/` is gitignored).
 - **2026-09-21** `shared/` is a plain source folder imported by relative path (server) and
