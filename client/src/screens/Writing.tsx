@@ -121,6 +121,7 @@ export function Writing({ ctl, room, me }: Props) {
             <h2 className="prompt display">{current.text}</h2>
             <WordInput
               key={current.promptId}
+              draftKey={`${room.code}.${current.promptId}`}
               limit={current.effectiveLimit}
               mode={current.mode}
               autoFocus

@@ -1045,3 +1045,64 @@
   color: var(--ink);
   font-weight: 700;
 }
+
+/* ---------- lobby: compact character grid + sticky start bar ---------- */
+.lobby {
+  padding-bottom: 96px;
+}
+.lobby .cgrid {
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  gap: 8px;
+}
+.lobby .ccell {
+  padding: 6px 4px 8px;
+  border-width: 3px;
+  border-radius: 14px;
+  box-shadow: 0 4px 0 var(--ink);
+}
+.lobby .ccell__name {
+  font-size: 12px;
+}
+.lobby .ccell__owner {
+  top: 4px;
+  right: 4px;
+  font-size: 11px;
+  padding: 1px 6px;
+}
+.startbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 10px 16px calc(10px + var(--safe-bottom));
+  background: linear-gradient(to top, var(--bg) 70%, transparent);
+}
+.startbar .btn {
+  flex: 1;
+}
+.startbar__wait {
+  flex: 1;
+  text-align: center;
+  padding: 12px;
+  border: 3px dashed var(--fg-dim);
+  border-radius: 16px;
+  color: var(--fg);
+}
+.howto {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 32px);
+  overflow: hidden;
+}
+.howto__list {
+  overflow-y: auto;
+  padding-right: 6px;
+  font-size: 15px;
+  -webkit-user-select: none;
+}

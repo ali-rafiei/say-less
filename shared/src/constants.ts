@@ -54,6 +54,7 @@ export const LEFT_TEXT = '[left the chat]';
 export const RECONNECT_HOLD_MS = 3 * 60_000;
 export const LOBBY_HOLD_MS = 30_000;
 export const EMPTY_ROOM_TTL_MS = 5 * 60_000;
+export const MAX_ROOMS = 300;
 export const RATE_LIMIT_MS = 250;
 
 export function roundSpec(index: RoundIndex): RoundSpec {

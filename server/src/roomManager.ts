@@ -1,4 +1,4 @@
-import { EMPTY_ROOM_TTL_MS, type ServerMessage } from './shared.ts';
+import { EMPTY_ROOM_TTL_MS, MAX_ROOMS, type ServerMessage } from './shared.ts';
 import type { PromptDeck } from './prompts.ts';
 import { Room, RoomError } from './room.ts';
 import { generateRoomCode } from './roomCode.ts';
@@ -21,6 +21,9 @@ export class RoomManager {
   }
 
   create(): Room {
+    if (this.rooms.size >= MAX_ROOMS) {
+      throw new RoomError('room_full', 'The server is full right now. Try again in a few minutes.');
+    }
     let code = generateRoomCode(this.deps.random);
     while (this.rooms.has(code)) code = generateRoomCode(this.deps.random);
     const room = new Room(code, {

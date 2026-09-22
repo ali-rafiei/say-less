@@ -251,6 +251,19 @@ describe('presence', () => {
     expect(h.state().banner).toBe('B is now the leader');
   });
 
+  it('still reports my prompts during voting so a refreshed client knows its own matchups', () => {
+    const h = makeRoom();
+    startToWriting(h);
+    answerAll(h, (id) => `${id} answer`);
+    expect(h.room.phase).toBe('VOTING');
+    h.room.disconnect('b');
+    h.inbox.set('b', []);
+    h.room.reconnect('b');
+    const prompts = h.last('b', 'your_prompts')!.payload.prompts;
+    expect(prompts).toHaveLength(2);
+    expect(prompts.every((p) => p.submittedText === 'b answer')).toBe(true);
+  });
+
   it('re-sends private prompts on reconnect during writing', () => {
     const h = makeRoom();
     startToWriting(h);

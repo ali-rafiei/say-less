@@ -232,26 +232,28 @@ export function Lobby({ ctl, room, me }: Props) {
         </section>
       )}
 
-      {isLeader ? (
-        <button
-          className="btn btn--block"
-          type="button"
-          disabled={room.players.length < LIMITS.MIN_PLAYERS}
-          onClick={() => {
-            sfx.tap();
-            ctl.startGame();
-          }}
-        >
-          {room.players.length < LIMITS.MIN_PLAYERS
-            ? `Need ${LIMITS.MIN_PLAYERS - room.players.length} more`
-            : 'Start Game'}
+      <div className="startbar">
+        <button className="btn btn--ghost btn--small" type="button" onClick={() => ctl.leaveRoom()}>
+          Leave
         </button>
-      ) : (
-        <p className="center dim">Waiting for {leader?.name ?? 'the leader'} to start…</p>
-      )}
-      <button className="btn btn--ghost btn--small" type="button" onClick={() => ctl.leaveRoom()}>
-        Leave room
-      </button>
+        {isLeader ? (
+          <button
+            className="btn"
+            type="button"
+            disabled={room.players.length < LIMITS.MIN_PLAYERS}
+            onClick={() => {
+              sfx.tap();
+              ctl.startGame();
+            }}
+          >
+            {room.players.length < LIMITS.MIN_PLAYERS
+              ? `Need ${LIMITS.MIN_PLAYERS - room.players.length} more player${LIMITS.MIN_PLAYERS - room.players.length === 1 ? '' : 's'}`
+              : 'Start Game'}
+          </button>
+        ) : (
+          <div className="startbar__wait">Waiting for {leader?.name ?? 'the leader'} to start…</div>
+        )}
+      </div>
     </main>
   );
 }

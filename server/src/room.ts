@@ -858,8 +858,15 @@ export class Room {
     };
   }
 
+  /** The player's own prompts for the current round; kept available through voting so a
+   *  refreshed client still knows which matchups it wrote (it must not vote on those). */
   yourPrompts(playerId: string): YourPrompt[] {
-    if (this.phase === 'WRITING' && this.promptsDealt) {
+    const roundActive =
+      this.phase === 'WRITING' ||
+      this.phase === 'VOTING' ||
+      this.phase === 'MATCHUP_REVEAL' ||
+      this.phase === 'ROUND_RESULTS';
+    if (roundActive && this.promptsDealt && this.matchups.length > 0) {
       const prompts: YourPrompt[] = [];
       this.matchups.forEach((m, matchupIndex) => {
         const slot = m.playerIds.indexOf(playerId);
