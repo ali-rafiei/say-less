@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="char char-ghost">
+<g class="c-shadow"><ellipse cx="256" cy="452" rx="110" ry="14" fill="#1A1A2E" opacity="0.15"/></g>
+<g class="c-body"><path d="M136 400V220Q136 90 256 90Q376 90 376 220V400Q356 380 336 400Q316 420 296 400Q276 380 256 400Q236 420 216 400Q196 380 176 400Q156 420 136 400z" fill="#F1FAEE" stroke="#1A1A2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="196" cy="272" r="14" fill="#FFADAD" stroke="#1A1A2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="316" cy="272" r="14" fill="#FFADAD" stroke="#1A1A2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><g class="c-face"><g class="c-eyes"><ellipse cx="216" cy="222" rx="12" ry="18" fill="#1A1A2E"/><ellipse cx="296" cy="222" rx="12" ry="18" fill="#1A1A2E"/></g><g class="c-mouth"><path d="M242 278q7 -8 14 0q7 8 14 0" fill="none" stroke="#1A1A2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/></g></g></g>
+<g class="c-arm-l"><ellipse cx="130" cy="320" rx="24" ry="16" fill="#F1FAEE" stroke="#1A1A2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/></g>
+<g class="c-arm-r"><ellipse cx="340" cy="310" rx="24" ry="16" fill="#F1FAEE" stroke="#1A1A2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/></g>
+<g class="c-prop c-mic"><polygon points="352,256 368,256 376,306 344,306" fill="#5C677D" stroke="#1A1A2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="360" cy="232" r="26" fill="#2B2D42" stroke="#1A1A2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/></g>
+<g class="c-prop c-pencil"><polygon points="330,310 398,292 404,308 336,326" fill="#FFC53D" stroke="#1A1A2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/><polygon points="398,292 422,298 404,308" fill="#1A1A2E" stroke="#1A1A2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/></g>
+<g class="c-prop c-sweat"><path d="M384 100c0 0-18 26-18 38a18 18 0 0 0 36 0c0-12-18-38-18-38z" fill="#4CC9F0" stroke="#1A1A2E" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/></g>
+<g class="c-gag"></g>
+</svg>

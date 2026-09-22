@@ -1,0 +1,5 @@
+dist
+node_modules
+.venv
+content/prompts.json
+client/src/characters/svg

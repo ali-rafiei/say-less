@@ -1,0 +1,57 @@
+#cloud-config
+# First boot of the Say Less instance: install Docker, clone the public repo,
+# discover the Cybera-assigned DNS name from instance metadata, and start the
+# stack. Re-deploys are `deploy/deploy.sh` over SSH (git pull + compose up).
+package_update: true
+package_upgrade: false
+packages:
+  - ca-certificates
+  - curl
+  - git
+  - jq
+  - ufw
+
+write_files:
+  - path: /usr/local/bin/say-less-bootstrap
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      exec > >(tee -a /var/log/say-less-bootstrap.log) 2>&1
+      echo "== bootstrap $(date -Is)"
+
+      install -m 0755 -d /etc/apt/keyrings
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+      . /etc/os-release
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${VERSION_CODENAME} stable" \
+        > /etc/apt/sources.list.d/docker.list
+      apt-get update -qq
+      apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin
+      usermod -aG docker ubuntu
+
+      ufw allow 22/tcp
+      ufw allow 80/tcp
+      ufw allow 443/tcp
+      ufw --force enable
+
+      if [ ! -d /opt/say-less/.git ]; then
+        git clone --depth 1 https://github.com/ali-rafiei/say-less.git /opt/say-less
+      fi
+      chown -R ubuntu:ubuntu /opt/say-less
+
+      # Cybera attaches a *.yeg.rac.sh name as server metadata; read it from the metadata service.
+      DNS_NAME="$(curl -fsS --max-time 10 http://169.254.169.254/openstack/latest/meta_data.json | jq -r '.meta.dns // empty' || true)"
+      if [ -z "${DNS_NAME}" ]; then
+        echo "!! no dns metadata yet; serving plain HTTP until deploy.sh sets SITE_ADDRESS"
+        DNS_NAME=":80"
+      fi
+      echo "SITE_ADDRESS=${DNS_NAME}" > /opt/say-less/deploy/.env
+      chown ubuntu:ubuntu /opt/say-less/deploy/.env
+      echo "== SITE_ADDRESS=${DNS_NAME}"
+
+      cd /opt/say-less/deploy
+      docker compose up -d --build
+      echo "== bootstrap done $(date -Is)"
+
+runcmd:
+  - [/usr/local/bin/say-less-bootstrap]

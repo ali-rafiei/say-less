@@ -1,0 +1,33 @@
+# Cloud credentials, SSH private keys, generated config
+cloud/secrets/
+*-openrc.sh
+*.pem
+clouds.yaml
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+dist/
+dist-types/
+*.tsbuildinfo
+.vite/
+
+# Generated sprites (source PNGs with magenta backgrounds live in art/raw, not committed)
+art/raw/**/*.png
+
+# macOS
+.DS_Store
+.claude/worktrees/
+
+# Playwright output
+e2e/shots/
+e2e/shots-live/
+test-results/
+playwright-report/

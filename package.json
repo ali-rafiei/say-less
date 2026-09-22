@@ -1,0 +1,37 @@
+{
+  "name": "say-less",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Say Less: an online party game where the word limit shrinks every round",
+  "license": "MIT",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n server,client -c blue,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w server && npm run build -w client",
+    "start": "node server/dist/server/src/index.js",
+    "test": "vitest run",
+    "typecheck": "tsc -p shared && tsc -p server --noEmit && tsc -p client",
+    "lint": "eslint shared server client",
+    "format": "prettier --write \"**/*.{ts,tsx,css,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,css,json,md}\""
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^22.15.0",
+    "@typescript-eslint/eslint-plugin": "^8.30.0",
+    "@typescript-eslint/parser": "^8.30.0",
+    "concurrently": "^9.1.0",
+    "eslint": "^9.25.0",
+    "playwright": "^1.63.0",
+    "prettier": "^3.5.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.1.0"
+  },
+  "type": "module"
+}

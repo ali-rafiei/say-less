@@ -1,0 +1,22 @@
+# SITE_ADDRESS is the public DNS name (e.g. abcde.yeg.rac.sh). Caddy provisions
+# and renews the Let's Encrypt certificate automatically over IPv6.
+#
+# Plain HTTP on any other host (e.g. the bare IPv6 literal) also serves the game,
+# so the instance is usable before Cybera publishes the forward DNS record.
+# Requests for the real hostname over HTTP are redirected to HTTPS.
+http:// {
+	@site host {$SITE_ADDRESS}
+	redir @site https://{host}{uri} permanent
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8080
+}
+
+{$SITE_ADDRESS} {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8080
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+}

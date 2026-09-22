@@ -1,0 +1,7 @@
+#!/bin/zsh
+# Thin wrapper: runs the venv's openstack client against our clouds.yaml.
+#   ./cloud/os server list
+set -euo pipefail
+root="${0:A:h:h}"
+export OS_CLIENT_CONFIG_FILE="$root/cloud/secrets/clouds.yaml"
+exec "$root/.venv/bin/openstack" --os-cloud cybera "$@"
