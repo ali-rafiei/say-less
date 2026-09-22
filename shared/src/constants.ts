@@ -17,7 +17,6 @@ export const ROUNDS: readonly RoundSpec[] = [
 export const FINAL_ROUND: RoundIndex = 2;
 
 export const TIMERS = {
-  CHAR_SELECT: 45_000,
   ROUND_INTRO: 4_000,
   ROAST_WINDOW: 10_000,
   VOTING: 20_000,
@@ -35,6 +34,8 @@ export const LIMITS = {
   ROASTED_LIMIT: 2,
   ROAST_TOKENS_PER_GAME: 1,
   ROAST_FROM_ROUND: 1 as RoundIndex,
+  PROMPT_MAX_CHARS: 120,
+  MAX_CUSTOM_PROMPTS: 60,
 } as const;
 
 export const POINTS = {
@@ -54,7 +55,6 @@ export const RECONNECT_HOLD_MS = 3 * 60_000;
 export const LOBBY_HOLD_MS = 30_000;
 export const EMPTY_ROOM_TTL_MS = 5 * 60_000;
 export const RATE_LIMIT_MS = 250;
-export const EMOJI_FINAL_CHANCE = 0.3;
 
 export function roundSpec(index: RoundIndex): RoundSpec {
   const spec = ROUNDS[index];

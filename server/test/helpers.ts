@@ -55,11 +55,9 @@ export function makeRoom(playerIds: string[] = ['a', 'b', 'c'], seed = 42): Harn
 
 export function startToWriting(h: Harness, round: RoundIndex = 0): void {
   const leader = h.room.leaderId;
-  h.room.startGame(leader);
   const chars = ['lemon', 'raccoon', 'icecream', 'grandma', 'sock', 'cactus', 'toast', 'pigeon'];
-  h.room.players.forEach((p, i) => {
-    if (h.room.phase === 'CHAR_SELECT') h.room.pickCharacter(p.id, chars[i]!);
-  });
+  h.room.players.forEach((p, i) => h.room.pickCharacter(p.id, chars[i]!));
+  h.room.startGame(leader);
   expect(h.room.phase).toBe('ROUND_INTRO');
   vi.advanceTimersByTime(4_000);
   if (round === 0) return;

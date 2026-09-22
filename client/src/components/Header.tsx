@@ -13,7 +13,7 @@ interface Props {
 
 export function Header({ room, clockOffset, limit, limitLabel }: Props) {
   const [muted, setMuted] = useState(sfx.muted);
-  const inRound = room.phase !== 'LOBBY' && room.phase !== 'CHAR_SELECT' && room.phase !== 'PODIUM';
+  const inRound = room.phase !== 'LOBBY' && room.phase !== 'PODIUM';
   const round = ROUNDS[room.roundIndex];
   return (
     <header className="header">

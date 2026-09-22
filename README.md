@@ -48,9 +48,11 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
 
 1. One player creates a room and gets a 4-letter code (no O or I). Others join with the
    code or the invite link (`/?code=ABCD`). The creator is the **leader** and owns the
-   Start button and settings (profanity filter, emoji final round).
-2. **Character select** (45 s): ten characters, first tap locks it for everyone.
-   Unpicked players get a random leftover when the timer ends.
+   Start button and settings: game mode (Classic bank or Custom prompts), profanity
+   filter, emoji final round. In Custom mode anyone in the lobby can add prompts; they
+   are dealt first, nobody gets a prompt they wrote, and the bank fills any shortfall.
+2. **Pick a character in the lobby**: ten characters, first tap locks it for everyone.
+   Anyone who hasn't picked when the leader presses Start gets a random leftover.
 3. **Round 1 "Say Some"** – 12 words, 90 s, ×1 points. Each player gets two prompts;
    each prompt is answered by exactly two players (ring pairing).
 4. **Voting** per matchup (20 s): the two answers are shown anonymously; the players who
@@ -257,6 +259,10 @@ per point among non-winners), Roast Victim, The Silencer, Fastest Submitter.
 
 ### Matchups
 
+Custom mode: unused custom prompts are drawn first (shuffled), the bank supplies the
+rest, and the prompt-to-matchup rotation with the fewest author collisions is chosen so
+nobody answers their own prompt whenever that is possible.
+
 Players are shuffled into a ring; matchup _i_ is player _i_ vs player _i+1 (mod N)_ with
 prompt _i_. Every player writes exactly two answers, every prompt gets exactly two
 answers, for any N ≥ 3. Prompts are drawn without replacement for the whole room session
@@ -275,15 +281,15 @@ unused prompt, then to reuse.
 
 ### Emoji final
 
-`settings.emojiFinal` is `off | sometimes | always` (default `sometimes` = 30 % chance).
-Decided when the final round begins; the round intro shows "5 emoji" tiles when active.
+`settings.emojiFinal` is `off | always` (default `off`). The round intro shows "5 emoji"
+tiles when active.
 
 ---
 
 ## State machine and timers
 
 ```
-LOBBY ─start(leader, ≥3)─▶ CHAR_SELECT ─all locked / 45s─▶ ROUND_INTRO (4s)
+LOBBY ─start(leader, ≥3; unpicked get random characters)─▶ ROUND_INTRO (4s)
   ▲                                                             │
   │                        ┌────────────────────────────────────┘
   │                        ▼
@@ -313,8 +319,9 @@ socket (`rate_limited`); the client paces its own sends to that gap so a double-
 delayed, not dropped. `ping` is exempt.
 
 Client → server: `create_room {name}`, `join_room {code, name, sessionToken?}`,
-`update_settings {profanityFilter?, emojiFinal?}` (leader, LOBBY), `start_game {}`
-(leader, LOBBY, ≥3), `pick_character {characterId}` (CHAR_SELECT), `spend_roast
+`update_settings {profanityFilter?, emojiFinal?, promptMode?}` (leader, LOBBY),
+`add_prompt {text}` / `remove_prompt {promptId}` (LOBBY; authors or the leader remove), `start_game {}`
+(leader, LOBBY, ≥3), `pick_character {characterId}` (LOBBY), `spend_roast
 {targetId}` (WRITING, round 2, first 10 s), `submit_answer {promptId, text}`
 (WRITING/FINAL_WRITING), `cast_vote {matchupIndex, answerIndex}` (VOTING),
 `cast_final_votes {first, second}` (FINAL_VOTING), `rematch {}` (leader, PODIUM),
@@ -332,7 +339,7 @@ invalid_chars, empty, self_target, no_token, already_submitted`.
 
 `PublicRoomState` (see `shared/src/types.ts`) carries: code, phase, `phaseEndsAt`,
 `phaseStartedAt`, `serverNow`, roundIndex, players (public fields only), leaderId,
-settings, matchups (redacted, see below), currentMatchupIndex, `roastWindowEndsAt`,
+settings, `customPrompts` (id, text, authorId), matchups (redacted, see below), currentMatchupIndex, `roastWindowEndsAt`,
 `submittedIds`, `votedIds`, `final` (prompt, mode, limit, answers, votes, result),
 `podium`, `banner`, `gamesPlayed`.
 
@@ -497,7 +504,7 @@ Recorded so nobody re-derives them.
 | Spec                                          | Implemented                                                                                                                                      | Why                                                                                                                                      |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `ROUND_RESULTS → FINAL_WRITING` directly      | `ROUND_RESULTS → ROUND_INTRO → FINAL_WRITING`                                                                                                    | The shattering 6 → 3 tiles is the signature motif; skipping it for the final felt wrong. 4 s cost.                                       |
-| `settings.emojiFinal: boolean`                | `'off' \| 'sometimes' \| 'always'`                                                                                                               | The spec says both "30 % probability" and "or always, via settings"; a tri-state expresses both.                                         |
+| `settings.emojiFinal: boolean`                | `'off' \| 'always'`, default off; no 30 % random mode                                                                                            | The spec says both "30 % probability" and "or always, via settings"; a tri-state expresses both.                                         |
 | Final voting anonymity unspecified            | Authors visible on the final card wall                                                                                                           | `cast_final_votes` is keyed by player id per the spec's protocol; matchup voting stays anonymous.                                        |
 | Mic Drop: "≤ half the limit and won"          | additionally requires ≥ 1 word and not auto-submitted                                                                                            | Otherwise a winning "…" (0 words) would earn a Mic Drop.                                                                                 |
 | `stats: {micDrops, silenced, wordsUsedTotal}` | plus `roasted, submissions, submitMsTotal`                                                                                                       | Needed for the Roast Victim and Fastest Submitter superlatives.                                                                          |

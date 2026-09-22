@@ -1,7 +1,6 @@
 import {
   AUTO_SUBMIT_TEXT,
   CHARACTER_IDS,
-  EMOJI_FINAL_CHANCE,
   FINAL_ROUND,
   LEFT_TEXT,
   LIMITS,
@@ -15,6 +14,7 @@ import {
   scoreMatchup,
   validateAnswer,
   type AnswerMode,
+  type CustomPrompt,
   type ErrorCode,
   type MatchupResult,
   type PlayerStats,
@@ -113,11 +113,13 @@ export class Room {
   phaseStartedAt: number;
   roundIndex: RoundIndex = 0;
   leaderId = '';
-  settings: RoomSettings = { profanityFilter: false, emojiFinal: 'sometimes' };
+  settings: RoomSettings = { profanityFilter: false, emojiFinal: 'off', promptMode: 'bank' };
   gamesPlayed = 0;
   banner: string | null = null;
 
   readonly players: Player[] = [];
+  private customPrompts: CustomPrompt[] = [];
+  private customPromptSeq = 0;
   private matchups: Matchup[] = [];
   private currentMatchupIndex = 0;
   private final: FinalRound | null = null;
@@ -273,13 +275,48 @@ export class Room {
     this.requireLeader(playerId);
     if (typeof patch.profanityFilter === 'boolean')
       this.settings.profanityFilter = patch.profanityFilter;
-    if (
-      patch.emojiFinal === 'off' ||
-      patch.emojiFinal === 'sometimes' ||
-      patch.emojiFinal === 'always'
-    ) {
+    if (patch.emojiFinal === 'off' || patch.emojiFinal === 'always') {
       this.settings.emojiFinal = patch.emojiFinal;
     }
+    if (patch.promptMode === 'bank' || patch.promptMode === 'custom') {
+      this.settings.promptMode = patch.promptMode;
+    }
+    this.broadcast();
+  }
+
+  /** Any player may add prompts in the lobby; they are dealt first in custom mode. */
+  addPrompt(playerId: string, rawText: string): void {
+    this.requirePhase('LOBBY');
+    this.requirePlayer(playerId);
+    const text = rawText
+      .replace(/[\p{C}]/gu, '')
+      .trim()
+      .replace(/\s+/g, ' ');
+    if (text.length < 3) throw new RoomError('empty', 'Write a prompt first');
+    if (text.length > LIMITS.PROMPT_MAX_CHARS) {
+      throw new RoomError('too_long', `Keep prompts under ${LIMITS.PROMPT_MAX_CHARS} characters`);
+    }
+    if (this.customPrompts.length >= LIMITS.MAX_CUSTOM_PROMPTS) {
+      throw new RoomError('invalid', `That's plenty: ${LIMITS.MAX_CUSTOM_PROMPTS} prompts max`);
+    }
+    if (this.customPrompts.some((p) => p.text.toLowerCase() === text.toLowerCase())) {
+      throw new RoomError('invalid', 'Someone already added that prompt');
+    }
+    this.customPromptSeq += 1;
+    this.customPrompts.push({ id: `c${this.customPromptSeq}`, text, authorId: playerId });
+    this.broadcast();
+  }
+
+  /** Authors remove their own prompts; the leader can remove any. */
+  removePrompt(playerId: string, promptId: string): void {
+    this.requirePhase('LOBBY');
+    this.requirePlayer(playerId);
+    const prompt = this.customPrompts.find((p) => p.id === promptId);
+    if (!prompt) throw new RoomError('not_found', 'That prompt is gone');
+    if (prompt.authorId !== playerId && this.leaderId !== playerId) {
+      throw new RoomError('not_leader', 'Only the author or the leader can remove it');
+    }
+    this.customPrompts = this.customPrompts.filter((p) => p.id !== promptId);
     this.broadcast();
   }
 
@@ -297,28 +334,25 @@ export class Room {
       player.score = 0;
       player.roastTokens = LIMITS.ROAST_TOKENS_PER_GAME;
       player.stats = freshStats();
-      player.characterId = null;
     }
     this.podium = null;
     this.final = null;
     this.matchups = [];
-    this.enterPhase('CHAR_SELECT', TIMERS.CHAR_SELECT);
+    // Characters are picked in the lobby; anyone who did not pick gets a random leftover.
+    this.assignMissingCharacters();
+    this.beginRound(0);
   }
 
+  /** Lobby pick, first come first served; picking again swaps to the new character. */
   pickCharacter(playerId: string, characterId: string): void {
-    this.requirePhase('CHAR_SELECT');
+    this.requirePhase('LOBBY');
     const player = this.requirePlayer(playerId);
     if (!CHARACTER_IDS.includes(characterId)) throw new RoomError('invalid', 'Unknown character');
     const owner = this.players.find((p) => p.characterId === characterId);
     if (owner && owner.id !== playerId)
       throw new RoomError('char_taken', 'Someone grabbed that one first');
     player.characterId = characterId;
-    if (this.players.every((p) => p.characterId !== null || !p.connected)) {
-      this.assignMissingCharacters();
-      this.beginRound(0);
-    } else {
-      this.broadcast();
-    }
+    this.broadcast();
   }
 
   spendRoast(playerId: string, targetId: string): void {
@@ -431,7 +465,6 @@ export class Room {
     this.final = null;
     this.matchups = [];
     this.banner = null;
-    for (const player of this.players) player.characterId = null;
     this.enterPhase('LOBBY', null);
   }
 
@@ -443,7 +476,7 @@ export class Room {
     this.roastWindowEndsAt = null;
     this.promptsDealt = false;
     if (index === FINAL_ROUND) {
-      const prompt = this.deps.deck.draw(FINAL_ROUND, 1, this.usedPromptIds)[0]!;
+      const prompt = this.drawPrompts(FINAL_ROUND, 1)[0]!;
       const mode = this.pickFinalMode();
       this.final = {
         prompt,
@@ -464,20 +497,50 @@ export class Room {
     switch (this.settings.emojiFinal) {
       case 'always':
         return 'emoji';
-      case 'sometimes':
-        return this.random() < EMOJI_FINAL_CHANCE ? 'emoji' : 'words';
       default:
         return 'words';
     }
   }
 
-  /** Ring pairing: player i vs player i+1 (mod N) gets prompt i; N matchups. */
+  /** Custom prompts first (shuffled, unused), then the bank for any shortfall. */
+  private drawPrompts(round: RoundIndex, count: number): Prompt[] {
+    const picked: Prompt[] = [];
+    if (this.settings.promptMode === 'custom') {
+      const fresh = this.shuffled(this.customPrompts.filter((p) => !this.usedPromptIds.has(p.id)));
+      for (const prompt of fresh.slice(0, count)) {
+        this.usedPromptIds.add(prompt.id);
+        picked.push({ id: prompt.id, text: prompt.text, rounds: [0, 1, 2] });
+      }
+    }
+    if (picked.length < count) {
+      picked.push(...this.deps.deck.draw(round, count - picked.length, this.usedPromptIds));
+    }
+    return picked;
+  }
+
+  /**
+   * Ring pairing: player i vs player i+1 (mod N) gets prompt i; N matchups. Prompts are
+   * then rotated so that, where possible, nobody answers a prompt they wrote.
+   */
   private generateMatchups(round: RoundIndex): Matchup[] {
     const order = this.shuffled(this.players.map((p) => p.id));
-    const prompts = this.deps.deck.draw(round, order.length, this.usedPromptIds);
+    const drawn = this.drawPrompts(round, order.length);
+    const pairs = order.map(
+      (playerId, i) => [playerId, order[(i + 1) % order.length]!] as [string, string],
+    );
+    const authorOf = new Map(this.customPrompts.map((p) => [p.id, p.authorId]));
+    const collisions = (offset: number) =>
+      pairs.filter((pair, i) =>
+        pair.includes(authorOf.get(drawn[(i + offset) % drawn.length]!.id) ?? ''),
+      ).length;
+    let bestOffset = 0;
+    for (let offset = 1; offset < drawn.length; offset++) {
+      if (collisions(offset) < collisions(bestOffset)) bestOffset = offset;
+    }
+    const prompts = drawn.map((_, i) => drawn[(i + bestOffset) % drawn.length]!);
     return order.map((playerId, i) => ({
       prompt: prompts[i]!,
-      playerIds: [playerId, order[(i + 1) % order.length]!],
+      playerIds: pairs[i]!,
       answers: [null, null],
       votes: {},
       roast: null,
@@ -606,10 +669,6 @@ export class Room {
 
   private onPhaseTimeout(): void {
     switch (this.phase) {
-      case 'CHAR_SELECT':
-        this.assignMissingCharacters();
-        this.beginRound(0);
-        return;
       case 'ROUND_INTRO':
         this.startWriting();
         return;
@@ -785,6 +844,7 @@ export class Room {
       players: this.players.map((p) => this.publicPlayer(p)),
       leaderId: this.leaderId,
       settings: { ...this.settings },
+      customPrompts: this.customPrompts.map((p) => ({ ...p })),
       matchups: this.matchups.map((m, i) => this.publicMatchup(m, i)),
       currentMatchupIndex: this.currentMatchupIndex,
       roastWindowEndsAt: this.roastWindowEndsAt,

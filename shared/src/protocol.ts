@@ -25,6 +25,8 @@ export type ClientMessage =
   | { type: 'update_settings'; payload: Partial<RoomSettings> }
   | { type: 'start_game'; payload: Record<string, never> }
   | { type: 'pick_character'; payload: { characterId: string } }
+  | { type: 'add_prompt'; payload: { text: string } }
+  | { type: 'remove_prompt'; payload: { promptId: string } }
   | { type: 'spend_roast'; payload: { targetId: string } }
   | { type: 'submit_answer'; payload: { promptId: string; text: string } }
   | { type: 'cast_vote'; payload: { matchupIndex: number; answerIndex: 0 | 1 } }
@@ -55,6 +57,8 @@ export const CLIENT_MESSAGE_TYPES: readonly ClientMessageType[] = [
   'update_settings',
   'start_game',
   'pick_character',
+  'add_prompt',
+  'remove_prompt',
   'spend_roast',
   'submit_answer',
   'cast_vote',

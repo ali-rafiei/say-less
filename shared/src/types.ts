@@ -1,6 +1,5 @@
 export type RoomPhase =
   | 'LOBBY'
-  | 'CHAR_SELECT'
   | 'ROUND_INTRO'
   | 'WRITING'
   | 'VOTING'
@@ -12,11 +11,21 @@ export type RoomPhase =
 
 export type RoundIndex = 0 | 1 | 2;
 export type AnswerMode = 'words' | 'emoji';
-export type EmojiFinalSetting = 'off' | 'sometimes' | 'always';
+export type EmojiFinalSetting = 'off' | 'always';
+
+export type PromptMode = 'bank' | 'custom';
 
 export interface RoomSettings {
   profanityFilter: boolean;
   emojiFinal: EmojiFinalSetting;
+  /** 'custom' deals player-written prompts first and fills any shortfall from the bank */
+  promptMode: PromptMode;
+}
+
+export interface CustomPrompt {
+  id: string;
+  text: string;
+  authorId: string;
 }
 
 export interface PlayerStats {
@@ -123,6 +132,7 @@ export interface PublicRoomState {
   players: PublicPlayer[];
   leaderId: string;
   settings: RoomSettings;
+  customPrompts: CustomPrompt[];
   matchups: PublicMatchup[];
   currentMatchupIndex: number;
   roastWindowEndsAt: number | null;

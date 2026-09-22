@@ -991,3 +991,57 @@
     transform: translateX(-100%);
   }
 }
+
+/* ---------- how to play ---------- */
+.howto {
+  max-width: 440px;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  animation: stamp-in 0.3s cubic-bezier(0.2, 1.4, 0.4, 1) backwards;
+}
+.howto__list {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 16px;
+  line-height: 1.35;
+}
+.lobby .cgrid {
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+}
+
+/* ---------- custom prompts ---------- */
+.plist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.plist__item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+}
+.plist__text {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.plist__remove {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 700;
+}

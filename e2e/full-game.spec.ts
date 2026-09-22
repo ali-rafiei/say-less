@@ -71,6 +71,10 @@ test('three phones play a full game, survive a refresh, and reach the podium', a
 
   // --- Home & lobby
   await shot(ann.page, '01-home');
+  await ann.page.getByRole('button', { name: 'How to play' }).click();
+  await ann.page.getByRole('dialog', { name: 'How to play' }).waitFor();
+  await shot(ann.page, '01b-how-to-play');
+  await ann.page.getByRole('button', { name: 'Got it' }).click();
   await ann.page.getByLabel('Your name').fill('Ann');
   await ann.page.getByRole('button', { name: 'Create Room' }).click();
   const code = (await ann.page.locator('.roomcode').innerText()).trim();
@@ -84,13 +88,17 @@ test('three phones play a full game, survive a refresh, and reach the podium', a
     await p.page.locator('.roomcode').waitFor();
   }
   await expect(ann.page.locator('.pchip__name')).toHaveCount(3);
-  await ann.page.locator('.seg__btn', { hasText: 'Off' }).click(); // emoji final off for determinism
-  await shot(ann.page, '02-lobby');
+  await expect(ann.page.getByRole('button', { name: 'Emoji final round' })).toHaveText('Off');
 
-  // --- Character select (two players race for the same character)
-  await ann.page.getByRole('button', { name: 'Start Game' }).click();
+  // Custom prompt mode: Bob adds a prompt; it must be dealt to someone other than Bob.
+  await ann.page.getByRole('radio', { name: 'Custom prompts' }).click();
+  await bob.page.getByLabel('New prompt').fill('Bob custom prompt about pigeons');
+  await bob.page.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(ann.page.locator('.plist__text')).toHaveText(['Bob custom prompt about pigeons']);
+
+  // --- Character select happens in the lobby (two players race for the same character)
   await ann.page.getByText('Pick your character').waitFor();
-  await shot(ann.page, '03-charselect');
+  await shot(ann.page, '02-lobby');
   // Playwright waits for enabled buttons; the loser's button gets disabled mid-race, so force both.
   await Promise.all([
     ann.page
@@ -110,12 +118,21 @@ test('three phones play a full game, survive a refresh, and reach the podium', a
   const loser = lemonOwners[0] === 1 ? bob : ann;
   await loser.page.locator('.ccell:not([disabled])', { hasText: 'Raccoon' }).click();
   await cat.page.locator('.ccell:not([disabled])', { hasText: 'Ice Cream' }).click();
+  await expect(cat.page.locator('.ccell--mine')).toHaveCount(1);
+  await shot(ann.page, '03-lobby-characters');
+  await ann.page.getByRole('button', { name: 'Start Game' }).click();
 
   // --- Round 1
   await ann.page.getByText('Say Some').waitFor();
   await shot(ann.page, '04-round-intro');
   await ann.page.locator('.winput__field').waitFor({ timeout: 15_000 });
   await shot(ann.page, '05-writing');
+
+  const promptTexts = await Promise.all(
+    players.map((p) => p.page.locator('.prompt').allInnerTexts()),
+  );
+  expect(promptTexts.flat()).toContain('Bob custom prompt about pigeons');
+  expect(promptTexts[1]).not.toContain('Bob custom prompt about pigeons');
 
   // Bob refreshes mid-write and must land back on his prompt.
   await bob.page.reload();

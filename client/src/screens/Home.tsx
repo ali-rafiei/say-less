@@ -16,6 +16,7 @@ export function Home({ ctl }: { ctl: RoomController }) {
   const [name, setName] = useState(loadName());
   const [code, setCode] = useState(codeFromUrl());
   const [mode, setMode] = useState<'pick' | 'join'>(codeFromUrl() ? 'join' : 'pick');
+  const [showHelp, setShowHelp] = useState(false);
   const cleanName = name.trim().slice(0, LIMITS.NAME_MAX);
   const canGo = cleanName.length > 0 && ctl.status === 'open';
 
@@ -107,6 +108,10 @@ export function Home({ ctl }: { ctl: RoomController }) {
         )}
       </form>
       <p className="center dim small">3 to 8 players · phones welcome · no account</p>
+      <button className="btn btn--ghost btn--small" type="button" onClick={() => setShowHelp(true)}>
+        How to play
+      </button>
+      {showHelp && <HowToPlay onClose={() => setShowHelp(false)} />}
     </main>
   );
 }
@@ -117,5 +122,44 @@ export function Logo() {
       <span className="logo__say">SAY</span>
       <span className="logo__less">LESS</span>
     </h1>
+  );
+}
+
+export function HowToPlay({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="overlay" role="dialog" aria-label="How to play" onClick={onClose}>
+      <div className="card howto stack" onClick={(e) => e.stopPropagation()}>
+        <h2 className="display">How to play</h2>
+        <ol className="howto__list">
+          <li>
+            <b>Gather 3 to 8 people.</b> One creates a room and shares the code; everyone joins on
+            their own phone and grabs a character.
+          </li>
+          <li>
+            <b>Answer prompts.</b> Each round you get two absurd prompts. Write the funniest answer
+            you can under the word limit: <b>12 words</b>, then <b>6</b>, then <b>3</b>.
+          </li>
+          <li>
+            <b>Vote.</b> Answers to the same prompt face off anonymously. Everyone who didn't write
+            them picks the funnier one. 100 points per vote, more in later rounds.
+          </li>
+          <li>
+            <b>Mic Drop.</b> Win with half the word budget or less for a bonus. Sweep every vote for
+            a <b>Silenced!</b> bonus.
+          </li>
+          <li>
+            <b>Roast.</b> From round 2, spend your one roast token to cut an opponent to 2 words. If
+            they win anyway, they steal your points.
+          </li>
+          <li>
+            <b>Final round.</b> One prompt, 3 words (or 5 emoji), everyone answers, everyone ranks
+            their top two. Highest total takes the podium.
+          </li>
+        </ol>
+        <button className="btn btn--block" type="button" onClick={onClose}>
+          Got it
+        </button>
+      </div>
+    </div>
   );
 }

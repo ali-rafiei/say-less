@@ -103,13 +103,12 @@ describe('answers and timers', () => {
   });
 });
 
-describe('character select', () => {
+describe('character select in the lobby', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
   it('resolves a race for the same character to exactly one owner', () => {
     const h = makeRoom();
-    h.room.startGame('a');
     h.room.pickCharacter('a', 'lemon');
     expect(() => h.room.pickCharacter('b', 'lemon')).toThrowError(
       expect.objectContaining({ code: 'char_taken' }),
@@ -117,15 +116,30 @@ describe('character select', () => {
     expect(h.state().players.filter((p) => p.characterId === 'lemon')).toHaveLength(1);
   });
 
-  it('assigns random unclaimed characters when the timer expires', () => {
+  it('lets a player swap to a free character and frees the old one', () => {
     const h = makeRoom();
-    h.room.startGame('a');
+    h.room.pickCharacter('a', 'lemon');
     h.room.pickCharacter('a', 'ghost');
-    vi.advanceTimersByTime(45_000);
+    h.room.pickCharacter('b', 'lemon');
+    expect(h.state().players.map((p) => p.characterId)).toEqual(['ghost', 'lemon', null]);
+  });
+
+  it('assigns random unclaimed characters to anyone who did not pick when the game starts', () => {
+    const h = makeRoom();
+    h.room.pickCharacter('a', 'ghost');
+    h.room.startGame('a');
     expect(h.room.phase).toBe('ROUND_INTRO');
     const ids = h.state().players.map((p) => p.characterId);
     expect(ids.every((id) => id !== null)).toBe(true);
     expect(new Set(ids).size).toBe(3);
+  });
+
+  it('refuses picks once the game has started', () => {
+    const h = makeRoom();
+    h.room.startGame('a');
+    expect(() => h.room.pickCharacter('b', 'toast')).toThrowError(
+      expect.objectContaining({ code: 'bad_phase' }),
+    );
   });
 });
 
@@ -273,5 +287,51 @@ describe('presence', () => {
       expect.objectContaining({ code: 'room_full' }),
     );
     expect(RoomError).toBeDefined();
+  });
+});
+
+describe('custom prompts', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('lets any player add prompts in the lobby and only authors or the leader remove them', () => {
+    const h = makeRoom();
+    h.room.addPrompt('b', '  The worst   thing to hear from your barber  ');
+    expect(h.state().customPrompts).toEqual([
+      { id: 'c1', text: 'The worst thing to hear from your barber', authorId: 'b' },
+    ]);
+    expect(() => h.room.addPrompt('c', 'the worst thing to hear from your barber')).toThrowError(
+      expect.objectContaining({ code: 'invalid' }),
+    );
+    expect(() => h.room.addPrompt('c', 'x'.repeat(121))).toThrowError(
+      expect.objectContaining({ code: 'too_long' }),
+    );
+    expect(() => h.room.removePrompt('c', 'c1')).toThrowError(
+      expect.objectContaining({ code: 'not_leader' }),
+    );
+    h.room.removePrompt('a', 'c1'); // leader
+    expect(h.state().customPrompts).toEqual([]);
+  });
+
+  it('deals custom prompts first in custom mode, fills from the bank, and avoids the author', () => {
+    const h = makeRoom(['a', 'b', 'c', 'd']);
+    h.room.updateSettings('a', { promptMode: 'custom' });
+    h.room.addPrompt('a', 'Prompt written by A');
+    h.room.addPrompt('b', 'Prompt written by B');
+    startToWriting(h);
+    const dealt = h.state().matchups.map((m) => m.promptId);
+    expect(dealt.filter((id) => id.startsWith('c'))).toHaveLength(2);
+    expect(dealt.filter((id) => id.startsWith('p'))).toHaveLength(2);
+    const aPrompts = h.room.yourPrompts('a').map((p) => p.text);
+    const bPrompts = h.room.yourPrompts('b').map((p) => p.text);
+    expect(aPrompts).not.toContain('Prompt written by A');
+    expect(bPrompts).not.toContain('Prompt written by B');
+  });
+
+  it('ignores custom prompts in bank mode', () => {
+    const h = makeRoom();
+    h.room.addPrompt('a', 'Never dealt in bank mode');
+    startToWriting(h);
+    expect(h.state().matchups.every((m) => m.promptId.startsWith('p'))).toBe(true);
   });
 });

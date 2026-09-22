@@ -168,6 +168,12 @@ export class Gateway {
       case 'pick_character':
         room.pickCharacter(playerId, String(message.payload.characterId));
         return;
+      case 'add_prompt':
+        room.addPrompt(playerId, String(message.payload.text));
+        return;
+      case 'remove_prompt':
+        room.removePrompt(playerId, String(message.payload.promptId));
+        return;
       case 'spend_roast':
         room.spendRoast(playerId, String(message.payload.targetId));
         return;

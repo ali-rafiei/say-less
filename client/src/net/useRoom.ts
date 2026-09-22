@@ -34,6 +34,8 @@ export interface RoomController {
   updateSettings: (patch: Partial<RoomSettings>) => void;
   startGame: () => void;
   pickCharacter: (characterId: string) => void;
+  addPrompt: (text: string) => void;
+  removePrompt: (promptId: string) => void;
   spendRoast: (targetId: string) => void;
   submitAnswer: (promptId: string, text: string) => void;
   castVote: (matchupIndex: number, answerIndex: 0 | 1) => void;
@@ -93,11 +95,7 @@ export function useRoom(): RoomController {
               setPrompts([]);
               setRoastedBy(null);
             }
-            if (
-              state.phase === 'ROUND_INTRO' ||
-              state.phase === 'LOBBY' ||
-              state.phase === 'CHAR_SELECT'
-            ) {
+            if (state.phase === 'ROUND_INTRO' || state.phase === 'LOBBY') {
               setMyPrompts({});
             }
             sfx.phase(state.phase);
@@ -193,6 +191,8 @@ export function useRoom(): RoomController {
       updateSettings: (patch) => send({ type: 'update_settings', payload: patch }),
       startGame: () => send({ type: 'start_game', payload: {} }),
       pickCharacter: (characterId) => send({ type: 'pick_character', payload: { characterId } }),
+      addPrompt: (text) => send({ type: 'add_prompt', payload: { text } }),
+      removePrompt: (promptId) => send({ type: 'remove_prompt', payload: { promptId } }),
       spendRoast: (targetId) => send({ type: 'spend_roast', payload: { targetId } }),
       submitAnswer: (promptId, text) =>
         send({ type: 'submit_answer', payload: { promptId, text } }),

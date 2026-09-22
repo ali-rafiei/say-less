@@ -2,7 +2,6 @@ import type { RoomPhase } from '@say-less/shared';
 import { useEffect } from 'react';
 import { sfx } from './audio/sfx.ts';
 import { useRoom } from './net/useRoom.ts';
-import { CharSelect } from './screens/CharSelect.tsx';
 import { FinalVoting } from './screens/FinalVoting.tsx';
 import { Home } from './screens/Home.tsx';
 import { Lobby } from './screens/Lobby.tsx';
@@ -15,7 +14,6 @@ import { Writing } from './screens/Writing.tsx';
 
 const PALETTES: Record<RoomPhase, string> = {
   LOBBY: 'lobby',
-  CHAR_SELECT: 'lobby',
   ROUND_INTRO: 'writing',
   WRITING: 'writing',
   FINAL_WRITING: 'writing',
@@ -60,9 +58,6 @@ export function App() {
     switch (room.phase) {
       case 'LOBBY':
         screen = <Lobby ctl={ctl} room={room} me={me} />;
-        break;
-      case 'CHAR_SELECT':
-        screen = <CharSelect ctl={ctl} room={room} me={me} />;
         break;
       case 'ROUND_INTRO':
         screen = <RoundIntro ctl={ctl} room={room} />;
