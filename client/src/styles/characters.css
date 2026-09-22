@@ -308,6 +308,7 @@
   font-size: clamp(56px, 18vw, 120px);
   color: var(--paper);
   -webkit-text-stroke: 4px var(--ink);
+  paint-order: stroke fill;
   text-shadow: 8px 8px 0 var(--ink);
   transform: rotate(-8deg) scale(0);
   animation: stamp-in 0.35s cubic-bezier(0.2, 1.5, 0.4, 1) 1s forwards;

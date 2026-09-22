@@ -31,3 +31,6 @@ e2e/shots/
 e2e/shots-live/
 test-results/
 playwright-report/
+
+# Screenshots of the app at different stages (local only)
+evidence/
