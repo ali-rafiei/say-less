@@ -541,15 +541,36 @@ flat-vector art direction, one unique character per player.
 
 ## Roadmap / known gaps
 
+Ordered by what would improve the game most. Everything here is known and deliberate;
+nothing in this list is a regression.
+
+**Next up**
+
 - **Final art.** Sprites and UI images per `ASSETS.md`; wire the UI images (logo, stamps)
   once delivered. Placeholders are playable but generic.
-- **Manual phone test.** The e2e suite runs Chromium at phone size; a real 6-phone session
-  over the public URL has not been done yet by a human.
+- **Prompt bank quality pass.** The bank is 245 prompts and playable, but it has never had
+  an editorial pass: some prompts are near-duplicates, some tagged for the final round need
+  more than three words to be funny, and structures repeat. Target: >=260 prompts with
+  > =170 tagged round 1, >=170 round 2, >=90 final, no more than ~8 sharing their first two
+  > words. A `node` script should assert those invariants.
+- **Manual phone test.** The e2e suite drives three Chromium contexts at iPhone 13 size; a
+  real session with 6 people on 6 phones over the public URL has not happened yet. That is
+  the only way to catch real iOS Safari keyboard, audio-unlock and backgrounding behaviour.
+- **Two review passes were cut short** by a session limit and their findings were never
+  collected: a second adversarial pass over the server's anonymity guarantees (does
+  `publicRoastTokens` updating at a reveal leak which later matchup is roasted?), and a
+  Playwright-driven pass over the client's reconnect layer (offline 40 s mid-write, refresh
+  in every phase, two tabs on one session, rejected submit, rapid double-taps). Re-run both
+  before calling the client done.
+
+**Accepted for v1**
+
 - **IPv4 reachability.** See Hosting; add a Cloudflare Tunnel if friends on IPv4-only
-  Wi-Fi cannot connect.
-- **Server restarts kill rooms.** Persisting rooms (Redis or a JSON snapshot) would allow
-  zero-downtime deploys; out of scope for v1.
-- **No metrics.** `/healthz` reports room count; no dashboards.
+  Wi-Fi cannot connect. The GitHub Pages front end loads over IPv4, but its WebSocket
+  still goes to the IPv6-only server.
+- **Server restarts kill rooms.** Rooms are in memory, so a deploy ends every game in
+  progress. Persisting them (Redis or a JSON snapshot) would allow zero-downtime deploys.
+- **No metrics.** `/healthz` reports room and prompt counts; there are no dashboards.
 - **Spectators / audience mode, accounts, localization** – explicit non-goals for v1.
 
 ---
