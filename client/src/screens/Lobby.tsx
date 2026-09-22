@@ -14,7 +14,7 @@ export function Lobby({ ctl, room, me }: Props) {
   const isLeader = room.leaderId === me;
   const leader = room.players.find((p) => p.id === room.leaderId);
   const [copied, setCopied] = useState(false);
-  const inviteUrl = `${location.origin}/?code=${room.code}`;
+  const inviteUrl = `${location.origin}${location.pathname}?code=${room.code}`;
 
   async function copyLink() {
     sfx.tap();

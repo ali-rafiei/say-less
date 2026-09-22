@@ -3,6 +3,8 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  // BASE_PATH=/say-less/ for GitHub Pages; default root for the Cybera-served build.
+  base: process.env.BASE_PATH ?? '/',
   plugins: [react()],
   resolve: {
     alias: {

@@ -34,7 +34,7 @@ type SpriteManifest = Record<string, string[]>;
 let manifestPromise: Promise<SpriteManifest> | null = null;
 let manifestCache: SpriteManifest = {};
 function loadManifest(): Promise<SpriteManifest> {
-  manifestPromise ??= fetch('/sprites/manifest.json')
+  manifestPromise ??= fetch(`${import.meta.env.BASE_URL}sprites/manifest.json`)
     .then((r) => (r.ok ? (r.json() as Promise<SpriteManifest>) : {}))
     .then((m) => (manifestCache = m))
     .catch(() => ({}));
@@ -68,7 +68,7 @@ export function Character({ characterId, state = 'idle', size = 96, className = 
     return <div className={`char-wrap char-empty ${className}`} style={style} data-state={state} />;
   }
   const sprite = manifest[characterId]?.includes(state)
-    ? `/sprites/${characterId}/${state}.png`
+    ? `${import.meta.env.BASE_URL}sprites/${characterId}/${state}.png`
     : null;
   if (sprite) {
     return (

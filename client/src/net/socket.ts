@@ -102,7 +102,10 @@ export class GameSocket {
   }
 }
 
+/** VITE_WS_URL points a static host (GitHub Pages) at the game server; otherwise same origin. */
 export function defaultSocketUrl(): string {
+  const configured = import.meta.env.VITE_WS_URL as string | undefined;
+  if (configured) return configured;
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${protocol}//${location.host}/ws`;
 }
