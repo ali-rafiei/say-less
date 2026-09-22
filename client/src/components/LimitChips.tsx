@@ -18,7 +18,7 @@ export function LimitChips({ limit, shatterFrom, label, size = 'small' }: Props)
     return () => clearTimeout(t);
   }, [shatterFrom, limit]);
   return (
-    <div className={`chips chips--${size}`} aria-label={`${limit} ${label ?? 'words'}`}>
+    <div className={`chips chips--${size}`} role="img" aria-label={label ?? `${limit} words`}>
       {Array.from({ length: total }, (_, i) => {
         const doomed = i >= limit;
         return (

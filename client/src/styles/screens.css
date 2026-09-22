@@ -1115,3 +1115,30 @@
 .writing:has(.winput__field:focus) .corner-char {
   display: none;
 }
+
+/* The room code is meant to be shared: it is the one piece of text players may select. */
+.roomcode {
+  -webkit-user-select: text;
+  user-select: text;
+}
+.mute {
+  width: 44px;
+  height: 44px;
+}
+.plist__remove {
+  width: 40px;
+  height: 40px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker__track {
+    animation: none;
+    padding-left: 0;
+    white-space: normal;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    padding: 0 12px;
+  }
+  .ticker__track .ticker__item:nth-child(n + 6) {
+    display: none;
+  }
+}

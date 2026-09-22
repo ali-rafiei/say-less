@@ -89,7 +89,9 @@ export function Lobby({ ctl, room, me }: Props) {
 
       <section className="stack">
         <h2 className="display center">{mine ? 'Your character' : 'Pick your character'}</h2>
-        <p className="center dim small">First tap wins. Anyone who skips gets a random leftover.</p>
+        <p className="center dim small">
+          Tap a character to claim it. First tap wins; anyone who skips gets a random leftover.
+        </p>
         <div className="cgrid">
           {CHARACTERS.map((c) => {
             const owner = room.players.find((p) => p.characterId === c.id);

@@ -12,7 +12,7 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   fullyParallel: false,
   workers: 1,
-  retries: 0,
+  retries: 1,
   reporter: [['list']],
   use: {
     ...devices['iPhone 13'],

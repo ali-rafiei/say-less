@@ -24,6 +24,18 @@ export function Writing({ ctl, room, me }: Props) {
   const [spentOn, setSpentOn] = useState<string | null>(null);
 
   useEffect(() => setRoastDismissed(false), [ctl.roastedBy]);
+  // Forget drafts for prompts the server has accepted.
+  useEffect(() => {
+    for (const p of ctl.prompts) {
+      if (p.submittedText !== null) {
+        try {
+          sessionStorage.removeItem(`say-less.draft.${room.code}.${p.promptId}`);
+        } catch {
+          // ignore
+        }
+      }
+    }
+  }, [ctl.prompts, room.code]);
 
   const limit =
     current?.effectiveLimit ?? (room.final?.mode === 'emoji' ? room.final.limit : round.limit);
@@ -51,7 +63,12 @@ export function Writing({ ctl, room, me }: Props) {
               <b>{ctl.roastedBy}</b> cut you down to <b>2 words</b> on your next answer.
             </p>
             <p className="dim">Good luck.</p>
-            <button className="btn btn--small" type="button">
+            <button
+              className="btn btn--small"
+              type="button"
+              autoFocus
+              onClick={() => setRoastDismissed(true)}
+            >
               Fine.
             </button>
           </div>
@@ -69,7 +86,8 @@ export function Writing({ ctl, room, me }: Props) {
               size={44}
             />
           </div>
-          {myPlayer && myPlayer.roastTokens > 0 ? (
+          <p className="dim small">Prompts arrive when the window closes.</p>
+          {ctl.myRoastTokens > 0 ? (
             <>
               <p>
                 Spend your one roast token: their next answer gets <b>2 words</b>. If they win
@@ -124,6 +142,7 @@ export function Writing({ ctl, room, me }: Props) {
               draftKey={`${room.code}.${current.promptId}`}
               limit={current.effectiveLimit}
               mode={current.mode}
+              resetToken={ctl.error?.at ?? null}
               autoFocus
               onSubmit={(text) => ctl.submitAnswer(current.promptId, text)}
             />

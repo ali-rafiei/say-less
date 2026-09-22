@@ -21,7 +21,9 @@ export function Header({ room, clockOffset, limit, limitLabel }: Props) {
         <span className="header__code display">{room.code}</span>
         {inRound && round && (
           <span className="header__round">
-            R{room.roundIndex + 1} · {round.name}
+            {limit != null
+              ? `Round ${room.roundIndex + 1}`
+              : `R${room.roundIndex + 1} · ${round.name}`}
           </span>
         )}
       </div>

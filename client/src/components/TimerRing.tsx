@@ -17,24 +17,31 @@ export function TimerRing({
   size = 56,
   showSeconds = true,
 }: Props) {
-  const [fraction, setFraction] = useState(1);
   const [seconds, setSeconds] = useState<number | null>(null);
   const lastTick = useRef<number>(-1);
+  const arcRef = useRef<SVGCircleElement>(null);
+  const circumferenceRef = useRef(0);
 
   useEffect(() => {
     if (endsAt === null) {
-      setFraction(1);
       setSeconds(null);
       return;
     }
     let frame = 0;
+    let shownSeconds = -1;
     const total = Math.max(endsAt - startedAt, 1);
     const update = () => {
       const now = Date.now() + clockOffset;
       const remaining = Math.max(endsAt - now, 0);
-      setFraction(remaining / total);
+      const arc = arcRef.current;
+      if (arc) {
+        arc.style.strokeDashoffset = String(circumferenceRef.current * (1 - remaining / total));
+      }
       const secs = Math.ceil(remaining / 1000);
-      setSeconds(secs);
+      if (secs !== shownSeconds) {
+        shownSeconds = secs;
+        setSeconds(secs);
+      }
       if (secs <= 5 && secs > 0 && secs !== lastTick.current) {
         lastTick.current = secs;
         sfx.tick();
@@ -49,12 +56,15 @@ export function TimerRing({
   const stroke = 6;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
+  circumferenceRef.current = circumference;
   const urgent = seconds !== null && seconds <= 5;
   return (
     <div
       className={`ring ${urgent ? 'ring--urgent' : ''}`}
       style={{ width: size, height: size }}
-      aria-label={`${seconds} seconds left`}
+      role="timer"
+      aria-live="off"
+      aria-label={seconds !== null && seconds <= 10 ? `${seconds} seconds left` : 'time remaining'}
     >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <circle
@@ -66,6 +76,7 @@ export function TimerRing({
           strokeWidth={stroke}
         />
         <circle
+          ref={arcRef}
           cx={size / 2}
           cy={size / 2}
           r={radius}
@@ -74,7 +85,6 @@ export function TimerRing({
           strokeWidth={stroke - 1}
           strokeLinecap="round"
           strokeDasharray={circumference}
-          strokeDashoffset={circumference * (1 - fraction)}
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       </svg>

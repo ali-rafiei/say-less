@@ -50,7 +50,11 @@ interface Player {
   joinedAt: number;
   score: number;
   roastTokens: number;
+  /** live counters; copied into `publicStats` only at round results / podium (anonymity) */
   stats: PlayerStats;
+  publicStats: PlayerStats;
+  publicRoastTokens: number;
+  slotExpired: boolean;
   removalTimer: ReturnType<typeof setTimeout> | null;
 }
 
@@ -99,12 +103,15 @@ function freshStats(): PlayerStats {
   };
 }
 
-export function sanitizeName(raw: string): string {
+function cleanName(raw: string): string {
   return raw
     .replace(/[\p{C}]/gu, '')
     .trim()
-    .replace(/\s+/g, ' ')
-    .slice(0, LIMITS.NAME_MAX);
+    .replace(/\s+/g, ' ');
+}
+
+export function sanitizeName(raw: string): string {
+  return Array.from(cleanName(raw)).slice(0, LIMITS.NAME_MAX).join('').trim();
 }
 
 export class Room {
@@ -184,6 +191,9 @@ export class Room {
       score: 0,
       roastTokens: LIMITS.ROAST_TOKENS_PER_GAME,
       stats: freshStats(),
+      publicStats: freshStats(),
+      publicRoastTokens: LIMITS.ROAST_TOKENS_PER_GAME,
+      slotExpired: false,
       removalTimer: null,
     });
     if (!this.leaderId) this.leaderId = playerId;
@@ -199,7 +209,13 @@ export class Room {
     }
     const wasConnected = player.connected;
     player.connected = true;
+    player.slotExpired = false;
     if (!wasConnected) player.connectedSince = Date.now();
+    const leader = this.players.find((p) => p.id === this.leaderId);
+    if (!leader || !leader.connected) {
+      this.leaderId = playerId;
+      this.banner = `${player.name} is now the leader`;
+    }
     this.broadcast();
     this.sendPrivateState(playerId);
   }
@@ -231,7 +247,22 @@ export class Room {
     const player = this.players.find((p) => p.id === playerId);
     if (!player || player.connected) return;
     player.removalTimer = null;
-    if (this.phase === 'LOBBY' || this.phase === 'PODIUM') this.removePlayer(playerId);
+    if (this.phase === 'LOBBY' || this.phase === 'PODIUM') {
+      this.removePlayer(playerId);
+      return;
+    }
+    // Mid-game the seat must stay (matchups reference it); drop it at the podium.
+    player.slotExpired = true;
+    if (this.leaderId === playerId) {
+      this.passLeadership();
+      this.broadcast();
+    }
+  }
+
+  private dropExpiredSlots(): void {
+    for (const player of [...this.players]) {
+      if (player.slotExpired && !player.connected) this.removePlayer(player.id);
+    }
   }
 
   private removePlayer(playerId: string): void {
@@ -323,17 +354,19 @@ export class Room {
   startGame(playerId: string): void {
     this.requirePhase('LOBBY');
     this.requireLeader(playerId);
+    if (this.connectedCount < LIMITS.MIN_PLAYERS) {
+      throw new RoomError('not_enough_players', `Need at least ${LIMITS.MIN_PLAYERS} players`);
+    }
     for (const player of [...this.players]) {
       if (!player.connected) this.removePlayer(player.id);
-    }
-    if (this.players.length < LIMITS.MIN_PLAYERS) {
-      throw new RoomError('not_enough_players', `Need at least ${LIMITS.MIN_PLAYERS} players`);
     }
     this.banner = null;
     for (const player of this.players) {
       player.score = 0;
       player.roastTokens = LIMITS.ROAST_TOKENS_PER_GAME;
+      player.publicRoastTokens = LIMITS.ROAST_TOKENS_PER_GAME;
       player.stats = freshStats();
+      player.publicStats = freshStats();
     }
     this.podium = null;
     this.final = null;
@@ -374,8 +407,8 @@ export class Room {
     if (!matchup) throw new RoomError('invalid', 'That player has no prompt this round');
     matchup.roast = { spenderId: playerId, targetId };
     spender.roastTokens -= 1;
-    target.stats.roasted += 1;
-    this.broadcast();
+    // Nothing public changes until the reveal: a visible token drop would name the target.
+    this.sendPrivateState(playerId);
     this.deps.send(targetId, { type: 'roasted', payload: { byName: spender.name } });
   }
 
@@ -464,6 +497,10 @@ export class Room {
     this.podium = null;
     this.final = null;
     this.matchups = [];
+    this.roundIndex = 0;
+    this.currentMatchupIndex = 0;
+    this.promptsDealt = false;
+    this.customPrompts = this.customPrompts.filter((p) => !this.usedPromptIds.has(p.id));
     this.banner = null;
     this.enterPhase('LOBBY', null);
   }
@@ -538,15 +575,22 @@ export class Room {
       if (collisions(offset) < collisions(bestOffset)) bestOffset = offset;
     }
     const prompts = drawn.map((_, i) => drawn[(i + bestOffset) % drawn.length]!);
-    return order.map((playerId, i) => ({
-      prompt: prompts[i]!,
-      playerIds: pairs[i]!,
-      answers: [null, null],
-      votes: {},
-      roast: null,
-      result: null,
-      revealed: false,
-    }));
+    // Public slot order and matchup order must not follow the ring, or a revealed
+    // matchup would name a neighbour in the next one.
+    const matchups: Matchup[] = order.map((_, i) => {
+      const pair = pairs[i]!;
+      const playerIds: [string, string] = this.random() < 0.5 ? [pair[1], pair[0]] : pair;
+      return {
+        prompt: prompts[i]!,
+        playerIds,
+        answers: [null, null],
+        votes: {},
+        roast: null,
+        result: null,
+        revealed: false,
+      };
+    });
+    return this.shuffled(matchups);
   }
 
   private startWriting(): void {
@@ -565,6 +609,9 @@ export class Room {
         this.dealPrompts();
       }, TIMERS.ROAST_WINDOW);
       this.broadcast();
+      for (const player of this.players) {
+        if (player.connected) this.sendPrivateState(player.id);
+      }
     } else {
       this.dealPrompts();
     }
@@ -573,6 +620,10 @@ export class Room {
   private dealPrompts(): void {
     this.promptsDealt = true;
     this.promptsDealtAt = Date.now();
+    if (this.allWritingDone()) {
+      this.endWriting();
+      return;
+    }
     this.broadcast();
     for (const player of this.players) {
       if (player.connected) this.sendPrivateState(player.id);
@@ -632,6 +683,17 @@ export class Room {
       if (award.kind === 'micDrop') this.requirePlayer(award.playerId).stats.micDrops += 1;
       if (award.kind === 'silenced') this.requirePlayer(award.playerId).stats.silenced += 1;
     }
+    if (matchup.roast) {
+      this.requirePlayer(matchup.roast.targetId).stats.roasted += 1;
+      const spender = this.players.find((p) => p.id === matchup.roast!.spenderId);
+      if (spender) spender.publicRoastTokens = spender.roastTokens;
+    }
+    for (const id of matchup.playerIds) {
+      const player = this.requirePlayer(id);
+      player.publicStats.micDrops = player.stats.micDrops;
+      player.publicStats.silenced = player.stats.silenced;
+      player.publicStats.roasted = player.stats.roasted;
+    }
     matchup.result = result;
     matchup.revealed = true;
     this.enterPhase('MATCHUP_REVEAL', revealDuration(a.text.length + b.text.length));
@@ -643,6 +705,7 @@ export class Room {
       this.currentMatchupIndex += 1;
       this.startVoting();
     } else {
+      this.publishStats();
       this.enterPhase('ROUND_RESULTS', TIMERS.ROUND_RESULTS);
     }
   }
@@ -659,12 +722,19 @@ export class Room {
       const player = this.players.find((p) => p.id === playerId);
       if (player) player.score += tally.points;
     }
+    this.publishStats();
     const publicPlayers = this.players.map((p) => this.publicPlayer(p));
     this.podium = {
       placements: computePlacements(publicPlayers),
       superlatives: computeSuperlatives(publicPlayers),
     };
     this.enterPhase('PODIUM', null);
+    this.dropExpiredSlots();
+    for (const player of this.players) {
+      if (!player.connected && !player.removalTimer) {
+        player.removalTimer = setTimeout(() => this.expireSlot(player.id), RECONNECT_HOLD_MS);
+      }
+    }
   }
 
   private onPhaseTimeout(): void {
@@ -726,6 +796,14 @@ export class Room {
   }
 
   // ------------------------------------------------------------------ helpers
+
+  /** Word/timing stats and token counts go public only between rounds (see publicPlayer). */
+  private publishStats(): void {
+    for (const player of this.players) {
+      player.publicStats = { ...player.stats };
+      player.publicRoastTokens = player.roastTokens;
+    }
+  }
 
   private assignMissingCharacters(): void {
     const free = this.shuffled(
@@ -844,7 +922,7 @@ export class Room {
       players: this.players.map((p) => this.publicPlayer(p)),
       leaderId: this.leaderId,
       settings: { ...this.settings },
-      customPrompts: this.customPrompts.map((p) => ({ ...p })),
+      customPrompts: this.phase === 'LOBBY' ? this.customPrompts.map((p) => ({ ...p })) : [],
       matchups: this.matchups.map((m, i) => this.publicMatchup(m, i)),
       currentMatchupIndex: this.currentMatchupIndex,
       roastWindowEndsAt: this.roastWindowEndsAt,
@@ -902,8 +980,10 @@ export class Room {
 
   private sendPrivateState(playerId: string): void {
     const prompts = this.yourPrompts(playerId);
-    if (prompts.length > 0)
-      this.deps.send(playerId, { type: 'your_prompts', payload: { prompts } });
+    const roastTokens = this.players.find((p) => p.id === playerId)?.roastTokens ?? 0;
+    if (prompts.length > 0 || this.phase === 'WRITING') {
+      this.deps.send(playerId, { type: 'your_prompts', payload: { prompts, roastTokens } });
+    }
     if (this.phase === 'WRITING') {
       const roast = this.matchups.find((m) => m.roast?.targetId === playerId)?.roast;
       if (roast) {
@@ -920,8 +1000,8 @@ export class Room {
       characterId: p.characterId,
       connected: p.connected,
       score: p.score,
-      roastTokens: p.roastTokens,
-      stats: { ...p.stats },
+      roastTokens: p.publicRoastTokens,
+      stats: { ...p.publicStats },
       joinedAt: p.joinedAt,
     };
   }
@@ -938,7 +1018,7 @@ export class Room {
       effectiveLimit: m.revealed ? (answer?.effectiveLimit ?? null) : null,
     });
     return {
-      promptId: m.prompt.id,
+      promptId: votingOpen ? m.prompt.id : '',
       promptText: votingOpen ? m.prompt.text : '',
       answers: [toPublic(m.answers[0]), toPublic(m.answers[1])],
       votes: m.revealed ? { ...m.votes } : null,

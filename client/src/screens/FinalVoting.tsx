@@ -1,5 +1,5 @@
 import { characterMeta, type PublicRoomState } from '@say-less/shared';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { sfx } from '../audio/sfx.ts';
 import { AnswerText } from '../components/AnswerText.tsx';
 import { Header } from '../components/Header.tsx';
@@ -15,6 +15,8 @@ export function FinalVoting({ ctl, room, me }: Props) {
   const final = room.final;
   const [picks, setPicks] = useState<string[]>([]);
   const voted = room.votedIds.includes(me);
+  const promptId = final?.prompt.id;
+  useEffect(() => setPicks([]), [promptId]);
   if (!final) return null;
   const canVoteAtAll = final.answers.filter((a) => a.playerId !== me).length >= 2;
 

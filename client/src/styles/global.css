@@ -164,14 +164,14 @@ p {
   max-width: 900px;
 }
 
+/* Opacity only: a transform here would turn .screen into the containing block for
+   position: fixed children (overlays, corner mascot) during the animation. */
 @keyframes screen-in {
   from {
     opacity: 0;
-    transform: translateY(10px) scale(0.99);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
 
@@ -301,6 +301,8 @@ p {
 }
 
 .toast {
+  font: inherit;
+  text-align: left;
   position: fixed;
   left: 16px;
   right: 16px;

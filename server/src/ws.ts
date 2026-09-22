@@ -7,7 +7,7 @@ import {
   type ServerMessage,
 } from './shared.ts';
 import type { WebSocket, WebSocketServer } from 'ws';
-import { RoomError } from './room.ts';
+import { RoomError, sanitizeName } from './room.ts';
 import { normalizeRoomCode } from './roomCode.ts';
 import type { RoomManager } from './roomManager.ts';
 import type { SessionSigner } from './session.ts';
@@ -17,6 +17,8 @@ interface Connection {
   playerId: string | null;
   roomCode: string | null;
   lastIntentAt: number;
+  lastPingAt: number;
+  parseFailures: number;
   alive: boolean;
 }
 
@@ -63,6 +65,8 @@ export class Gateway {
       playerId: null,
       roomCode: null,
       lastIntentAt: 0,
+      lastPingAt: 0,
+      parseFailures: 0,
       alive: true,
     };
     this.connections.add(conn);
@@ -86,12 +90,21 @@ export class Gateway {
     let message: ClientMessage;
     try {
       message = parseClientMessage(raw);
+      conn.parseFailures = 0;
     } catch (error) {
+      conn.parseFailures += 1;
+      if (conn.parseFailures >= 5) {
+        conn.socket.close(1008, 'too many malformed messages');
+        return;
+      }
       this.error(conn, 'invalid', error instanceof Error ? error.message : 'Bad message');
       return;
     }
     if (message.type === 'ping') {
-      conn.socket.send(JSON.stringify({ type: 'pong', payload: { serverTime: Date.now() } }));
+      const now = Date.now();
+      if (now - conn.lastPingAt < 1_000) return;
+      conn.lastPingAt = now;
+      conn.socket.send(JSON.stringify({ type: 'pong', payload: { serverTime: now } }));
       return;
     }
     const now = Date.now();
@@ -118,16 +131,27 @@ export class Gateway {
   private dispatch(conn: Connection, message: ClientMessage): void {
     switch (message.type) {
       case 'create_room': {
+        if (sanitizeName(message.payload.name).length === 0) {
+          throw new RoomError('bad_name', 'Pick a name between 1 and 12 characters');
+        }
+        this.unbind(conn);
         const room = this.deps.rooms.create();
         const playerId = this.deps.signer.newPlayerId();
-        room.addPlayer(playerId, message.payload.name);
+        try {
+          room.addPlayer(playerId, message.payload.name);
+        } catch (error) {
+          this.deps.rooms.destroy(room.code);
+          throw error;
+        }
         this.bind(conn, room.code, playerId);
         return;
       }
       case 'join_room': {
         const code = normalizeRoomCode(message.payload.code);
         const room = this.deps.rooms.require(code);
-        const returning = this.deps.signer.verify(message.payload.sessionToken);
+        const token = message.payload.sessionToken;
+        const returning = this.deps.signer.verify(typeof token === 'string' ? token : undefined);
+        if (!(returning && conn.playerId === returning)) this.unbind(conn);
         if (returning && room.hasPlayer(returning)) {
           this.bind(conn, room.code, returning, true);
           return;
@@ -146,6 +170,8 @@ export class Gateway {
         conn.socket.send(JSON.stringify({ type: 'left', payload: {} } satisfies ServerMessage));
         return;
       }
+      case 'ping':
+        return;
       default: {
         const { room, playerId } = this.requireBound(conn);
         this.dispatchInRoom(room, playerId, message);
@@ -166,19 +192,19 @@ export class Gateway {
         room.startGame(playerId);
         return;
       case 'pick_character':
-        room.pickCharacter(playerId, String(message.payload.characterId));
+        room.pickCharacter(playerId, str(message.payload.characterId));
         return;
       case 'add_prompt':
-        room.addPrompt(playerId, String(message.payload.text));
+        room.addPrompt(playerId, str(message.payload.text));
         return;
       case 'remove_prompt':
-        room.removePrompt(playerId, String(message.payload.promptId));
+        room.removePrompt(playerId, str(message.payload.promptId));
         return;
       case 'spend_roast':
-        room.spendRoast(playerId, String(message.payload.targetId));
+        room.spendRoast(playerId, str(message.payload.targetId));
         return;
       case 'submit_answer':
-        room.submitAnswer(playerId, String(message.payload.promptId), String(message.payload.text));
+        room.submitAnswer(playerId, str(message.payload.promptId), str(message.payload.text));
         return;
       case 'cast_vote': {
         const { matchupIndex, answerIndex } = message.payload;
@@ -199,6 +225,19 @@ export class Gateway {
         return;
       default:
         throw new RoomError('invalid', `Unexpected message ${message.type}`);
+    }
+  }
+
+  /** A socket that was bound to another seat drops it (as a disconnect) before rebinding. */
+  private unbind(conn: Connection): void {
+    if (!conn.playerId) return;
+    const previousId = conn.playerId;
+    const previousCode = conn.roomCode;
+    conn.playerId = null;
+    conn.roomCode = null;
+    if (this.byPlayer.get(previousId) === conn) {
+      this.byPlayer.delete(previousId);
+      if (previousCode) this.deps.rooms.get(previousCode)?.disconnect(previousId);
     }
   }
 
@@ -241,6 +280,11 @@ export class Gateway {
       JSON.stringify({ type: 'error', payload: { code, message } } satisfies ServerMessage),
     );
   }
+}
+
+/** Payload fields are untrusted: anything that is not a string is treated as empty. */
+function str(value: unknown): string {
+  return typeof value === 'string' ? value : '';
 }
 
 export function parseClientMessage(raw: string): ClientMessage {

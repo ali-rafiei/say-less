@@ -26,7 +26,7 @@ const PALETTES: Record<RoomPhase, string> = {
 
 export function App() {
   const ctl = useRoom();
-  const { room, me, error, dismissError, status } = ctl;
+  const { room, me, error, dismissError, status, everConnected } = ctl;
 
   useEffect(() => {
     const unlock = () => sfx.unlock();
@@ -87,13 +87,15 @@ export function App() {
   return (
     <div className="app" data-palette={palette}>
       {status !== 'open' && (
-        <div className="conn">{status === 'connecting' ? 'Reconnecting…' : 'Offline'}</div>
+        <div className="conn" role="status">
+          {status === 'connecting' ? (everConnected ? 'Reconnecting…' : 'Connecting…') : 'Offline'}
+        </div>
       )}
       {screen}
       {error && (
-        <div className="toast" role="alert" onClick={dismissError}>
+        <button className="toast" type="button" role="alert" onClick={dismissError}>
           {error.message}
-        </div>
+        </button>
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 import { LIMITS } from '@say-less/shared';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { sfx } from '../audio/sfx.ts';
 import { loadName } from '../net/session.ts';
 import type { RoomController } from '../net/useRoom.ts';
@@ -17,6 +17,12 @@ export function Home({ ctl }: { ctl: RoomController }) {
   const [code, setCode] = useState(codeFromUrl());
   const [mode, setMode] = useState<'pick' | 'join'>(codeFromUrl() ? 'join' : 'pick');
   const [showHelp, setShowHelp] = useState(false);
+  const [slowRejoin, setSlowRejoin] = useState(false);
+  useEffect(() => {
+    if (!ctl.rejoining) return;
+    const t = setTimeout(() => setSlowRejoin(true), 5_000);
+    return () => clearTimeout(t);
+  }, [ctl.rejoining]);
   const cleanName = name.trim().slice(0, LIMITS.NAME_MAX);
   const canGo = cleanName.length > 0 && ctl.status === 'open';
 
@@ -25,6 +31,15 @@ export function Home({ ctl }: { ctl: RoomController }) {
       <main className="screen center home">
         <Logo />
         <p className="dim">Finding your seat…</p>
+        {slowRejoin && (
+          <button
+            className="btn btn--ghost btn--small"
+            type="button"
+            onClick={() => ctl.startOver()}
+          >
+            Start over
+          </button>
+        )}
       </main>
     );
   }

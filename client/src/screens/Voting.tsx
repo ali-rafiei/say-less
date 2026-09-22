@@ -18,7 +18,6 @@ export function Voting({ ctl, room, me }: Props) {
   const myText = ctl.myPrompts[matchup.promptId] ?? null;
   const voted = room.votedIds.includes(me);
   const myPlayer = room.players.find((p) => p.id === me);
-  const voters = room.players.filter((p) => p.connected && !room.votedIds.includes(p.id));
 
   return (
     <main className="screen voting">
@@ -55,7 +54,7 @@ export function Voting({ ctl, room, me }: Props) {
           <p className="dim">You wrote one of these. Sweat it out.</p>
         </div>
       ) : voted ? (
-        <p className="center dim">Vote locked. Waiting on {voters.length} more…</p>
+        <p className="center dim">Vote locked. Waiting on the other voters…</p>
       ) : (
         <p className="center dim">Tap the funnier one.</p>
       )}

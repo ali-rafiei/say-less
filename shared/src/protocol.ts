@@ -44,7 +44,7 @@ export interface RevealPayload {
 export type ServerMessage =
   | { type: 'welcome'; payload: { playerId: string; sessionToken: string; code: string } }
   | { type: 'room_state'; payload: PublicRoomState }
-  | { type: 'your_prompts'; payload: { prompts: YourPrompt[] } }
+  | { type: 'your_prompts'; payload: { prompts: YourPrompt[]; roastTokens: number } }
   | { type: 'roasted'; payload: { byName: string } }
   | { type: 'reveal'; payload: RevealPayload }
   | { type: 'error'; payload: { code: ErrorCode; message: string } }

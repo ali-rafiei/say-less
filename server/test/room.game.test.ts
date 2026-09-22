@@ -122,7 +122,10 @@ describe('a full 3-player game', () => {
     startToWriting(h);
     const matchups = h.state().matchups;
     expect(matchups).toHaveLength(5);
-    expect(new Set(matchups.map((m) => m.promptId)).size).toBe(5);
+    const dealtIds = new Set(
+      h.room.players.flatMap((p) => h.room.yourPrompts(p.id).map((x) => x.promptId)),
+    );
+    expect(dealtIds.size).toBe(5);
     const appearances = new Map<string, number>();
     for (const player of h.room.players) {
       appearances.set(player.id, h.room.yourPrompts(player.id).length);

@@ -53,6 +53,51 @@ describe('redaction', () => {
     expect(revealed.result).not.toBeNull();
   });
 
+  it('does not let a revealed matchup name a neighbour: slot order and matchup order are shuffled', () => {
+    // With ring pairing, slot 1 of matchup i would equal slot 0 of matchup i+1 every time.
+    let adjacencyHits = 0;
+    let trials = 0;
+    for (let seed = 1; seed <= 40; seed++) {
+      const h = makeRoom(['a', 'b', 'c', 'd', 'e'], seed);
+      startToWriting(h);
+      answerAll(h, (id) => `${id} answer`);
+      // reveal everything
+      drainRound(h);
+      const revealed = h.state().matchups;
+      for (let i = 0; i + 1 < revealed.length; i++) {
+        trials += 1;
+        if (revealed[i]!.answers[1]!.playerId === revealed[i + 1]!.answers[0]!.playerId)
+          adjacencyHits += 1;
+      }
+    }
+    // Random pairing would hit about 1 in 5 for 5 players; the ring would hit every time.
+    expect(adjacencyHits / trials).toBeLessThan(0.5);
+  });
+
+  it('keeps word counts, submission stats and roast tokens out of the public state until round results', () => {
+    const h = makeRoom();
+    startToWriting(h);
+    h.room.submitAnswer('a', h.room.yourPrompts('a')[0]!.promptId, 'five words in this answer');
+    const during = h.state().players.find((p) => p.id === 'a')!;
+    expect(during.stats.wordsUsedTotal).toBe(0);
+    expect(during.stats.submissions).toBe(0);
+    answerAll(h, (id) => `${id} answer`);
+    drainRound(h);
+    expect(h.room.phase).toBe('ROUND_RESULTS');
+    const after = h.state().players.find((p) => p.id === 'a')!;
+    expect(after.stats.wordsUsedTotal).toBe(7);
+    expect(after.stats.submissions).toBe(2);
+  });
+
+  it('redacts prompt ids along with prompt text until voting opens', () => {
+    const h = makeRoom();
+    startToWriting(h);
+    expect(h.state().matchups.every((m) => m.promptId === '' && m.promptText === '')).toBe(true);
+    answerAll(h, (id) => `${id} answer`);
+    const current = h.state().matchups[h.state().currentMatchupIndex]!;
+    expect(current.promptId).not.toBe('');
+  });
+
   it('never includes another player prompts in the public state', () => {
     const h = makeRoom();
     startToWriting(h);
@@ -160,7 +205,10 @@ describe('roast tokens', () => {
     toRoundTwoWindow(h);
     h.room.spendRoast('a', 'b');
     expect(h.last('b', 'roasted')!.payload.byName).toBe('A');
-    expect(h.state().players.find((p) => p.id === 'a')!.roastTokens).toBe(0);
+    // The spender learns privately; publicly nothing moves until the reveal.
+    expect(h.last('a', 'your_prompts')!.payload.roastTokens).toBe(0);
+    expect(h.state().players.find((p) => p.id === 'a')!.roastTokens).toBe(1);
+    expect(h.state().players.find((p) => p.id === 'b')!.stats.roasted).toBe(0);
     expect(() => h.room.spendRoast('c', 'b')).toThrowError(
       expect.objectContaining({ code: 'already_roasted' }),
     );
@@ -243,6 +291,24 @@ describe('roast tokens', () => {
 describe('presence', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
+
+  it('hands leadership to a returning player when the leader is gone', () => {
+    const h = makeRoom();
+    h.room.disconnect('b');
+    h.room.disconnect('c');
+    h.room.disconnect('a'); // leadership falls to a disconnected player
+    expect(h.room.leaderId).not.toBe('a');
+    h.room.reconnect('c');
+    expect(h.room.leaderId).toBe('c');
+  });
+
+  it('drops players whose slot expired mid-game when the podium is reached', () => {
+    const h = makeRoom();
+    startToWriting(h);
+    h.room.disconnect('c');
+    vi.advanceTimersByTime(3 * 60_000); // slot expires mid-game; seat stays
+    expect(h.room.players.map((p) => p.id)).toEqual(['a', 'b', 'c']);
+  });
 
   it('passes leadership to the longest-connected player and announces it', () => {
     const h = makeRoom();
@@ -343,9 +409,12 @@ describe('custom prompts', () => {
     h.room.addPrompt('a', 'Prompt written by A');
     h.room.addPrompt('b', 'Prompt written by B');
     startToWriting(h);
-    const dealt = h.state().matchups.map((m) => m.promptId);
+    const dealt = [
+      ...new Set(h.room.players.flatMap((p) => h.room.yourPrompts(p.id).map((x) => x.promptId))),
+    ];
     expect(dealt.filter((id) => id.startsWith('c'))).toHaveLength(2);
     expect(dealt.filter((id) => id.startsWith('p'))).toHaveLength(2);
+    expect(h.state().customPrompts).toEqual([]); // not public once the game starts
     const aPrompts = h.room.yourPrompts('a').map((p) => p.text);
     const bPrompts = h.room.yourPrompts('b').map((p) => p.text);
     expect(aPrompts).not.toContain('Prompt written by A');
@@ -356,6 +425,7 @@ describe('custom prompts', () => {
     const h = makeRoom();
     h.room.addPrompt('a', 'Never dealt in bank mode');
     startToWriting(h);
-    expect(h.state().matchups.every((m) => m.promptId.startsWith('p'))).toBe(true);
+    const dealt = h.room.players.flatMap((p) => h.room.yourPrompts(p.id).map((x) => x.promptId));
+    expect(dealt.every((id) => id.startsWith('p'))).toBe(true);
   });
 });

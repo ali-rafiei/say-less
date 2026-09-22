@@ -23,6 +23,8 @@ export interface RoomController {
   prompts: YourPrompt[];
   /** Every prompt dealt to me this round (promptId -> my answer or null), kept through voting. */
   myPrompts: Record<string, string | null>;
+  /** My own roast token count (public state only updates it between rounds). */
+  myRoastTokens: number;
   roastedBy: string | null;
   error: UiError | null;
   /** serverNow - Date.now(); add to local time to compare with server deadlines */
@@ -31,6 +33,10 @@ export interface RoomController {
   createRoom: (name: string) => void;
   joinRoom: (code: string, name: string) => void;
   leaveRoom: () => void;
+  /** Forget the stored session and show the home screen (escape hatch while rejoining). */
+  startOver: () => void;
+  /** false until the first successful connection of this page load */
+  everConnected: boolean;
   updateSettings: (patch: Partial<RoomSettings>) => void;
   startGame: () => void;
   pickCharacter: (characterId: string) => void;
@@ -51,12 +57,16 @@ export function useRoom(): RoomController {
   const [me, setMe] = useState<string | null>(null);
   const [prompts, setPrompts] = useState<YourPrompt[]>([]);
   const [myPrompts, setMyPrompts] = useState<Record<string, string | null>>({});
+  const [myRoastTokens, setMyRoastTokens] = useState(1);
   const [roastedBy, setRoastedBy] = useState<string | null>(null);
   const [error, setError] = useState<UiError | null>(null);
   const [clockOffset, setClockOffset] = useState(0);
   const [rejoining, setRejoining] = useState(() => loadSession() !== null);
   const nameRef = useRef<string>(loadSession()?.name ?? '');
   const phaseRef = useRef<string | null>(null);
+  const roomRef = useRef<PublicRoomState | null>(null);
+  const joiningRef = useRef(false);
+  const [everConnected, setEverConnected] = useState(false);
 
   useEffect(() => {
     const socket = new GameSocket(defaultSocketUrl());
@@ -64,10 +74,12 @@ export function useRoom(): RoomController {
     const offStatus = socket.onStatus((next) => {
       setStatus(next);
       if (next === 'open') {
+        setEverConnected(true);
         const session = loadSession();
         if (session) {
           setRejoining(true);
-          socket.send({
+          joiningRef.current = true;
+          socket.sendNow({
             type: 'join_room',
             payload: { code: session.code, name: session.name, sessionToken: session.sessionToken },
           });
@@ -77,6 +89,7 @@ export function useRoom(): RoomController {
     const offMessage = socket.onMessage((message) => {
       switch (message.type) {
         case 'welcome': {
+          joiningRef.current = false;
           setMe(message.payload.playerId);
           setRejoining(false);
           saveSession({
@@ -100,11 +113,13 @@ export function useRoom(): RoomController {
             }
             sfx.phase(state.phase);
           }
+          roomRef.current = state;
           setRoom(state);
           return;
         }
         case 'your_prompts':
           setPrompts(message.payload.prompts);
+          setMyRoastTokens(message.payload.roastTokens);
           setMyPrompts((current) => {
             const next = { ...current };
             for (const p of message.payload.prompts) next[p.promptId] = p.submittedText;
@@ -119,6 +134,7 @@ export function useRoom(): RoomController {
           return;
         case 'left':
           clearSession();
+          roomRef.current = null;
           setRoom(null);
           setMe(null);
           setPrompts([]);
@@ -126,18 +142,19 @@ export function useRoom(): RoomController {
           return;
         case 'error': {
           const { code, message: text } = message.payload;
-          if (code === 'not_found' && loadSession()) {
-            // Our stored room is gone; fall back to the home screen quietly.
+          if (joiningRef.current && (code === 'not_found' || code === 'bad_phase')) {
+            // The stored room is gone or no longer joinable: back to home, quietly.
+            joiningRef.current = false;
             clearSession();
             setRejoining(false);
+            roomRef.current = null;
             setRoom(null);
             setMe(null);
+            if (code === 'bad_phase') setError({ code, message: text, at: Date.now() });
             return;
           }
-          if (code === 'bad_phase' && loadSession() && !room) {
-            clearSession();
-            setRejoining(false);
-          }
+          joiningRef.current = false;
+          if (code === 'rate_limited') return; // the socket paces sends; a stray one is harmless
           setError({ code, message: text, at: Date.now() });
           sfx.error();
           return;
@@ -164,22 +181,34 @@ export function useRoom(): RoomController {
       | 'me'
       | 'prompts'
       | 'myPrompts'
+      | 'myRoastTokens'
       | 'roastedBy'
       | 'error'
       | 'clockOffset'
       | 'rejoining'
+      | 'everConnected'
     >
   >(
     () => ({
       createRoom: (name) => {
         nameRef.current = name;
         saveName(name);
+        joiningRef.current = true;
         send({ type: 'create_room', payload: { name } });
       },
       joinRoom: (code, name) => {
         nameRef.current = name;
         saveName(name);
+        joiningRef.current = true;
         send({ type: 'join_room', payload: { code, name } });
+      },
+      startOver: () => {
+        clearSession();
+        joiningRef.current = false;
+        setRejoining(false);
+        roomRef.current = null;
+        setRoom(null);
+        setMe(null);
       },
       leaveRoom: () => {
         send({ type: 'leave_room', payload: {} });
@@ -206,5 +235,18 @@ export function useRoom(): RoomController {
     [send],
   );
 
-  return { status, room, me, prompts, myPrompts, roastedBy, error, clockOffset, rejoining, ...api };
+  return {
+    status,
+    room,
+    me,
+    prompts,
+    myPrompts,
+    myRoastTokens,
+    roastedBy,
+    error,
+    clockOffset,
+    rejoining,
+    everConnected,
+    ...api,
+  };
 }

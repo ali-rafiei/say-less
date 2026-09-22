@@ -32,7 +32,7 @@ export function PlayerChip({
           <span className="pchip__initial display">{player.name.slice(0, 1).toUpperCase()}</span>
         )}
         {isLeader && (
-          <span className="pchip__crown" title="Leader">
+          <span className="pchip__crown" role="img" aria-label="Leader">
             👑
           </span>
         )}
