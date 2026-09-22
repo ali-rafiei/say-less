@@ -124,7 +124,7 @@ say-less/
 ├── shared/test/           Unit tests for the rules incl. the spec's worked examples
 ├── server/src/
 │   ├── index.ts           HTTP + WS entrypoint, static serving, /healthz, graceful shutdown
-│   ├── room.ts            THE state machine: one class per room (~900 lines, read this first)
+│   ├── room.ts            THE state machine: one class per room (~1000 lines, read this first)
 │   ├── roomManager.ts     Room registry, code generation, empty-room expiry
 │   ├── ws.ts              Gateway: socket↔player mapping, parsing, rate limit, dispatch
 │   ├── session.ts         HMAC session tokens

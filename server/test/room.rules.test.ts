@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { RoomError } from '../src/room.ts';
+import { RoomError, revealDuration } from '../src/room.ts';
 import type { PublicMatchup } from '../src/shared.ts';
-import { answerAll, makeRoom, startToWriting, type Harness } from './helpers.ts';
+import { advanceToPhaseEnd, answerAll, makeRoom, startToWriting, type Harness } from './helpers.ts';
 
 /** Advance through VOTING/MATCHUP_REVEAL until the round results, calling back on each reveal. */
 function drainRound(h: Harness, onReveal: (m: PublicMatchup) => void = () => {}): void {
@@ -9,7 +9,7 @@ function drainRound(h: Harness, onReveal: (m: PublicMatchup) => void = () => {})
     if (h.room.phase === 'VOTING') vi.advanceTimersByTime(20_000);
     else if (h.room.phase === 'MATCHUP_REVEAL') {
       onReveal(h.state().matchups[h.state().currentMatchupIndex]!);
-      vi.advanceTimersByTime(6_000);
+      advanceToPhaseEnd(h);
     } else throw new Error(`Unexpected phase ${h.room.phase}`);
   }
 }
@@ -233,7 +233,7 @@ describe('roast tokens', () => {
       } else {
         for (const v of voters) h.room.castVote(v.id, state.currentMatchupIndex, 0);
       }
-      vi.advanceTimersByTime(6_000);
+      advanceToPhaseEnd(h);
     }
     expect(h.room.phase).toBe('ROUND_RESULTS');
     expect(h.state().players.find((p) => p.id === 'b')!.stats.roasted).toBe(1);
@@ -300,6 +300,17 @@ describe('presence', () => {
       expect.objectContaining({ code: 'room_full' }),
     );
     expect(RoomError).toBeDefined();
+  });
+});
+
+describe('revealDuration', () => {
+  it('gives 6 s for short answers and scales to a 10 s cap for long ones', () => {
+    expect(revealDuration(20)).toBe(6_000);
+    expect(revealDuration(80)).toBe(6_000);
+    expect(revealDuration(81)).toBe(7_000);
+    expect(revealDuration(160)).toBe(8_000);
+    expect(revealDuration(240)).toBe(10_000);
+    expect(revealDuration(1000)).toBe(10_000);
   });
 });
 

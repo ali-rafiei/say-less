@@ -64,6 +64,13 @@ export function startToWriting(h: Harness, round: RoundIndex = 0): void {
   throw new Error('startToWriting only handles round 0; drive later rounds explicitly');
 }
 
+/** Advance fake time to the current phase's deadline (whatever the server chose). */
+export function advanceToPhaseEnd(h: Harness): void {
+  const endsAt = h.room.phaseEndsAt;
+  if (endsAt === null) throw new Error(`Phase ${h.room.phase} has no timer`);
+  vi.advanceTimersByTime(Math.max(endsAt - Date.now(), 0));
+}
+
 /** Everyone answers with text that reveals the author for the voter scripts. */
 export function answerAll(h: Harness, wordsFor: (playerId: string, limit: number) => string): void {
   for (const player of h.room.players) {

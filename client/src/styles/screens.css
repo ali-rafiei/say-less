@@ -1106,3 +1106,12 @@
   font-size: 15px;
   -webkit-user-select: none;
 }
+
+.startbar .btn--ghost {
+  flex: 0 0 auto;
+  min-width: 88px;
+}
+/* The corner mascot must not sit on top of the keyboard-shrunk viewport while typing. */
+.writing:has(.winput__field:focus) .corner-char {
+  display: none;
+}

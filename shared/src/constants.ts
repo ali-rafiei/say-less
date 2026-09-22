@@ -21,6 +21,9 @@ export const TIMERS = {
   ROAST_WINDOW: 10_000,
   VOTING: 20_000,
   MATCHUP_REVEAL: 6_000,
+  /** extra reveal time per 40 characters of combined answer text beyond 80, capped */
+  MATCHUP_REVEAL_PER_40_CHARS: 1_000,
+  MATCHUP_REVEAL_MAX: 10_000,
   ROUND_RESULTS: 8_000,
   FINAL_VOTING: 25_000,
 } as const;

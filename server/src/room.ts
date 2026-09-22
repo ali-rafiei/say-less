@@ -634,7 +634,7 @@ export class Room {
     }
     matchup.result = result;
     matchup.revealed = true;
-    this.enterPhase('MATCHUP_REVEAL', TIMERS.MATCHUP_REVEAL);
+    this.enterPhase('MATCHUP_REVEAL', revealDuration(a.text.length + b.text.length));
     this.broadcastAll({ type: 'reveal', payload: { matchupIndex: this.currentMatchupIndex } });
   }
 
@@ -1009,6 +1009,13 @@ export class Room {
       if (player.connected) this.deps.send(player.id, message);
     }
   }
+}
+
+/** Longer answers get more time on screen: 6 s base, +1 s per 40 chars past 80, max 10 s. */
+export function revealDuration(combinedChars: number): number {
+  const extra =
+    Math.max(0, Math.ceil((combinedChars - 80) / 40)) * TIMERS.MATCHUP_REVEAL_PER_40_CHARS;
+  return Math.min(TIMERS.MATCHUP_REVEAL + extra, TIMERS.MATCHUP_REVEAL_MAX);
 }
 
 function hash(input: string): number {

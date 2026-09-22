@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { answerAll, makeRoom, startToWriting, type Harness } from './helpers.ts';
+import { advanceToPhaseEnd, answerAll, makeRoom, startToWriting, type Harness } from './helpers.ts';
 
 /**
  * Scripted 3-player game. Author-revealing answers let the single voter always
@@ -31,7 +31,7 @@ function playMatchupRound(h: Harness): void {
     expect(h.room.phase).toBe('VOTING');
     voteForFirstAuthor(h);
     expect(h.room.phase).toBe('MATCHUP_REVEAL');
-    vi.advanceTimersByTime(6_000);
+    advanceToPhaseEnd(h);
   }
 }
 
