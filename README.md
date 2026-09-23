@@ -12,7 +12,7 @@ project: architecture, every rule as implemented, every deviation from the origi
 build spec, the deployment runbook, and where to pick up. If you are resuming work in a
 fresh session, read this file first, then `ASSETS.md` if you are touching art.
 
-- **Live game:** https://38daf.yeg.rac.sh/ (IPv6-only, see [Hosting](#hosting-on-cybera)).
+- **Live game:** https://38dcd.yeg.rac.sh/ (IPv6-only, see [Hosting](#hosting-on-cybera)).
   Cybera published the AAAA record about 50 minutes after the instance was created; the
   bare address `http://[2605:fd00:4:1001:f816:3eff:fe02:e97f]/` also works over plain HTTP.
 - **Repo:** https://github.com/ali-rafiei/say-less (public; contains no secrets)
@@ -446,9 +446,17 @@ Cybera Rapid Access Cloud (OpenStack, region Edmonton). Project quota: 8 instanc
 IPv6, plus an automatic DNS name `<hex>.yeg.rac.sh` (AAAA record only) stored as the
 server property `dns` and readable from the instance metadata service.
 
-| Instance        | Role                                         | Address                                                    |
-| --------------- | -------------------------------------------- | ---------------------------------------------------------- |
-| `say-less-prod` | this game, m1.medium (2 vCPU / 4 GB / 40 GB) | `38daf.yeg.rac.sh`, `2605:fd00:4:1001:f816:3eff:fe02:e97f` |
+| Instance         | Role                                        | Address                                                    |
+| ---------------- | ------------------------------------------- | ---------------------------------------------------------- |
+| `say-less-prod`  | this game, m1.micro (1 vCPU / 1 GB / 5 GB)  | `38dcd.yeg.rac.sh`, `2605:fd00:4:1001:f816:3eff:fe84:1b3a` |
+
+**Why m1.micro.** Every room lives in the server's memory and a full eight-player room is
+a few kilobytes, so serving a game costs almost nothing: under load the `app` container
+holds ~22 MB and Caddy ~38 MB, leaving over 500 MB free. The only demanding moment is the
+in-place Docker build, which needs more than 1 GB of RAM and about 800 MB of scratch disk.
+The flavor's own 1 GB swap partition covers the first; pruning the build cache after each
+build covers the second, and the root settles at ~59% full. A full three-browser Playwright
+game passes against this instance.
 
 Consequence of no floating IP: **the game is reachable over IPv6 only.** Canadian mobile
 carriers are IPv6, most home ISPs are too, but a phone on an IPv4-only Wi-Fi network
@@ -471,19 +479,19 @@ application credential in `cloud/secrets/clouds.yaml` (gitignored; mint one with
 
 ```bash
 # one-time: create the VM (idempotent) – installs Docker and starts the stack via cloud-init
-deploy/provision.sh say-less-prod m1.medium
+deploy/provision.sh say-less-prod m1.micro
 
 # every release: push main, then
-deploy/deploy.sh say-less-prod            # ssh: git reset to origin/main, compose up --build
-deploy/deploy.sh say-less-prod --logs     # bootstrap log + compose ps + recent container logs
+deploy/deploy.sh say-less-prod           # ssh: git reset to origin/main, compose up --build
+deploy/deploy.sh say-less-prod --logs    # bootstrap log + compose ps + recent container logs
 
 # manual access
-ssh -i cloud/secrets/say-less.pem ubuntu@2605:fd00:4:1001:f816:3eff:fe02:e97f
+ssh -i cloud/secrets/say-less.pem ubuntu@2605:fd00:4:1001:f816:3eff:fe84:1b3a
 sudo tail -f /var/log/say-less-bootstrap.log
 cd /opt/say-less/deploy && sudo docker compose logs -f
 ```
 
-Health: `curl -6 https://38daf.yeg.rac.sh/healthz` → `{"ok":true,"rooms":N,"prompts":245}`.
+Health: `curl -6 https://38dcd.yeg.rac.sh/healthz` → `{"ok":true,"rooms":N,"prompts":245}`.
 
 Rollback: `ssh … 'cd /opt/say-less && git reset --hard <sha> && cd deploy && sudo docker compose up -d --build'`.
 
@@ -493,7 +501,15 @@ deploy between sessions.
 Cloud-init (`deploy/cloud-init.yaml`) on first boot: adds Docker's apt repo, installs
 Docker CE + compose plugin, enables ufw, clones the public repo, reads `.meta.dns` from
 `http://169.254.169.254/openstack/latest/meta_data.json`, writes `deploy/.env`, and runs
-`docker compose up -d --build`. Log: `/var/log/say-less-bootstrap.log`.
+`docker compose up -d --build`. Log: `/var/log/say-less-bootstrap.log`. It also drops the
+apt caches and the Docker build cache, which together are ~1.2 GB on a 5 GB root, and adds
+a swapfile only if the flavor did not already attach swap.
+
+**The DNS name belongs to the instance, not to the project.** Replacing the instance gets a
+new `<hex>.yeg.rac.sh`, and the forward AAAA record takes roughly an hour to publish (the
+PTR exists immediately). So rebuilding the server means editing `VITE_WS_URL` in
+`.github/workflows/pages.yml` to the new name and pushing; keep the old instance running
+until the new record resolves and its certificate is issued.
 
 ---
 
@@ -522,6 +538,10 @@ flat-vector art direction, one unique character per player.
 
 ## Decisions log
 
+- **2026-09-23** Rebuild the server on an m1.micro (1 vCPU / 1 GB / 5 GB) and delete the
+  m1.medium, reusing the name `say-less-prod`. Measured runtime cost is ~60 MB across both containers,
+  so the larger flavor was buying nothing and holding half the project's RAM quota. The
+  5 GB root only works because the build cache is pruned after every build; see Hosting.
 - **2026-09-21** Host on a new dedicated m1.medium (`say-less-prod`); this uses the last
   of the project's RAM quota. IPv6-only via the rac.sh
   name + Let's Encrypt, chosen over a Cloudflare Tunnel. Public GitHub repo, commits per

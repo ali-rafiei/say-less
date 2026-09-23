@@ -27,7 +27,7 @@ jobs:
       - run: npm run build -w client
         env:
           BASE_PATH: /say-less/
-          VITE_WS_URL: wss://38daf.yeg.rac.sh/ws
+          VITE_WS_URL: wss://38dcd.yeg.rac.sh/ws
       - uses: actions/upload-pages-artifact@v3
         with:
           path: client/dist
