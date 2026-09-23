@@ -29,6 +29,8 @@ sudo docker compose up -d --build --remove-orphans
 # The Caddyfile is a bind-mounted file; git replaces the inode, so recreate Caddy to pick it up.
 sudo docker compose up -d --force-recreate caddy
 sudo docker image prune -f >/dev/null
+# m1.micro has a 5 GB root; the build cache is the biggest thing on it.
+sudo docker builder prune -af >/dev/null
 sudo docker compose ps
 REMOTE
 echo "Deployed. https://${DNS_NAME:-$IPV6}/"

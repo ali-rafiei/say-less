@@ -1,10 +1,14 @@
 #!/bin/bash
 # Create the Cybera instance for Say Less (one-time). Idempotent: exits if it exists.
 #   deploy/provision.sh [name] [flavor]
+#
+# m1.micro (1 vCPU, 1 GB RAM, 5 GB disk) is enough: the game holds every room in
+# memory and a full 8-player room is a few kilobytes. cloud-init adds swap so the
+# image still builds in place.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 NAME="${1:-say-less-prod}"
-FLAVOR="${2:-m1.medium}"
+FLAVOR="${2:-m1.micro}"
 OS=./cloud/os
 
 if $OS server show "$NAME" >/dev/null 2>&1; then

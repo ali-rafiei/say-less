@@ -2,6 +2,10 @@
 # First boot of the Say Less instance: install Docker, clone the public repo,
 # discover the Cybera-assigned DNS name from instance metadata, and start the
 # stack. Re-deploys are `deploy/deploy.sh` over SSH (git pull + compose up).
+#
+# Sized for m1.micro (1 vCPU, 1 GB RAM, 5 GB disk): the swapfile below keeps the
+# in-place image build from being OOM-killed, and the build cache is pruned once
+# the image exists so the root filesystem stays under half full.
 package_update: true
 package_upgrade: false
 packages:
@@ -19,6 +23,16 @@ write_files:
       set -euo pipefail
       exec > >(tee -a /var/log/say-less-bootstrap.log) 2>&1
       echo "== bootstrap $(date -Is)"
+
+      # 1 GB of RAM is not enough to run `npm ci` and the Vite build; 512 MB of
+      # swap is, and costs a tenth of the 5 GB disk.
+      if [ ! -f /swapfile ]; then
+        fallocate -l 512M /swapfile
+        chmod 600 /swapfile
+        mkswap /swapfile
+        swapon /swapfile
+        echo '/swapfile none swap sw 0 0' >> /etc/fstab
+      fi
 
       install -m 0755 -d /etc/apt/keyrings
       curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
@@ -51,6 +65,8 @@ write_files:
 
       cd /opt/say-less/deploy
       docker compose up -d --build
+      # The build cache is ~800 MB and is worth more as free disk on a 5 GB root.
+      docker builder prune -af >/dev/null
       echo "== bootstrap done $(date -Is)"
 
 runcmd:
