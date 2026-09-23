@@ -3,9 +3,9 @@
 # discover the Cybera-assigned DNS name from instance metadata, and start the
 # stack. Re-deploys are `deploy/deploy.sh` over SSH (git pull + compose up).
 #
-# Sized for m1.micro (1 vCPU, 1 GB RAM, 5 GB disk): the swapfile below keeps the
-# in-place image build from being OOM-killed, and the build cache is pruned once
-# the image exists so the root filesystem stays under half full.
+# Sized for m1.micro (1 vCPU, 1 GB RAM, 5 GB disk): swap keeps the in-place image
+# build from being OOM-killed, and the apt caches and Docker build cache are both
+# dropped once they have served their purpose so the root stays around 60% full.
 package_update: true
 package_upgrade: false
 packages:
@@ -24,9 +24,10 @@ write_files:
       exec > >(tee -a /var/log/say-less-bootstrap.log) 2>&1
       echo "== bootstrap $(date -Is)"
 
-      # 1 GB of RAM is not enough to run `npm ci` and the Vite build; 512 MB of
-      # swap is, and costs a tenth of the 5 GB disk.
-      if [ ! -f /swapfile ]; then
+      # 1 GB of RAM is not enough to run `npm ci` and the Vite build. m1.micro
+      # already attaches a 1 GB swap partition, so only fall back to a swapfile
+      # if some future flavor does not -- on a 5 GB root the space matters more.
+      if [ -z "$(swapon --show --noheadings)" ]; then
         fallocate -l 512M /swapfile
         chmod 600 /swapfile
         mkswap /swapfile
@@ -42,6 +43,9 @@ write_files:
       apt-get update -qq
       apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin
       usermod -aG docker ubuntu
+      # ~400 MB of apt caches on a 5 GB root, needed only during this install.
+      apt-get clean
+      rm -rf /var/lib/apt/lists/*
 
       ufw allow 22/tcp
       ufw allow 80/tcp
