@@ -435,7 +435,8 @@ uv run tools/dechroma.py
 ```
 
 This keys out the magenta, despills edges, cuts sheets into cells, trims, squares, resizes
-to 512 and writes both manifests. Commit the outputs under `client/public/`; the whole
+to 512 and writes WebP (quality 88, about a fifth of the PNG size: 2.2 MB for all 83
+images instead of 12 MB) plus both manifests. Commit the outputs under `client/public/`; the whole
 `art/` folder is gitignored.
 
 **Art provenance.** Generated on 2026-09-24 with ChatGPT's built-in image tool from the

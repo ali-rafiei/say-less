@@ -13,12 +13,13 @@ How it works:
    rules, because ChatGPT drifts between images.
 3. Save each result to the path given under its prompt.
 4. Run `uv run tools/dechroma.py`. It keys out the magenta, cuts each sheet into its cells,
-   trims, squares, resizes to 512 x 512 and writes the files the game loads.
+   trims, squares, resizes to 512 x 512 and writes WebP files the game loads (about a fifth
+   of the PNG size, which matters on a phone's data plan).
 
 What the game uses today:
 
 - **Character sprites are wired.** `client/src/components/Character.tsx` reads
-  `client/public/sprites/manifest.json` and shows the PNG instead of the SVG for every
+  `client/public/sprites/manifest.json` and shows the painted image instead of the SVG for every
   character/pose listed there. The tool writes that manifest.
 - **UI images are wired.** Stamps, icons, podium, how-to illustrations and the logo use
   `UIArt.tsx` and the generated `client/public/ui/manifest.json` bounds. App icons and the
@@ -29,30 +30,30 @@ What the game uses today:
 20 generations in total (12 character sheets, 4 UI sheets, 1 logo, 3 final files), plus two
 optional sets.
 
-| Done | Save ChatGPT's image as              | What                             | Grid, cells | The tool writes                             | Wired |
-| ---- | ------------------------------------ | -------------------------------- | ----------- | ------------------------------------------- | ----- |
-| [x]  | `art/raw/characters/cat.png`         | Cat, 5 poses                     | 3x2, 5      | `client/public/sprites/cat/<pose>.png`      | yes   |
-| [x]  | `art/raw/characters/monkey.png`      | Monkey, 5 poses                  | 3x2, 5      | `client/public/sprites/monkey/<pose>.png`   | yes   |
-| [x]  | `art/raw/characters/frog.png`        | Frog, 5 poses                    | 3x2, 5      | `client/public/sprites/frog/<pose>.png`     | yes   |
-| [x]  | `art/raw/characters/bird.png`        | Bird, 5 poses                    | 3x2, 5      | `client/public/sprites/bird/<pose>.png`     | yes   |
-| [x]  | `art/raw/characters/axolotl.png`     | Axolotl, 5 poses                 | 3x2, 5      | `client/public/sprites/axolotl/<pose>.png`  | yes   |
-| [x]  | `art/raw/characters/bear.png`        | Bear, 5 poses                    | 3x2, 5      | `client/public/sprites/bear/<pose>.png`     | yes   |
-| [x]  | `art/raw/characters/rabbit.png`      | Rabbit, 5 poses                  | 3x2, 5      | `client/public/sprites/rabbit/<pose>.png`   | yes   |
-| [x]  | `art/raw/characters/fish.png`        | Fish, 5 poses                    | 3x2, 5      | `client/public/sprites/fish/<pose>.png`     | yes   |
-| [x]  | `art/raw/characters/blob.png`        | Blob, 5 poses                    | 3x2, 5      | `client/public/sprites/blob/<pose>.png`     | yes   |
-| [x]  | `art/raw/characters/otter.png`       | Otter, 5 poses                   | 3x2, 5      | `client/public/sprites/otter/<pose>.png`    | yes   |
-| [x]  | `art/raw/characters/penguin.png`     | Penguin, 5 poses                 | 3x2, 5      | `client/public/sprites/penguin/<pose>.png`  | yes   |
-| [x]  | `art/raw/characters/hedgehog.png`    | Hedgehog, 5 poses                | 3x2, 5      | `client/public/sprites/hedgehog/<pose>.png` | yes   |
-| [x]  | `art/raw/sheets/stamps.png`          | Bonus stamps with text           | 3x2, 5      | `client/public/ui/<stamp>.png`              | yes   |
-| [x]  | `art/raw/sheets/icons.png`           | Icons (flame, crown, sound, ...) | 4x2, 8      | `client/public/ui/<icon>.png`               | yes   |
-| [x]  | `art/raw/sheets/podium.png`          | Podium stands 1, 2, 3            | 3x1, 3      | `client/public/ui/stand-<n>.png`            | yes   |
-| [x]  | `art/raw/sheets/howto.png`           | How-to-play illustrations        | 3x2, 6      | `client/public/ui/howto-<step>.png`         | yes   |
-| [x]  | `art/raw/ui/logo.png`                | SAY LESS wordmark                | single      | `client/public/ui/logo.png`                 | yes   |
-| [x]  | `client/public/icon-512.png`         | App icon, 512 x 512              | final file  | (not processed by the tool)                 | yes   |
-| [x]  | `client/public/apple-touch-icon.png` | iOS home-screen icon, 180 x 180  | final file  | (not processed by the tool)                 | yes   |
-| [x]  | `client/public/og-image.png`         | Link-preview card, 1200 x 630    | final file  | (not processed by the tool)                 | yes   |
-| [ ]  | `client/public/ui/bg-<palette>.png`  | Optional: 6 background tiles     | final files | (not processed by the tool)                 | no    |
-| [ ]  | `art/raw/later/confetti.png`         | Optional: confetti pieces        | 4x2, 8      | (not processed until it is wired)           | no    |
+| Done | Save ChatGPT's image as              | What                             | Grid, cells | The tool writes                              | Wired |
+| ---- | ------------------------------------ | -------------------------------- | ----------- | -------------------------------------------- | ----- |
+| [x]  | `art/raw/characters/cat.png`         | Cat, 5 poses                     | 3x2, 5      | `client/public/sprites/cat/<pose>.webp`      | yes   |
+| [x]  | `art/raw/characters/monkey.png`      | Monkey, 5 poses                  | 3x2, 5      | `client/public/sprites/monkey/<pose>.webp`   | yes   |
+| [x]  | `art/raw/characters/frog.png`        | Frog, 5 poses                    | 3x2, 5      | `client/public/sprites/frog/<pose>.webp`     | yes   |
+| [x]  | `art/raw/characters/bird.png`        | Bird, 5 poses                    | 3x2, 5      | `client/public/sprites/bird/<pose>.webp`     | yes   |
+| [x]  | `art/raw/characters/axolotl.png`     | Axolotl, 5 poses                 | 3x2, 5      | `client/public/sprites/axolotl/<pose>.webp`  | yes   |
+| [x]  | `art/raw/characters/bear.png`        | Bear, 5 poses                    | 3x2, 5      | `client/public/sprites/bear/<pose>.webp`     | yes   |
+| [x]  | `art/raw/characters/rabbit.png`      | Rabbit, 5 poses                  | 3x2, 5      | `client/public/sprites/rabbit/<pose>.webp`   | yes   |
+| [x]  | `art/raw/characters/fish.png`        | Fish, 5 poses                    | 3x2, 5      | `client/public/sprites/fish/<pose>.webp`     | yes   |
+| [x]  | `art/raw/characters/blob.png`        | Blob, 5 poses                    | 3x2, 5      | `client/public/sprites/blob/<pose>.webp`     | yes   |
+| [x]  | `art/raw/characters/otter.png`       | Otter, 5 poses                   | 3x2, 5      | `client/public/sprites/otter/<pose>.webp`    | yes   |
+| [x]  | `art/raw/characters/penguin.png`     | Penguin, 5 poses                 | 3x2, 5      | `client/public/sprites/penguin/<pose>.webp`  | yes   |
+| [x]  | `art/raw/characters/hedgehog.png`    | Hedgehog, 5 poses                | 3x2, 5      | `client/public/sprites/hedgehog/<pose>.webp` | yes   |
+| [x]  | `art/raw/sheets/stamps.png`          | Bonus stamps with text           | 3x2, 5      | `client/public/ui/<stamp>.webp`              | yes   |
+| [x]  | `art/raw/sheets/icons.png`           | Icons (flame, crown, sound, ...) | 4x2, 8      | `client/public/ui/<icon>.webp`               | yes   |
+| [x]  | `art/raw/sheets/podium.png`          | Podium stands 1, 2, 3            | 3x1, 3      | `client/public/ui/stand-<n>.webp`            | yes   |
+| [x]  | `art/raw/sheets/howto.png`           | How-to-play illustrations        | 3x2, 6      | `client/public/ui/howto-<step>.webp`         | yes   |
+| [x]  | `art/raw/ui/logo.png`                | SAY LESS wordmark                | single      | `client/public/ui/logo.webp`                 | yes   |
+| [x]  | `client/public/icon-512.png`         | App icon, 512 x 512              | final file  | (not processed by the tool)                  | yes   |
+| [x]  | `client/public/apple-touch-icon.png` | iOS home-screen icon, 180 x 180  | final file  | (not processed by the tool)                  | yes   |
+| [x]  | `client/public/og-image.png`         | Link-preview card, 1200 x 630    | final file  | (not processed by the tool)                  | yes   |
+| [ ]  | `client/public/ui/bg-<palette>.png`  | Optional: 6 background tiles     | final files | (not processed by the tool)                  | no    |
+| [ ]  | `art/raw/later/confetti.png`         | Optional: confetti pieces        | 4x2, 8      | (not processed until it is wired)            | no    |
 
 For the three final files, save ChatGPT's original under `art/raw/final/` and resize it into
 place with the command given in section 3.6.
@@ -1079,7 +1080,7 @@ Nothing to generate: every sound is synthesized at runtime in `client/src/audio/
    ```
 
    Sheets are still cut in memory, and each cell prints as
-   `art/raw/characters/cat.png [writing] -> client/public/sprites/cat/writing.png`. Look for
+   `art/raw/characters/cat.png [writing] -> client/public/sprites/cat/writing.webp`. Look for
    a warning like:
 
    ```
@@ -1098,11 +1099,11 @@ Nothing to generate: every sound is synthesized at runtime in `client/src/audio/
    uv run tools/dechroma.py
    ```
 
-   It writes `client/public/sprites/<id>/<pose>.png`, `client/public/ui/<name>.png`
+   It writes `client/public/sprites/<id>/<pose>.webp`, `client/public/ui/<name>.webp`
    (512 x 512; `--size 768` for bigger) and rewrites both the sprite and UI manifests.
    About a second per 2048 px sheet.
 
-4. **Look at the output** (open a few PNGs on a dark and a light background):
+4. **Look at the output** (open a few of the WebP files on a dark and a light background):
    - Edges do not glow pink. If they do, raise `soft_hi` in `key_out_magenta` in
      `tools/dechroma.py` (default 170) and run again.
    - The keyer now protects coral, grey and dusty lavender before applying its distance threshold.

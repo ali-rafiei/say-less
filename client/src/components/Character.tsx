@@ -31,7 +31,7 @@ const SVGS: Record<string, string> = {
 };
 
 /**
- * Optional raster sprites (from /public/sprites/<id>/<state>.png, listed in
+ * Optional raster sprites (from /public/sprites/<id>/<state>.webp, listed in
  * manifest.json) override the vector placeholder for that state.
  */
 type SpriteManifest = Record<string, string[]>;
@@ -72,7 +72,7 @@ export function Character({ characterId, state = 'idle', size = 96, className = 
     return <div className={`char-wrap char-empty ${className}`} style={style} data-state={state} />;
   }
   const sprite = manifest[characterId]?.includes(state)
-    ? `${import.meta.env.BASE_URL}sprites/${characterId}/${state}.png`
+    ? `${import.meta.env.BASE_URL}sprites/${characterId}/${state}.webp`
     : null;
   if (sprite) {
     return (

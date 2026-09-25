@@ -23,7 +23,7 @@ export function UIArt({
   } as CSSProperties;
   return (
     <span className={`ui-art ${className}`} style={style} aria-hidden={label ? undefined : true}>
-      <img src={`${import.meta.env.BASE_URL}ui/${name}.png`} alt={label} draggable={false} />
+      <img src={`${import.meta.env.BASE_URL}ui/${name}.webp`} alt={label} draggable={false} />
     </span>
   );
 }

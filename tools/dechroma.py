@@ -12,9 +12,9 @@ Usage (from the repo root):
 
 Input layout (see ASSETS.md):
     art/raw/characters/<characterId>.png           sheet, 3x2: idle writing waiting / win lose
-                                                   -> client/public/sprites/<characterId>/<state>.png
+                                                   -> client/public/sprites/<characterId>/<state>.webp
     art/raw/characters/<characterId>/<state>.png   single pose; replaces that sheet cell at the cell's scale
-    art/raw/sheets/<sheet>.png                     UI sheet, cells as in SHEETS -> client/public/ui/<name>.png
+    art/raw/sheets/<sheet>.png                     UI sheet, cells as in SHEETS -> client/public/ui/<name>.webp
     art/raw/ui/<name>.png                          single UI image; wins over a sheet cell of the same name
 
 Sheets are cut by projection: key out the magenta, find bands of rows holding any
@@ -63,6 +63,11 @@ CHARACTER_IDS = [
 STATES = ["idle", "writing", "waiting", "win", "lose"]
 
 KEY = (255, 0, 255)
+# WebP with alpha is about a fifth of the PNG size at no visible cost, which matters on a
+# phone's data plan: the lobby alone shows twelve characters. iOS Safari 14+ and every
+# Android Chrome decode it.
+OUTPUT_SUFFIX = ".webp"
+WEBP_QUALITY = 88
 OPAQUE_ALPHA = 128
 MERGE_GAP_RATIO = 0.04
 SELF_TEST_COLOURS = [
@@ -129,7 +134,7 @@ def main() -> int:
         print(f"wrote {OUT_SPRITES.relative_to(ROOT)}/manifest.json")
         if OUT_UI.exists():
             bounds = {}
-            for path in sorted(OUT_UI.glob("*.png")):
+            for path in sorted(OUT_UI.glob(f"*{OUTPUT_SUFFIX}")):
                 with Image.open(path) as image:
                     alpha = image.convert("RGBA").getchannel("A")
                     box = alpha.point(lambda a: 255 if a >= OPAQUE_ALPHA else 0).getbbox()
@@ -160,7 +165,7 @@ def convert_characters(size: int, dry_run: bool, manifest: dict[str, list[str]])
             with Image.open(sheet) as raw:
                 frames = cut_sheet(raw, CHARACTER_SHEET, size, str(sheet.relative_to(ROOT)))
         for state, source in singles.items():
-            _convert_single(source, out_dir / f"{state}.png", size, dry_run, frame=frames.get(state))
+            _convert_single(source, out_dir / f"{state}{OUTPUT_SUFFIX}", size, dry_run, frame=frames.get(state))
         written = set(singles)
         if sheet.exists():
             written |= _convert_sheet(sheet, CHARACTER_SHEET, out_dir, size, dry_run, skip=set(singles))
@@ -181,7 +186,7 @@ def convert_ui(size: int, dry_run: bool) -> int:
                 continue
             processed += len(_convert_sheet(sheet, layout, OUT_UI, size, dry_run, skip={s.stem for s in singles}))
     for single in singles:
-        _convert_single(single, OUT_UI / single.name, size, dry_run)
+        _convert_single(single, OUT_UI / f"{single.stem}{OUTPUT_SUFFIX}", size, dry_run)
         processed += 1
     return processed
 
@@ -333,7 +338,7 @@ def _convert_single(source: Path, target: Path, size: int, dry_run: bool, frame:
         keyed = key_out_magenta(raw)
     sprite = fit_replacement(keyed, frame) if frame is not None else trim_and_square(keyed, size)
     target.parent.mkdir(parents=True, exist_ok=True)
-    sprite.save(target, optimize=True)
+    _save(sprite, target)
 
 
 def fit_replacement(image: Image.Image, frame: Image.Image) -> Image.Image:
@@ -363,7 +368,7 @@ def _convert_sheet(
         sprites = cut_sheet(raw, layout, size, str(source.relative_to(ROOT)))
     written = set()
     for name, sprite in sprites.items():
-        target = out_dir / f"{name}.png"
+        target = out_dir / f"{name}{OUTPUT_SUFFIX}"
         if name in skip:
             print(f"{source.relative_to(ROOT)} [{name}] skipped: a single file replaces this cell")
             continue
@@ -371,7 +376,7 @@ def _convert_sheet(
         written.add(name)
         if not dry_run:
             target.parent.mkdir(parents=True, exist_ok=True)
-            sprite.save(target, optimize=True)
+            _save(sprite, target)
     return written
 
 
@@ -527,6 +532,10 @@ def _dominant_colour(sprite: Image.Image) -> tuple[int, int, int]:
 def _has_colour(sprite: Image.Image, colour: tuple[int, int, int], tolerance: int = 16) -> bool:
     counts = sprite.getcolors(sprite.width * sprite.height) or []
     return any(rgba[3] == 255 and max(abs(rgba[i] - colour[i]) for i in range(3)) <= tolerance for _, rgba in counts)
+
+
+def _save(sprite: Image.Image, target: Path) -> None:
+    sprite.save(target, "WEBP", quality=WEBP_QUALITY, method=6)
 
 
 def _opaque_bbox(image: Image.Image) -> tuple[int, int, int, int] | None:

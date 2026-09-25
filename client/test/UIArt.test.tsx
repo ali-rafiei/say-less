@@ -13,6 +13,6 @@ describe('UIArt', () => {
     const html = renderToStaticMarkup(<UIArt name="logo" />);
 
     // Assert
-    expect(html).toContain('src="/say-less/ui/logo.png"');
+    expect(html).toContain('src="/say-less/ui/logo.webp"');
   });
 });
