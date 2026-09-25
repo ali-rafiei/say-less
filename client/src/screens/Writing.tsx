@@ -1,3 +1,4 @@
+import { UIArt } from '../components/UIArt.tsx';
 import { ROUNDS, type PublicRoomState } from '@say-less/shared';
 import { useEffect, useState } from 'react';
 import { sfx } from '../audio/sfx.ts';
@@ -57,7 +58,7 @@ export function Writing({ ctl, room, me }: Props) {
           role="dialog"
         >
           <div className="overlay__box">
-            <span className="overlay__fire">🔥</span>
+            <UIArt name="flame" className="overlay__fire" />
             <h2 className="display">YOU'VE BEEN ROASTED</h2>
             <p>
               <b>{ctl.roastedBy}</b> cut you down to <b>2 words</b> on your next answer.
@@ -78,7 +79,9 @@ export function Writing({ ctl, room, me }: Props) {
       {roastWindow && (
         <section className="card stack roast">
           <div className="row row--between">
-            <h2 className="display">🔥 Roast window</h2>
+            <h2 className="display">
+              <UIArt name="flame" /> Roast window
+            </h2>
             <TimerRing
               endsAt={room.roastWindowEndsAt}
               startedAt={(room.roastWindowEndsAt ?? 0) - 10_000}
@@ -134,7 +137,12 @@ export function Writing({ ctl, room, me }: Props) {
           <div className="card deck__card stack" key={current.promptId}>
             <span className="dim small">
               {ctl.prompts.length - pending.length + 1} of {ctl.prompts.length}
-              {current.effectiveLimit === 2 && room.phase === 'WRITING' ? ' · 🔥 roasted' : ''}
+              {current.effectiveLimit === 2 && room.phase === 'WRITING' && (
+                <>
+                  {' '}
+                  · <UIArt name="flame" /> roasted
+                </>
+              )}
             </span>
             <h2 className="prompt display">{current.text}</h2>
             <WordInput
@@ -152,7 +160,9 @@ export function Writing({ ctl, room, me }: Props) {
 
       {!current && ctl.prompts.length > 0 && (
         <section className="card stack center">
-          <h2 className="display">Waiting on…</h2>
+          <h2 className="display">
+            <UIArt name="pencil" /> Waiting on…
+          </h2>
           <div className="pgrid">
             {room.players
               .filter((p) => !room.submittedIds.includes(p.id) && p.id !== me)

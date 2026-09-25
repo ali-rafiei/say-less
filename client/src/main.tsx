@@ -4,6 +4,7 @@ import '@fontsource/nunito/700.css';
 import './styles/global.css';
 import './styles/characters.css';
 import './styles/screens.css';
+import './styles/art.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App.tsx';

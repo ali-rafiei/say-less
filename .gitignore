@@ -19,8 +19,9 @@ dist-types/
 *.tsbuildinfo
 .vite/
 
-# Generated sprites (source PNGs with magenta backgrounds live in art/raw, not committed)
-art/raw/**/*.png
+# Art sources: ChatGPT originals on magenta, revisions, and generation notes. Only the
+# processed files under client/public/ are committed.
+art/
 
 # macOS
 .DS_Store

@@ -13,7 +13,7 @@ Usage (from the repo root):
 Input layout (see ASSETS.md):
     art/raw/characters/<characterId>.png           sheet, 3x2: idle writing waiting / win lose
                                                    -> client/public/sprites/<characterId>/<state>.png
-    art/raw/characters/<characterId>/<state>.png   single pose; wins over that pose's sheet cell
+    art/raw/characters/<characterId>/<state>.png   single pose; replaces that sheet cell at the cell's scale
     art/raw/sheets/<sheet>.png                     UI sheet, cells as in SHEETS -> client/public/ui/<name>.png
     art/raw/ui/<name>.png                          single UI image; wins over a sheet cell of the same name
 
@@ -127,6 +127,16 @@ def main() -> int:
         OUT_SPRITES.mkdir(parents=True, exist_ok=True)
         (OUT_SPRITES / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
         print(f"wrote {OUT_SPRITES.relative_to(ROOT)}/manifest.json")
+        if OUT_UI.exists():
+            bounds = {}
+            for path in sorted(OUT_UI.glob("*.png")):
+                with Image.open(path) as image:
+                    alpha = image.convert("RGBA").getchannel("A")
+                    box = alpha.point(lambda a: 255 if a >= OPAQUE_ALPHA else 0).getbbox()
+                    if box:
+                        left, top, right, bottom = box
+                        bounds[path.stem] = dict(x=left, y=top, width=right-left, height=bottom-top, size=image.width)
+            (OUT_UI / "manifest.json").write_text(json.dumps(bounds, indent=2, sort_keys=True) + "\n")
     print(f"{processed} file(s) processed")
     if processed == 0:
         print("Nothing found under art/raw/. See ASSETS.md for the expected layout.", file=sys.stderr)
@@ -144,10 +154,14 @@ def convert_characters(size: int, dry_run: bool, manifest: dict[str, list[str]])
             continue
         out_dir = OUT_SPRITES / character_id
         singles = _single_poses(RAW_CHARACTERS / character_id)
-        for state, source in singles.items():
-            _convert_single(source, out_dir / f"{state}.png", size, dry_run)
-        written = set(singles)
         sheet = RAW_CHARACTERS / f"{character_id}.png"
+        frames = {}
+        if singles and sheet.exists():
+            with Image.open(sheet) as raw:
+                frames = cut_sheet(raw, CHARACTER_SHEET, size, str(sheet.relative_to(ROOT)))
+        for state, source in singles.items():
+            _convert_single(source, out_dir / f"{state}.png", size, dry_run, frame=frames.get(state))
+        written = set(singles)
         if sheet.exists():
             written |= _convert_sheet(sheet, CHARACTER_SHEET, out_dir, size, dry_run, skip=set(singles))
         processed += len(written)
@@ -201,6 +215,40 @@ def self_test() -> int:
     assert "even 3x2 grid" in warnings.getvalue(), f"bridged sheet did not fall back: {warnings.getvalue()!r}"
     _check_cells("bridged characters", CHARACTER_SHEET, sprites, colours, size, same_baseline=True)
     print(f"ok bridged characters (even-grid fallback): {' '.join(sprites)}")
+    narrow = Image.new("RGB", (600, 400), KEY)
+    draw = ImageDraw.Draw(narrow)
+    colours = dict(zip(STATES, SELF_TEST_COLOURS))
+    boxes = [(30, 30, 210, 175), (225, 30, 385, 175), (430, 30, 575, 175),
+             (30, 230, 210, 375), (225, 230, 385, 375)]
+    for name, box in zip(STATES, boxes):
+        draw.rectangle(box, fill=colours[name])
+    keyed = key_out_magenta(narrow)
+    cells = _find_cells(keyed, CHARACTER_SHEET, "narrow gaps")
+    assert cells["idle"][2] == 211, "narrow-gap cut clipped art at the even-grid boundary"
+    for name, box in cells.items():
+        crop = keyed.crop(box)
+        opaque_colours = {rgba[:3] for _, rgba in crop.getcolors(crop.width * crop.height) if rgba[3]}
+        assert opaque_colours == {colours[name]}, f"narrow-gap {name}: neighbouring art leaked in"
+    for colour in ((232, 128, 122, 255), (160, 130, 150, 255), (125, 125, 125, 255), (255, 61, 104, 255)):
+        assert key_out_magenta(Image.new("RGBA", (1, 1), colour)).getpixel((0, 0)) == colour
+    dark_edge = key_out_magenta(Image.new("RGBA", (1, 1), (80, 24, 100, 255))).getpixel((0, 0))
+    assert dark_edge == (24, 24, 44, 255), f"dark edge still has a magenta cast: {dark_edge}"
+    assert key_out_magenta(Image.new("RGB", (1, 1), KEY)).getpixel((0, 0))[3] == 0
+    print("ok narrow-gap crops and opaque coral colours")
+    body = (200, 120, 80, 255)
+    frame = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
+    ImageDraw.Draw(frame).rectangle((156, 60, 355, 479), fill=body)
+    revision = Image.new("RGBA", (1000, 1000), (0, 0, 0, 0))
+    ImageDraw.Draw(revision).rectangle((300, 100, 699, 939), fill=body)
+    for corner in ((4, 4), (995, 4), (4, 995), (995, 995)):
+        revision.putpixel(corner, (255, 0, 255, 60))
+    fitted_box = _opaque_bbox(fit_replacement(revision, frame))
+    frame_box = _opaque_bbox(frame)
+    assert fitted_box[3] == frame_box[3], f"revision lost the baseline: {fitted_box} vs {frame_box}"
+    assert fitted_box[3] - fitted_box[1] >= (frame_box[3] - frame_box[1]) - 2, (
+        f"faint specks shrank the revision: {fitted_box} vs {frame_box}"
+    )
+    print("ok revised pose keeps its sheet scale despite faint specks")
     print("self-test passed")
     return 0
 
@@ -220,7 +268,7 @@ def cut_sheet(sheet: Image.Image, layout: SheetLayout, size: int, label: str) ->
     return {name: trim_and_square(crop, size) for name, crop in crops.items()}
 
 
-def key_out_magenta(image: Image.Image, soft_lo: int = 40, soft_hi: int = 140) -> Image.Image:
+def key_out_magenta(image: Image.Image, soft_lo: int = 40, soft_hi: int = 170) -> Image.Image:
     """Alpha from distance to pure magenta; despill the pink fringe on soft edges."""
     rgba = image.convert("RGBA")
     pixels = rgba.load()
@@ -228,16 +276,24 @@ def key_out_magenta(image: Image.Image, soft_lo: int = 40, soft_hi: int = 140) -
     for y in range(height):
         for x in range(width):
             r, g, b, a = pixels[x, y]
-            # Magenta-ness: high R and B, low G.
+            # Only key colours with a magenta cast. Distance alone also catches
+            # opaque coral, dusty lavender and medium grey inside the artwork.
+            excess = min(r, b) - g
+            if excess <= 30 or b < r * 0.75:
+                continue
             distance = max(abs(r - KEY[0]), abs(g - KEY[1]), abs(b - KEY[2]))
             if distance <= soft_lo:
                 pixels[x, y] = (0, 0, 0, 0)
             elif distance < soft_hi:
                 alpha = int(255 * (distance - soft_lo) / (soft_hi - soft_lo))
                 # Despill: pull R/B toward G so the edge does not glow pink.
-                r2 = min(r, g + (r - g) // 3)
-                b2 = min(b, g + (b - g) // 3)
+                r2 = max(0, r - excess)
+                b2 = max(0, b - excess)
                 pixels[x, y] = (r2, g, b2, min(a, alpha))
+            else:
+                # Dark antialiased ink edges may be far from the bright key
+                # while retaining a visible magenta fringe.
+                pixels[x, y] = (max(0, r - excess), g, max(0, b - excess), a)
     return rgba
 
 
@@ -269,15 +325,35 @@ def _single_poses(folder: Path) -> dict[str, Path]:
     return poses
 
 
-def _convert_single(source: Path, target: Path, size: int, dry_run: bool) -> None:
+def _convert_single(source: Path, target: Path, size: int, dry_run: bool, frame: Image.Image | None = None) -> None:
     print(f"{source.relative_to(ROOT)} -> {target.relative_to(ROOT)}")
     if dry_run:
         return
     with Image.open(source) as raw:
         keyed = key_out_magenta(raw)
-    sprite = trim_and_square(keyed, size)
+    sprite = fit_replacement(keyed, frame) if frame is not None else trim_and_square(keyed, size)
     target.parent.mkdir(parents=True, exist_ok=True)
     sprite.save(target, optimize=True)
+
+
+def fit_replacement(image: Image.Image, frame: Image.Image) -> Image.Image:
+    """Keep a revised pose inside its original sheet pose's scale and baseline.
+
+    Both poses are measured by their opaque pixels. An edited image often keeps a
+    faint, half-keyed haze of uneven background far from the character, and measuring
+    that would shrink the character to fit it.
+    """
+    bounds = _opaque_bbox(frame)
+    subject = _opaque_bbox(image)
+    if bounds is None or subject is None:
+        raise ValueError("replacement or reference pose is empty")
+    left, top, right, bottom = bounds
+    cropped = image.crop(subject)
+    scale = min((right - left) / cropped.width, (bottom - top) / cropped.height)
+    resized = cropped.resize((max(1, round(cropped.width * scale)), max(1, round(cropped.height * scale))), Image.LANCZOS)
+    result = Image.new("RGBA", frame.size, (0, 0, 0, 0))
+    result.paste(resized, ((left + right - resized.width) // 2, bottom - resized.height))
+    return result
 
 
 def _convert_sheet(
@@ -301,15 +377,18 @@ def _convert_sheet(
 
 def _find_cells(keyed: Image.Image, layout: SheetLayout, label: str) -> dict[str, tuple[int, int, int, int]]:
     mask = keyed.getchannel("A").point(lambda a: 255 if a >= OPAQUE_ALPHA else 0)
-    column_gap = int(keyed.width * MERGE_GAP_RATIO)
-    found = []
-    for top, bottom in _runs(_occupied_rows(mask), int(keyed.height * MERGE_GAP_RATIO)):
-        band = mask.crop((0, top, mask.width, bottom)).transpose(Image.Transpose.TRANSPOSE)
-        found.append([(left, top, right, bottom) for left, right in _runs(_occupied_rows(band), column_gap)])
-    found_per_row = [len(row) for row in found]
     expected_per_row = [len(row) for row in layout.names_per_row]
-    if found_per_row == expected_per_row:
-        return dict(zip(layout.names, (box for row in found for box in row)))
+    # Narrow inter-cell gaps can be smaller than the default prop-merging radius.
+    # Retry conservatively, accepting a cut only when every row matches the layout.
+    for ratio in (MERGE_GAP_RATIO, 0.03, 0.025, 0.02, 0.015, 0.01, 0.005):
+        column_gap = int(keyed.width * ratio)
+        found = []
+        for top, bottom in _runs(_occupied_rows(mask), int(keyed.height * MERGE_GAP_RATIO)):
+            band = mask.crop((0, top, mask.width, bottom)).transpose(Image.Transpose.TRANSPOSE)
+            found.append([(left, top, right, bottom) for left, right in _runs(_occupied_rows(band), column_gap)])
+        found_per_row = [len(row) for row in found]
+        if found_per_row == expected_per_row:
+            return dict(zip(layout.names, (box for row in found for box in row)))
     print(
         f"warning: {label}: found {sum(found_per_row)} cells (rows of {found_per_row}), "
         f"expected {sum(expected_per_row)} (rows of {expected_per_row}); "
@@ -448,6 +527,10 @@ def _dominant_colour(sprite: Image.Image) -> tuple[int, int, int]:
 def _has_colour(sprite: Image.Image, colour: tuple[int, int, int], tolerance: int = 16) -> bool:
     counts = sprite.getcolors(sprite.width * sprite.height) or []
     return any(rgba[3] == 255 and max(abs(rgba[i] - colour[i]) for i in range(3)) <= tolerance for _, rgba in counts)
+
+
+def _opaque_bbox(image: Image.Image) -> tuple[int, int, int, int] | None:
+    return image.getchannel("A").point(lambda a: 255 if a >= OPAQUE_ALPHA else 0).getbbox()
 
 
 def _opaque_size(sprite: Image.Image) -> tuple[int, int]:

@@ -1,3 +1,4 @@
+import { UIArt } from './UIArt.tsx';
 import { ROUNDS, type PublicRoomState } from '@say-less/shared';
 import { useState } from 'react';
 import { sfx } from '../audio/sfx.ts';
@@ -46,7 +47,7 @@ export function Header({ room, clockOffset, limit, limitLabel }: Props) {
             setMuted(!muted);
           }}
         >
-          {muted ? '🔇' : '🔊'}
+          <UIArt name={muted ? 'sound-off' : 'sound-on'} />
         </button>
       </div>
     </header>

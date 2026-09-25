@@ -1,3 +1,4 @@
+import { UIArt } from './UIArt.tsx';
 import { useEffect, useState } from 'react';
 
 interface Props {
@@ -24,9 +25,11 @@ export function LimitChips({ limit, shatterFrom, label, size = 'small' }: Props)
         return (
           <span
             key={i}
-            className={`chip ${doomed ? 'chip--doomed' : ''} ${doomed && shattering ? 'chip--shatter' : ''}`}
+            className={`chip chip--art ${doomed ? 'chip--doomed' : ''} ${doomed && shattering ? 'chip--shatter' : ''}`}
             style={{ animationDelay: doomed ? `${(i - limit) * 40}ms` : undefined }}
-          />
+          >
+            <UIArt name="tile" />
+          </span>
         );
       })}
       {label && <span className="chips__label display">{label}</span>}

@@ -3,3 +3,5 @@ node_modules
 .venv
 content/prompts.json
 client/src/characters/svg
+client/public/sprites/manifest.json
+client/public/ui/manifest.json

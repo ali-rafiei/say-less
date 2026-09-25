@@ -1,1 +1,86 @@
-{}
+{
+  "axolotl": [
+    "idle",
+    "writing",
+    "waiting",
+    "win",
+    "lose"
+  ],
+  "bear": [
+    "idle",
+    "writing",
+    "waiting",
+    "win",
+    "lose"
+  ],
+  "bird": [
+    "idle",
+    "writing",
+    "waiting",
+    "win",
+    "lose"
+  ],
+  "blob": [
+    "idle",
+    "writing",
+    "waiting",
+    "win",
+    "lose"
+  ],
+  "cat": [
+    "idle",
+    "writing",
+    "waiting",
+    "win",
+    "lose"
+  ],
+  "fish": [
+    "idle",
+    "writing",
+    "waiting",
+    "win",
+    "lose"
+  ],
+  "frog": [
+    "idle",
+    "writing",
+    "waiting",
+    "win",
+    "lose"
+  ],
+  "hedgehog": [
+    "idle",
+    "writing",
+    "waiting",
+    "win",
+    "lose"
+  ],
+  "monkey": [
+    "idle",
+    "writing",
+    "waiting",
+    "win",
+    "lose"
+  ],
+  "otter": [
+    "idle",
+    "writing",
+    "waiting",
+    "win",
+    "lose"
+  ],
+  "penguin": [
+    "idle",
+    "writing",
+    "waiting",
+    "win",
+    "lose"
+  ],
+  "rabbit": [
+    "idle",
+    "writing",
+    "waiting",
+    "win",
+    "lose"
+  ]
+}

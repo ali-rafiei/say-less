@@ -1,3 +1,4 @@
+import { UIArt } from './UIArt.tsx';
 import { characterMeta, type PublicPlayer } from '@say-less/shared';
 import { Character, type CharacterState } from './Character.tsx';
 
@@ -33,7 +34,7 @@ export function PlayerChip({
         )}
         {isLeader && (
           <span className="pchip__crown" role="img" aria-label="Leader">
-            👑
+            <UIArt name="crown" />
           </span>
         )}
         {badge && <span className="pchip__badge">{badge}</span>}

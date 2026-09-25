@@ -1,3 +1,4 @@
+import { UIArt } from '../components/UIArt.tsx';
 import { CHARACTERS, LIMITS, type PublicRoomState } from '@say-less/shared';
 import { useState, type FormEvent } from 'react';
 import { sfx } from '../audio/sfx.ts';
@@ -80,7 +81,9 @@ export function Lobby({ ctl, room, me }: Props) {
           ))}
           {Array.from({ length: Math.max(LIMITS.MIN_PLAYERS - room.players.length, 0) }, (_, i) => (
             <div key={`empty-${i}`} className="pchip pchip--empty">
-              <div className="pchip__avatar pchip__avatar--empty">?</div>
+              <div className="pchip__avatar pchip__avatar--empty">
+                <UIArt name="seat" className="seat-art" />
+              </div>
               <span className="pchip__name dim">waiting…</span>
             </div>
           ))}

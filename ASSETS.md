@@ -1,9 +1,9 @@
 # Art asset requests
 
-Everything the game shows today is drawn by code: SVG placeholder characters, CSS badges,
-tiles and podium blocks, and emoji icons. This document lists every image that can replace
-them, with the exact ChatGPT prompt, the file name, where to save it, the grid, the cell
-order and the size.
+The core art set is generated and wired: 60 character poses, 23 UI images, two app icons
+and a share card. This document retains the generation prompts, source paths, grid orders
+and output sizes. The generation record is summarised under "Art provenance" in the README;
+the sources and full notes stay local in `art/`, which is gitignored.
 
 How it works:
 
@@ -20,40 +20,39 @@ What the game uses today:
 - **Character sprites are wired.** `client/src/components/Character.tsx` reads
   `client/public/sprites/manifest.json` and shows the PNG instead of the SVG for every
   character/pose listed there. The tool writes that manifest.
-- **No UI image is wired yet.** Stamps, icons, podium, how-to illustrations, logo, app icons
-  and the share card are still drawn in CSS or emoji. The tool already cuts them into
-  `client/public/ui/`, and each one is swapped in for its CSS/emoji version once the file
-  exists.
+- **UI images are wired.** Stamps, icons, podium, how-to illustrations and the logo use
+  `UIArt.tsx` and the generated `client/public/ui/manifest.json` bounds. App icons and the
+  share card are linked from `client/index.html`. The logo fade and pose animations remain CSS.
 
 ## Progress
 
 20 generations in total (12 character sheets, 4 UI sheets, 1 logo, 3 final files), plus two
 optional sets.
 
-| Done | Save ChatGPT's image as              | What                             | Grid, cells | The tool writes                             | Wired   |
-| ---- | ------------------------------------ | -------------------------------- | ----------- | ------------------------------------------- | ------- |
-| [ ]  | `art/raw/characters/cat.png`         | Cat, 5 poses                     | 3x2, 5      | `client/public/sprites/cat/<pose>.png`      | yes     |
-| [ ]  | `art/raw/characters/monkey.png`      | Monkey, 5 poses                  | 3x2, 5      | `client/public/sprites/monkey/<pose>.png`   | yes     |
-| [ ]  | `art/raw/characters/frog.png`        | Frog, 5 poses                    | 3x2, 5      | `client/public/sprites/frog/<pose>.png`     | yes     |
-| [ ]  | `art/raw/characters/bird.png`        | Bird, 5 poses                    | 3x2, 5      | `client/public/sprites/bird/<pose>.png`     | yes     |
-| [ ]  | `art/raw/characters/axolotl.png`     | Axolotl, 5 poses                 | 3x2, 5      | `client/public/sprites/axolotl/<pose>.png`  | yes     |
-| [ ]  | `art/raw/characters/bear.png`        | Bear, 5 poses                    | 3x2, 5      | `client/public/sprites/bear/<pose>.png`     | yes     |
-| [ ]  | `art/raw/characters/rabbit.png`      | Rabbit, 5 poses                  | 3x2, 5      | `client/public/sprites/rabbit/<pose>.png`   | yes     |
-| [ ]  | `art/raw/characters/fish.png`        | Fish, 5 poses                    | 3x2, 5      | `client/public/sprites/fish/<pose>.png`     | yes     |
-| [ ]  | `art/raw/characters/blob.png`        | Blob, 5 poses                    | 3x2, 5      | `client/public/sprites/blob/<pose>.png`     | yes     |
-| [ ]  | `art/raw/characters/otter.png`       | Otter, 5 poses                   | 3x2, 5      | `client/public/sprites/otter/<pose>.png`    | yes     |
-| [ ]  | `art/raw/characters/penguin.png`     | Penguin, 5 poses                 | 3x2, 5      | `client/public/sprites/penguin/<pose>.png`  | yes     |
-| [ ]  | `art/raw/characters/hedgehog.png`    | Hedgehog, 5 poses                | 3x2, 5      | `client/public/sprites/hedgehog/<pose>.png` | yes     |
-| [ ]  | `art/raw/sheets/stamps.png`          | Bonus stamps with text           | 3x2, 5      | `client/public/ui/<stamp>.png`              | not yet |
-| [ ]  | `art/raw/sheets/icons.png`           | Icons (flame, crown, sound, ...) | 4x2, 8      | `client/public/ui/<icon>.png`               | not yet |
-| [ ]  | `art/raw/sheets/podium.png`          | Podium stands 1, 2, 3            | 3x1, 3      | `client/public/ui/stand-<n>.png`            | not yet |
-| [ ]  | `art/raw/sheets/howto.png`           | How-to-play illustrations        | 3x2, 6      | `client/public/ui/howto-<step>.png`         | not yet |
-| [ ]  | `art/raw/ui/logo.png`                | SAY LESS wordmark                | single      | `client/public/ui/logo.png`                 | not yet |
-| [ ]  | `client/public/icon-512.png`         | App icon, 512 x 512              | final file  | (not processed by the tool)                 | not yet |
-| [ ]  | `client/public/apple-touch-icon.png` | iOS home-screen icon, 180 x 180  | final file  | (not processed by the tool)                 | not yet |
-| [ ]  | `client/public/og-image.png`         | Link-preview card, 1200 x 630    | final file  | (not processed by the tool)                 | not yet |
-| [ ]  | `client/public/ui/bg-<palette>.png`  | Optional: 6 background tiles     | final files | (not processed by the tool)                 | no      |
-| [ ]  | `art/raw/later/confetti.png`         | Optional: confetti pieces        | 4x2, 8      | (not processed until it is wired)           | no      |
+| Done | Save ChatGPT's image as              | What                             | Grid, cells | The tool writes                             | Wired |
+| ---- | ------------------------------------ | -------------------------------- | ----------- | ------------------------------------------- | ----- |
+| [x]  | `art/raw/characters/cat.png`         | Cat, 5 poses                     | 3x2, 5      | `client/public/sprites/cat/<pose>.png`      | yes   |
+| [x]  | `art/raw/characters/monkey.png`      | Monkey, 5 poses                  | 3x2, 5      | `client/public/sprites/monkey/<pose>.png`   | yes   |
+| [x]  | `art/raw/characters/frog.png`        | Frog, 5 poses                    | 3x2, 5      | `client/public/sprites/frog/<pose>.png`     | yes   |
+| [x]  | `art/raw/characters/bird.png`        | Bird, 5 poses                    | 3x2, 5      | `client/public/sprites/bird/<pose>.png`     | yes   |
+| [x]  | `art/raw/characters/axolotl.png`     | Axolotl, 5 poses                 | 3x2, 5      | `client/public/sprites/axolotl/<pose>.png`  | yes   |
+| [x]  | `art/raw/characters/bear.png`        | Bear, 5 poses                    | 3x2, 5      | `client/public/sprites/bear/<pose>.png`     | yes   |
+| [x]  | `art/raw/characters/rabbit.png`      | Rabbit, 5 poses                  | 3x2, 5      | `client/public/sprites/rabbit/<pose>.png`   | yes   |
+| [x]  | `art/raw/characters/fish.png`        | Fish, 5 poses                    | 3x2, 5      | `client/public/sprites/fish/<pose>.png`     | yes   |
+| [x]  | `art/raw/characters/blob.png`        | Blob, 5 poses                    | 3x2, 5      | `client/public/sprites/blob/<pose>.png`     | yes   |
+| [x]  | `art/raw/characters/otter.png`       | Otter, 5 poses                   | 3x2, 5      | `client/public/sprites/otter/<pose>.png`    | yes   |
+| [x]  | `art/raw/characters/penguin.png`     | Penguin, 5 poses                 | 3x2, 5      | `client/public/sprites/penguin/<pose>.png`  | yes   |
+| [x]  | `art/raw/characters/hedgehog.png`    | Hedgehog, 5 poses                | 3x2, 5      | `client/public/sprites/hedgehog/<pose>.png` | yes   |
+| [x]  | `art/raw/sheets/stamps.png`          | Bonus stamps with text           | 3x2, 5      | `client/public/ui/<stamp>.png`              | yes   |
+| [x]  | `art/raw/sheets/icons.png`           | Icons (flame, crown, sound, ...) | 4x2, 8      | `client/public/ui/<icon>.png`               | yes   |
+| [x]  | `art/raw/sheets/podium.png`          | Podium stands 1, 2, 3            | 3x1, 3      | `client/public/ui/stand-<n>.png`            | yes   |
+| [x]  | `art/raw/sheets/howto.png`           | How-to-play illustrations        | 3x2, 6      | `client/public/ui/howto-<step>.png`         | yes   |
+| [x]  | `art/raw/ui/logo.png`                | SAY LESS wordmark                | single      | `client/public/ui/logo.png`                 | yes   |
+| [x]  | `client/public/icon-512.png`         | App icon, 512 x 512              | final file  | (not processed by the tool)                 | yes   |
+| [x]  | `client/public/apple-touch-icon.png` | iOS home-screen icon, 180 x 180  | final file  | (not processed by the tool)                 | yes   |
+| [x]  | `client/public/og-image.png`         | Link-preview card, 1200 x 630    | final file  | (not processed by the tool)                 | yes   |
+| [ ]  | `client/public/ui/bg-<palette>.png`  | Optional: 6 background tiles     | final files | (not processed by the tool)                 | no    |
+| [ ]  | `art/raw/later/confetti.png`         | Optional: confetti pieces        | 4x2, 8      | (not processed until it is wired)           | no    |
 
 For the three final files, save ChatGPT's original under `art/raw/final/` and resize it into
 place with the command given in section 3.6.
@@ -718,12 +717,11 @@ the character. No other objects, no speech bubbles, no motion lines, no stars, n
 
 ## 3. UI images
 
-**None of these are wired yet.** The game draws each of them today with CSS or an emoji.
-The tool already cuts them into `client/public/ui/`; each is swapped in for its CSS/emoji
-version once the file lands. The cell order in each prompt matches the tool's `SHEETS` table
+**All core UI images are wired.** The tool cuts them into `client/public/ui/` and writes
+painted bounds to its manifest so `UIArt.tsx` can display wide badges without square padding. The cell order in each prompt matches the tool's `SHEETS` table
 exactly; do not reorder.
 
-Complete inventory, from the screens:
+Complete inventory (the middle column records the former placeholder):
 
 | File (in `client/public/ui/`)               | Replaces today                                      | Where it shows                                                                                    |
 | ------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -913,8 +911,8 @@ How the game draws it now (`.logo__say` / `.logo__less` in `client/src/styles/sc
 "LESS" sits beneath it, about 45% of the size, cream, with very wide letter spacing, and it
 fades out: solid for the top 55% of its height, then fading to fully transparent at its
 bottom edge, as if the word is being cut off mid-sentence. Paint LESS **solid**: a fade
-painted into the magenta keys out as a grey-pink smear, so the game will apply the same fade
-as a CSS mask over the image when the logo is wired.
+painted into the magenta keys out as a grey-pink smear, so the game applies the same fade
+as a CSS mask over the wired image.
 
 ```
 Single image: the "SAY LESS" wordmark, for the game Say Less.
@@ -950,10 +948,12 @@ uv run --with pillow python -c "from PIL import Image, ImageOps; ImageOps.fit(Im
 
 `ImageOps.fit` scales and centre-crops to the exact size.
 
-They also need tags in `client/index.html` that are **not there yet** and will be added
-when the files land: `<link rel="apple-touch-icon" href="/apple-touch-icon.png">`, a PNG
+The corresponding tags are now in `client/index.html`: `<link rel="apple-touch-icon" href="/apple-touch-icon.png">`, a PNG
 icon link for `icon-512.png`, and the share-card tags (`og:title`, `og:description`,
-`og:image` with an absolute URL, `twitter:card`). The existing `favicon.svg` stays.
+`og:image` with an absolute URL, `twitter:card`). The browser-tab icon `favicon.png` (64 x 64)
+is cut from the same `art/raw/final/icon.png` with rounded corners, replacing the old
+code-drawn `favicon.svg`. `og:image` points at the GitHub Pages copy, because link-preview
+crawlers mostly fetch over IPv4 and the game server is IPv6-only.
 
 **App icon.** Save as `art/raw/final/icon.png` -> `client/public/icon-512.png`
 
@@ -1099,13 +1099,14 @@ Nothing to generate: every sound is synthesized at runtime in `client/src/audio/
    ```
 
    It writes `client/public/sprites/<id>/<pose>.png`, `client/public/ui/<name>.png`
-   (512 x 512; `--size 768` for bigger) and rewrites `client/public/sprites/manifest.json`.
+   (512 x 512; `--size 768` for bigger) and rewrites both the sprite and UI manifests.
    About a second per 2048 px sheet.
 
 4. **Look at the output** (open a few PNGs on a dark and a light background):
    - Edges do not glow pink. If they do, raise `soft_hi` in `key_out_magenta` in
-     `tools/dechroma.py` (default 140, try 170) and run again.
-   - No see-through patches inside the art, especially the pale pink axolotl, its coral
+     `tools/dechroma.py` (default 170) and run again.
+   - The keyer now protects coral, grey and dusty lavender before applying its distance threshold.
+     Check for see-through patches inside the art, especially the pale pink axolotl, its coral
      gills and lavender top, the cat's and rabbit's inner ears, the rabbit's cheeks, the
      fish's mouth, and any medium grey. If an area went see-through, lower `soft_hi` (try
      110), or ask ChatGPT to make that colour warmer (more peach, less pink) or darker.
@@ -1144,8 +1145,9 @@ come from the sheet:
 | one UI cell or the logo | `art/raw/ui/<name>.png`              | `art/raw/ui/sound-off.png`          |
 
 Then run `uv run tools/dechroma.py` again. The run prints
-`... [lose] skipped: a single file replaces this cell` for the replaced cell. A single file
-is trimmed and scaled on its own, not together with the sheet, so a replaced pose can come
-out a little bigger or smaller than its siblings. If that shows in the game, redo the whole
-sheet instead. Podium stands must stay the same scale as each other, so redo the whole
-podium sheet rather than one stand.
+`... [lose] skipped: a single file replaces this cell` for the replaced cell. A replaced
+character pose is fitted to the box and baseline of the pose it replaces in the sheet, so
+it keeps the same scale as its siblings; both are measured by their opaque pixels, so a
+faint half-keyed haze in an edited image does not shrink the character. A single UI image
+is trimmed and scaled on its own. Podium stands must stay the same scale as each other, so
+redo the whole podium sheet rather than one stand.

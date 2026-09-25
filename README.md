@@ -420,20 +420,34 @@ waiting glance, win arm-up + falling mic, lose deflate with per-character gags
 The roster is the Reel Town cast (cat, monkey, frog, bird, axolotl, bear, rabbit, fish,
 blob) plus otter, penguin and hedgehog, so the same animals appear in both games. Twelve
 characters because the room holds twelve players and every player needs a unique one.
-The placeholder SVGs are generated, not hand-drawn, and exist only until the painted
-sprites land; raster sprites are animated as a whole (`.char-sprite img` in
-`characters.css`) since they have no named groups.
+Every character and pose now has painted art, so the SVGs are only a fallback for a pose
+missing from `client/public/sprites/manifest.json`. Raster sprites are animated as a whole
+(`.char-sprite img` in `characters.css`) since they have no named groups. UI images render
+through `client/src/components/UIArt.tsx`, which crops each one to its painted bounds from
+`client/public/ui/manifest.json` and prefixes `import.meta.env.BASE_URL` so the same build
+works at the domain root (Cybera) and under `/say-less/` (GitHub Pages).
 
-Generated raster art replaces these without code changes. Follow `ASSETS.md`
-(filenames, sizes, prompts, **magenta #FF00FF background**), drop files under
-`art/raw/`, then:
+To change art, follow `ASSETS.md` (filenames, sizes, prompts, **magenta #FF00FF
+background**), drop files under `art/raw/`, then:
 
 ```bash
 uv run tools/dechroma.py
 ```
 
-This keys out the magenta, despills edges, trims, squares, resizes to 512 and writes
-`client/public/sprites/manifest.json`. Commit the outputs under `client/public/`.
+This keys out the magenta, despills edges, cuts sheets into cells, trims, squares, resizes
+to 512 and writes both manifests. Commit the outputs under `client/public/`; the whole
+`art/` folder is gitignored.
+
+**Art provenance.** Generated on 2026-09-24 with ChatGPT's built-in image tool from the
+prompts in `ASSETS.md`, using the two Reel Town reference sheets. Sheets came back at
+1254 x 1254 rather than the requested 2048 (podium 1774 x 887, share card 1536 x 1024);
+cells are enlarged slightly on the 512 export. Revisions on 2026-09-25: new faces for the
+bear, bird, blob and monkey `waiting` poses (the bird had grown a human mouth under its
+beak; the others had zigzag grimaces) and a recast share card (cat, monkey, bird, rabbit).
+The originals of those five are kept locally in `art/raw/revisions-before/`, and the edit
+prompts in `art/revision-prompts.json`. `art/raw/final/icon-rounded-original.png` is not
+used: the generator punched blotchy transparent holes through its background, so the
+opaque icon supplies every icon size.
 
 ---
 
@@ -551,6 +565,9 @@ flat-vector art direction, one unique character per player.
 
 ## Decisions log
 
+- **2026-09-25** The whole `art/` folder is gitignored; only processed art under
+  `client/public/` is committed. `og:image` points at the GitHub Pages copy of the share
+  card because the game server is IPv6-only and most link-preview crawlers fetch over IPv4.
 - **2026-09-24** Party size 3–12 (was 3–8) at the user's request, and the roster swapped to
   the Reel Town animals plus three more so the art can be shared between the two games.
   Twelve players means twelve matchups per round (about six minutes of voting and reveal
@@ -583,8 +600,8 @@ nothing in this list is a regression.
 
 **Next up**
 
-- **Final art.** Sprites and UI images per `ASSETS.md`; wire the UI images (logo, stamps)
-  once delivered. Placeholders are playable but generic.
+- **Core art is complete.** All 60 poses, 23 UI images, app icons and share card are wired.
+  Generation prompts and the optional background tiles and confetti are in `ASSETS.md`.
 - **Manual phone test.** The e2e suite drives three Chromium contexts at iPhone 13 size; a
   real session with 6 people on 6 phones over the public URL has not happened yet. That is
   the only way to catch real iOS Safari keyboard, audio-unlock and backgrounding behaviour.

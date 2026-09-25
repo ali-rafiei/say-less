@@ -1,5 +1,6 @@
 import { LIMITS } from '@say-less/shared';
 import { useEffect, useState, type FormEvent } from 'react';
+import { UIArt } from '../components/UIArt.tsx';
 import { sfx } from '../audio/sfx.ts';
 import { loadName } from '../net/session.ts';
 import type { RoomController } from '../net/useRoom.ts';
@@ -136,8 +137,7 @@ export function Home({ ctl }: { ctl: RoomController }) {
 export function Logo() {
   return (
     <h1 className="logo display" aria-label="Say Less">
-      <span className="logo__say">SAY</span>
-      <span className="logo__less">LESS</span>
+      <UIArt name="logo" className="logo__art" />
     </h1>
   );
 }
@@ -148,30 +148,36 @@ export function HowToPlay({ onClose }: { onClose: () => void }) {
       <div className="card howto stack" onClick={(e) => e.stopPropagation()}>
         <h2 className="display">How to play</h2>
         <ol className="howto__list">
-          <li>
+          <li className="howto__step">
+            <UIArt name="howto-gather" className="howto__art" />
             <b>
               Gather {LIMITS.MIN_PLAYERS} to {LIMITS.MAX_PLAYERS} people.
             </b>{' '}
             One creates a room and shares the code; everyone joins on their own phone and grabs a
             character.
           </li>
-          <li>
+          <li className="howto__step">
+            <UIArt name="howto-answer" className="howto__art" />
             <b>Answer prompts.</b> Each round you get two absurd prompts. Write the funniest answer
             you can under the word limit: <b>12 words</b>, then <b>6</b>, then <b>3</b>.
           </li>
-          <li>
+          <li className="howto__step">
+            <UIArt name="howto-vote" className="howto__art" />
             <b>Vote.</b> Answers to the same prompt face off anonymously. Everyone who didn't write
             them picks the funnier one. 100 points per vote, more in later rounds.
           </li>
-          <li>
+          <li className="howto__step">
+            <UIArt name="howto-micdrop" className="howto__art" />
             <b>Mic Drop.</b> Win with half the word budget or less for a bonus. Sweep every vote for
             a <b>Silenced!</b> bonus.
           </li>
-          <li>
+          <li className="howto__step">
+            <UIArt name="howto-roast" className="howto__art" />
             <b>Roast.</b> From round 2, spend your one roast token to cut an opponent to 2 words. If
             they win anyway, they steal your points.
           </li>
-          <li>
+          <li className="howto__step">
+            <UIArt name="howto-final" className="howto__art" />
             <b>Final round.</b> One prompt, 3 words (or 5 emoji), everyone answers, everyone ranks
             their top two. Highest total takes the podium.
           </li>

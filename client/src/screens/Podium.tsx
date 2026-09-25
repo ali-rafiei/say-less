@@ -1,3 +1,4 @@
+import { UIArt } from '../components/UIArt.tsx';
 import { characterMeta, type PublicRoomState } from '@say-less/shared';
 import { sfx } from '../audio/sfx.ts';
 import { AnswerText } from '../components/AnswerText.tsx';
@@ -41,7 +42,7 @@ export function Podium({ ctl, room, me }: Props) {
                         className="block__name display"
                         style={{ background: characterMeta(player?.characterId)?.accent }}
                       >
-                        {place === 1 ? '👑 ' : ''}
+                        {place === 1 && <UIArt name="crown" />}
                         {player?.name ?? '?'}
                       </span>
                     </div>
@@ -49,7 +50,11 @@ export function Podium({ ctl, room, me }: Props) {
                 })}
               </div>
               <div className="block__stand display">
-                <span className="block__place">{place}</span>
+                <UIArt
+                  name={place === 1 ? 'stand-1' : place === 2 ? 'stand-2' : 'stand-3'}
+                  label={`Place ${place}`}
+                  className="block__art"
+                />
                 <span className="block__score">{group[0]?.score ?? ''}</span>
               </div>
             </div>

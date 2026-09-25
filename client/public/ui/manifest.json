@@ -1,0 +1,163 @@
+{
+  "backfire": {
+    "height": 290,
+    "size": 512,
+    "width": 457,
+    "x": 27,
+    "y": 110
+  },
+  "crown": {
+    "height": 438,
+    "size": 512,
+    "width": 458,
+    "x": 26,
+    "y": 37
+  },
+  "flame": {
+    "height": 457,
+    "size": 512,
+    "width": 367,
+    "x": 72,
+    "y": 27
+  },
+  "greatminds": {
+    "height": 254,
+    "size": 512,
+    "width": 457,
+    "x": 27,
+    "y": 128
+  },
+  "howto-answer": {
+    "height": 456,
+    "size": 512,
+    "width": 322,
+    "x": 95,
+    "y": 27
+  },
+  "howto-final": {
+    "height": 457,
+    "size": 512,
+    "width": 367,
+    "x": 72,
+    "y": 27
+  },
+  "howto-gather": {
+    "height": 363,
+    "size": 512,
+    "width": 457,
+    "x": 27,
+    "y": 74
+  },
+  "howto-micdrop": {
+    "height": 456,
+    "size": 512,
+    "width": 438,
+    "x": 37,
+    "y": 28
+  },
+  "howto-roast": {
+    "height": 457,
+    "size": 512,
+    "width": 456,
+    "x": 28,
+    "y": 27
+  },
+  "howto-vote": {
+    "height": 446,
+    "size": 512,
+    "width": 458,
+    "x": 27,
+    "y": 33
+  },
+  "logo": {
+    "height": 326,
+    "size": 512,
+    "width": 457,
+    "x": 27,
+    "y": 93
+  },
+  "mic": {
+    "height": 458,
+    "size": 512,
+    "width": 356,
+    "x": 77,
+    "y": 26
+  },
+  "micdrop": {
+    "height": 251,
+    "size": 512,
+    "width": 458,
+    "x": 26,
+    "y": 131
+  },
+  "pencil": {
+    "height": 457,
+    "size": 512,
+    "width": 348,
+    "x": 82,
+    "y": 27
+  },
+  "robbed": {
+    "height": 236,
+    "size": 512,
+    "width": 458,
+    "x": 26,
+    "y": 138
+  },
+  "seat": {
+    "height": 457,
+    "size": 512,
+    "width": 355,
+    "x": 78,
+    "y": 28
+  },
+  "silenced": {
+    "height": 252,
+    "size": 512,
+    "width": 457,
+    "x": 27,
+    "y": 129
+  },
+  "sound-off": {
+    "height": 430,
+    "size": 512,
+    "width": 458,
+    "x": 27,
+    "y": 40
+  },
+  "sound-on": {
+    "height": 419,
+    "size": 512,
+    "width": 458,
+    "x": 27,
+    "y": 47
+  },
+  "stand-1": {
+    "height": 397,
+    "size": 512,
+    "width": 458,
+    "x": 27,
+    "y": 88
+  },
+  "stand-2": {
+    "height": 296,
+    "size": 512,
+    "width": 437,
+    "x": 37,
+    "y": 188
+  },
+  "stand-3": {
+    "height": 246,
+    "size": 512,
+    "width": 436,
+    "x": 38,
+    "y": 239
+  },
+  "tile": {
+    "height": 456,
+    "size": 512,
+    "width": 353,
+    "x": 79,
+    "y": 28
+  }
+}

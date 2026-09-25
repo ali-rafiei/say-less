@@ -1,0 +1,109 @@
+/* Crop the common square exports to their painted bounds at display time. */
+.ui-art {
+  display: inline-block;
+  position: relative;
+  overflow: hidden;
+  width: 1.25em;
+  flex-shrink: 0;
+  vertical-align: -0.15em;
+  line-height: 0;
+}
+.ui-art > img {
+  position: absolute;
+  width: var(--art-width);
+  height: var(--art-height);
+  max-width: none;
+  left: var(--art-left);
+  top: var(--art-top);
+}
+.logo__art {
+  width: min(300px, 80vw);
+  mask-image: linear-gradient(to bottom, #000 83%, transparent 100%);
+}
+.mute .ui-art {
+  width: 28px;
+}
+.pchip__crown .ui-art {
+  width: 24px;
+}
+.pchip__avatar--empty {
+  border: 0;
+  background: none;
+}
+.seat-art {
+  width: 48px;
+}
+.chip.chip--art {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.chip--art .ui-art {
+  width: 100%;
+  height: 100%;
+}
+.chip--art.chip--doomed {
+  filter: grayscale(1);
+}
+.howto__step {
+  display: flow-root;
+  margin-bottom: 18px;
+}
+.howto__art {
+  width: 82px;
+  float: left;
+  margin: 0 12px 6px 0;
+}
+.overlay__fire.ui-art {
+  width: 100px;
+}
+.stamp.stamp--art {
+  padding: 0;
+  border: 0;
+  background: none;
+  line-height: 0;
+}
+.stamp--art .ui-art {
+  width: 110px;
+}
+.stamp-banner {
+  background: none;
+  text-align: center;
+}
+.stamp-banner .ui-art {
+  width: min(280px, 80%);
+}
+.micdrop-stamp {
+  line-height: 0;
+  text-shadow: none;
+}
+.micdrop-stamp .ui-art {
+  width: min(390px, 90vw);
+}
+.micdrop-mic {
+  width: 34px;
+  transform: rotate(20deg);
+}
+.blocks {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.block .block__stand {
+  position: relative;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.block__art {
+  display: block;
+  width: 100%;
+}
+.block__score {
+  position: absolute;
+  bottom: 7%;
+  font-size: clamp(12px, 3.5vw, 20px);
+  line-height: 1;
+  color: var(--ink);
+}

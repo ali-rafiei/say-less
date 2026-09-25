@@ -1,3 +1,4 @@
+import { UIArt } from '../components/UIArt.tsx';
 import { characterMeta, type PublicMatchup, type PublicRoomState } from '@say-less/shared';
 import { useEffect } from 'react';
 import { sfx } from '../audio/sfx.ts';
@@ -6,15 +7,23 @@ import { Character } from '../components/Character.tsx';
 import { Header } from '../components/Header.tsx';
 import type { RoomController } from '../net/useRoom.ts';
 
+const stampArt = {
+  'MIC DROP!': 'micdrop',
+  'SILENCED!': 'silenced',
+  'GREAT MINDS': 'greatminds',
+  'BACKFIRE!': 'backfire',
+  ROBBED: 'robbed',
+} as const;
+
 interface Props {
   ctl: RoomController;
   room: PublicRoomState;
   me: string;
 }
 
-function stampsFor(matchup: PublicMatchup, playerId: string | null): string[] {
+function stampsFor(matchup: PublicMatchup, playerId: string | null): (keyof typeof stampArt)[] {
   if (!matchup.result || !playerId) return [];
-  const stamps: string[] = [];
+  const stamps: (keyof typeof stampArt)[] = [];
   for (const award of matchup.result.awards) {
     if (award.playerId !== playerId) continue;
     if (award.kind === 'silenced') stamps.push('SILENCED!');
@@ -48,7 +57,11 @@ export function MatchupReveal({ ctl, room, me }: Props) {
     <main className="screen reveal">
       <Header room={room} clockOffset={ctl.clockOffset} />
       <h2 className="prompt display center">{matchup.promptText}</h2>
-      {result.greatMinds && <div className="banner stamp-banner display">GREAT MINDS</div>}
+      {result.greatMinds && (
+        <div className="stamp-banner">
+          <UIArt name="greatminds" label="GREAT MINDS" />
+        </div>
+      )}
 
       <div className="rcards">
         {matchup.answers.map((answer, index) => {
@@ -109,10 +122,10 @@ export function MatchupReveal({ ctl, room, me }: Props) {
                 {stampsFor(matchup, answer.playerId).map((s, i) => (
                   <span
                     key={s}
-                    className={`stamp display stamp--${s.replace(/[^A-Z]/g, '').toLowerCase()}`}
+                    className="stamp stamp--art"
                     style={{ animationDelay: `${1.4 + i * 0.3}s` }}
                   >
-                    {s}
+                    <UIArt name={stampArt[s]!} label={s} />
                   </span>
                 ))}
               </div>
@@ -123,15 +136,19 @@ export function MatchupReveal({ ctl, room, me }: Props) {
 
       {matchup.roast && (
         <p className="center dim small">
-          🔥 {room.players.find((p) => p.id === matchup.roast!.spenderId)?.name} roasted{' '}
-          {room.players.find((p) => p.id === matchup.roast!.targetId)?.name} down to 2 words.
+          <UIArt name="flame" /> {room.players.find((p) => p.id === matchup.roast!.spenderId)?.name}{' '}
+          roasted {room.players.find((p) => p.id === matchup.roast!.targetId)?.name} down to 2
+          words.
         </p>
       )}
 
       {micDropper && (
         <div className="micdrop-overlay" aria-hidden="true">
           <Character characterId={micDropCharacter} state="win" size={220} />
-          <span className="micdrop-stamp">MIC DROP</span>
+          <UIArt name="mic" className="micdrop-mic" />
+          <span className="micdrop-stamp">
+            <UIArt name="micdrop" />
+          </span>
         </div>
       )}
     </main>
