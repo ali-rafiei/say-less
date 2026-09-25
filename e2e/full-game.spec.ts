@@ -34,10 +34,7 @@ async function answerAllPrompts(
   for (let i = 0; i < 2; i++) {
     const field = player.page.locator('.winput__field');
     if (!(await field.isVisible().catch(() => false))) {
-      await player.page
-        .locator('.winput__field, .waitroom')
-        .first()
-        .waitFor({ timeout: 15_000 });
+      await player.page.locator('.winput__field, .waitroom').first().waitFor({ timeout: 15_000 });
       if (!(await field.isVisible().catch(() => false))) return seen;
     }
     seen.push((await player.page.locator('.deck__card .prompt').innerText()).trim());
