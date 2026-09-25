@@ -60,23 +60,25 @@ export function FinalVoting({ ctl, room, me }: Props) {
           );
         })}
       </div>
-      {voted ? (
-        <p className="center dim">Votes locked. Waiting on the others…</p>
-      ) : canVoteAtAll ? (
-        <button
-          className="btn btn--block"
-          type="button"
-          disabled={picks.length !== 2}
-          onClick={() => {
-            sfx.tap();
-            ctl.castFinalVotes(picks[0]!, picks[1]!);
-          }}
-        >
-          {picks.length === 2 ? 'Lock in' : `Pick ${2 - picks.length} more`}
-        </button>
-      ) : (
-        <p className="center dim">Not enough other answers to vote on.</p>
-      )}
+      <div className="startbar">
+        {voted ? (
+          <p className="startbar__wait">Votes locked. Waiting on the others…</p>
+        ) : canVoteAtAll ? (
+          <button
+            className="btn btn--block"
+            type="button"
+            disabled={picks.length !== 2}
+            onClick={() => {
+              sfx.tap();
+              ctl.castFinalVotes(picks[0]!, picks[1]!);
+            }}
+          >
+            {picks.length === 2 ? 'Lock in' : `Pick ${2 - picks.length} more`}
+          </button>
+        ) : (
+          <p className="startbar__wait">Not enough other answers to vote on.</p>
+        )}
+      </div>
     </main>
   );
 }

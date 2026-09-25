@@ -363,7 +363,7 @@
   );
   animation:
     shake 0.5s ease-in-out 0.9s 1,
-    fade-out 0.4s ease 2.6s forwards;
+    fade-out 0.4s ease 2.1s forwards;
   pointer-events: none;
 }
 .micdrop-stamp {

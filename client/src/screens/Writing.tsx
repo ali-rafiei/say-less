@@ -38,6 +38,8 @@ export function Writing({ ctl, room, me }: Props) {
     }
   }, [ctl.prompts, room.code]);
 
+  // The server skips players who were gone when the round was dealt; it marks them done.
+  const sittingOut = !roastWindow && ctl.prompts.length === 0 && room.submittedIds.includes(me);
   const answeredCount = room.players.filter(
     (p) => p.id === me || room.submittedIds.includes(p.id),
   ).length;
@@ -100,7 +102,9 @@ export function Writing({ ctl, room, me }: Props) {
                 Spend your one roast token: their next answer gets <b>2 words</b>. If they win
                 anyway, they steal your points.
               </p>
-              <div className="roast__targets">
+              <div
+                className={`roast__targets ${room.players.length > 7 ? 'roast__targets--grid' : ''}`}
+              >
                 {room.players
                   .filter((p) => p.id !== me)
                   .map((p) => (
@@ -132,7 +136,9 @@ export function Writing({ ctl, room, me }: Props) {
         </section>
       )}
 
-      {!roastWindow && ctl.prompts.length === 0 && <p className="center dim">Dealing prompts…</p>}
+      {!roastWindow && ctl.prompts.length === 0 && !sittingOut && (
+        <p className="center dim">Dealing prompts…</p>
+      )}
 
       {current && (
         <section className="deck">
@@ -161,7 +167,7 @@ export function Writing({ ctl, room, me }: Props) {
         </section>
       )}
 
-      {!current && ctl.prompts.length > 0 && (
+      {!current && (ctl.prompts.length > 0 || sittingOut) && (
         <section className="card stack center waitroom">
           <h2 className="display">
             <UIArt name="pencil" /> {answeredCount} of {room.players.length} done
@@ -181,6 +187,11 @@ export function Writing({ ctl, room, me }: Props) {
               );
             })}
           </div>
+          {sittingOut && (
+            <p>
+              You dropped out before the deal, so you sit this round out. You're back in next round.
+            </p>
+          )}
           <p className="dim small">
             {answeredCount === room.players.length
               ? "Everyone's in. Tallying…"
@@ -189,7 +200,7 @@ export function Writing({ ctl, room, me }: Props) {
         </section>
       )}
 
-      {(current || roastWindow) && (
+      {current && (
         <div className="corner-char">
           <Character
             characterId={myPlayer?.characterId ?? null}

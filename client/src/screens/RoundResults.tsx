@@ -1,4 +1,5 @@
 import { characterMeta, type PublicRoomState } from '@say-less/shared';
+import { useEffect } from 'react';
 import { Character } from '../components/Character.tsx';
 import { Header } from '../components/Header.tsx';
 import type { RoomController } from '../net/useRoom.ts';
@@ -18,12 +19,23 @@ export function RoundResults({ ctl, room, me }: Props) {
   const sorted = [...room.players].sort((a, b) => b.score - a.score);
   const top = sorted[0]?.score ?? 0;
   const bottom = sorted[sorted.length - 1]?.score ?? 0;
+  const dense = sorted.length > 8;
+
+  // With twelve rows, the lower half of the board is below the fold for the 8 s it shows.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      document
+        .querySelector('.board__row--me')
+        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, 900);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <main className="screen results">
       <Header room={room} clockOffset={ctl.clockOffset} />
       <h2 className="display center">Scoreboard</h2>
-      <ol className="board">
+      <ol className={`board ${dense ? 'board--dense' : ''}`}>
         {sorted.map((p, i) => {
           const delta = roundDelta.get(p.id) ?? 0;
           const state =
@@ -39,7 +51,7 @@ export function RoundResults({ ctl, room, me }: Props) {
               style={{ animationDelay: `${i * 80}ms` }}
             >
               <span className="board__rank display">{i + 1}</span>
-              <Character characterId={p.characterId} state={state} size={52} />
+              <Character characterId={p.characterId} state={state} size={dense ? 36 : 52} />
               <span
                 className="board__name"
                 style={{ background: characterMeta(p.characterId)?.accent }}

@@ -165,7 +165,7 @@
   color: var(--accent);
   -webkit-text-stroke: 3px var(--ink);
   paint-order: stroke fill;
-  text-shadow: 6px 6px 0 var(--ink);
+  filter: drop-shadow(6px 6px 0 var(--ink));
 }
 /* "LESS" is the smaller word, fading out at the bottom instead of being cut off. */
 .logo__less {
@@ -194,7 +194,7 @@
   color: var(--accent);
   -webkit-text-stroke: 3px var(--ink);
   paint-order: stroke fill;
-  text-shadow: 5px 5px 0 var(--ink);
+  filter: drop-shadow(5px 5px 0 var(--ink));
 }
 .pgrid {
   display: grid;
@@ -234,7 +234,7 @@
 }
 .pchip__initial {
   font-size: 30px;
-  color: var(--ink);
+  color: var(--paper);
 }
 .pchip__crown {
   position: absolute;
@@ -282,7 +282,7 @@
 
 .toggle {
   min-width: 72px;
-  min-height: 40px;
+  min-height: 44px;
   border: 3px solid var(--ink);
   border-radius: 999px;
   background: var(--paper);
@@ -304,7 +304,7 @@
   background: var(--paper);
 }
 .seg__btn {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 12px;
   border: none;
   background: transparent;
@@ -370,6 +370,10 @@
   position: absolute;
   top: 6px;
   right: 6px;
+  max-width: calc(100% - 12px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   padding: 2px 8px;
   border: 2px solid var(--ink);
   border-radius: 999px;
@@ -390,7 +394,7 @@
   color: var(--accent);
   -webkit-text-stroke: 3px var(--ink);
   paint-order: stroke fill;
-  text-shadow: 6px 6px 0 var(--ink);
+  filter: drop-shadow(6px 6px 0 var(--ink));
   animation: stamp-in 0.4s cubic-bezier(0.2, 1.5, 0.4, 1) backwards;
 }
 .intro__chips {
@@ -516,6 +520,21 @@
   flex-direction: column;
   gap: 8px;
 }
+.roast__targets--grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.roast__targets--grid .roast__target {
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  padding: 6px 4px;
+  text-align: center;
+  font-size: 15px;
+}
+.writing .roast {
+  margin-block: auto;
+}
 .roast__target {
   display: flex;
   align-items: center;
@@ -593,6 +612,11 @@
   grid-template-columns: 1fr;
   gap: 14px;
 }
+.voting .vcards {
+  flex: 1;
+  grid-auto-rows: minmax(140px, 1fr);
+  max-height: 560px;
+}
 @media (min-width: 560px) {
   .vcards {
     grid-template-columns: 1fr 1fr;
@@ -634,7 +658,8 @@
 .answer-text {
   display: block;
   line-height: 1.1;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  hyphens: auto;
   color: var(--card-fg);
 }
 .caret {
@@ -733,6 +758,13 @@
   gap: 2px;
   min-height: 28px;
 }
+.voters--many {
+  flex-wrap: nowrap;
+  gap: 0;
+}
+.voters--many .char-wrap + .char-wrap {
+  margin-left: -9px;
+}
 .rcard__points {
   font-size: 30px;
   color: var(--ink);
@@ -796,6 +828,16 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+.board--dense {
+  gap: 5px;
+}
+.board--dense .board__row {
+  grid-template-columns: 24px 36px 1fr auto auto;
+  gap: 8px;
+  padding: 3px 10px;
+  border-width: 3px;
+  box-shadow: 0 3px 0 var(--ink);
 }
 .board__row {
   display: grid;
@@ -900,7 +942,7 @@
   color: var(--accent);
   -webkit-text-stroke: 3px var(--ink);
   paint-order: stroke fill;
-  text-shadow: 5px 5px 0 var(--ink);
+  filter: drop-shadow(5px 5px 0 var(--ink));
 }
 .blocks {
   display: grid;
@@ -1057,7 +1099,8 @@
 }
 
 /* ---------- lobby: compact character grid + sticky start bar ---------- */
-.lobby {
+.lobby,
+.final {
   padding-bottom: 96px;
 }
 .lobby .cgrid {

@@ -30,6 +30,7 @@ art/
 # Playwright output
 e2e/shots/
 e2e/shots-live/
+e2e/shots-twelve/
 test-results/
 playwright-report/
 

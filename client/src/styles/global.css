@@ -139,6 +139,8 @@ p {
 }
 
 .app {
+  /* A card sliding in from the side must not make the page scroll sideways. */
+  overflow-x: clip;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -226,7 +228,7 @@ p {
   width: 100%;
 }
 .btn--small {
-  min-height: 42px;
+  min-height: 44px;
   font-size: 17px;
   padding: 0 14px;
   border-width: 3px;

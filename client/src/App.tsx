@@ -44,6 +44,11 @@ export function App() {
     return () => clearTimeout(t);
   }, [error, dismissError]);
 
+  const phase = room?.phase;
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [phase, room?.currentMatchupIndex]);
+
   const palette = room ? PALETTES[room.phase] : 'home';
   useEffect(() => {
     document.documentElement.dataset.palette = palette;

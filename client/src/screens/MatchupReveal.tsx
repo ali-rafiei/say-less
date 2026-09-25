@@ -121,7 +121,7 @@ export function MatchupReveal({ ctl, room, me }: Props) {
                 </span>
               </div>
               <div className="rcard__foot">
-                <div className="row row--wrap voters">
+                <div className={`row row--wrap voters ${voters.length > 5 ? 'voters--many' : ''}`}>
                   {voters.map((v) => (
                     <Character key={v.id} characterId={v.characterId} size={26} />
                   ))}

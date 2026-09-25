@@ -109,7 +109,7 @@ export function Podium({ ctl, room, me }: Props) {
         </section>
       )}
 
-      <ol className="board">
+      <ol className={`board ${placements.length > 8 ? 'board--dense' : ''}`}>
         {placements.map((p) => {
           const player = byId.get(p.playerId);
           return (
@@ -118,7 +118,10 @@ export function Podium({ ctl, room, me }: Props) {
               className={`board__row ${p.playerId === me ? 'board__row--me' : ''}`}
             >
               <span className="board__rank display">{p.place}</span>
-              <Character characterId={player?.characterId ?? null} size={44} />
+              <Character
+                characterId={player?.characterId ?? null}
+                size={placements.length > 8 ? 34 : 44}
+              />
               <span
                 className="board__name"
                 style={{ background: characterMeta(player?.characterId)?.accent }}
