@@ -34,14 +34,14 @@
     "win",
     "lose"
   ],
-  "fish": [
+  "duck": [
     "idle",
     "writing",
     "waiting",
     "win",
     "lose"
   ],
-  "frog": [
+  "fish": [
     "idle",
     "writing",
     "waiting",

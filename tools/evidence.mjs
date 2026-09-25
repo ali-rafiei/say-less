@@ -21,7 +21,7 @@ const BASE = args.base ?? 'http://localhost:8090';
 const OUT = args.out ?? `evidence/${new Date().toISOString().slice(0, 10)}`;
 const WHICH = args.device ?? 'all';
 const NAMES = ['Ann', 'Bob', 'Cat', 'Dee'];
-const CHARACTERS = { Ann: 'Cat', Bob: 'Monkey', Cat: 'Frog', Dee: 'Axolotl' };
+const CHARACTERS = { Ann: 'Cat', Bob: 'Monkey', Cat: 'Duck', Dee: 'Axolotl' };
 const STATES = ['idle', 'writing', 'waiting', 'win', 'lose'];
 
 const PROFILES = {

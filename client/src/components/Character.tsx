@@ -5,8 +5,8 @@ import bear from '../characters/svg/bear.svg?raw';
 import bird from '../characters/svg/bird.svg?raw';
 import blob from '../characters/svg/blob.svg?raw';
 import cat from '../characters/svg/cat.svg?raw';
+import duck from '../characters/svg/duck.svg?raw';
 import fish from '../characters/svg/fish.svg?raw';
-import frog from '../characters/svg/frog.svg?raw';
 import hedgehog from '../characters/svg/hedgehog.svg?raw';
 import monkey from '../characters/svg/monkey.svg?raw';
 import otter from '../characters/svg/otter.svg?raw';
@@ -18,7 +18,7 @@ export type CharacterState = 'idle' | 'writing' | 'waiting' | 'win' | 'lose';
 const SVGS: Record<string, string> = {
   cat,
   monkey,
-  frog,
+  duck,
   bird,
   axolotl,
   bear,

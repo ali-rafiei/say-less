@@ -23,6 +23,9 @@ size are merged so a detached sweat drop or falling mic stays with its character
 the cells found do not match the expected grid, the sheet is split evenly instead and a
 warning is printed.
 
+The painted win pose holds a microphone the game does not show; remove_mic erases it from
+every win sprite after scaling, so the character keeps its size and baseline.
+
 Also rewrites client/public/sprites/manifest.json so the game knows which
 character/state pairs have a raster sprite and should skip the SVG placeholder.
 """
@@ -49,7 +52,7 @@ OUT_UI = ROOT / "client" / "public" / "ui"
 CHARACTER_IDS = [
     "cat",
     "monkey",
-    "frog",
+    "duck",
     "bird",
     "axolotl",
     "bear",
@@ -70,6 +73,13 @@ OUTPUT_SUFFIX = ".webp"
 WEBP_QUALITY = 88
 OPAQUE_ALPHA = 128
 MERGE_GAP_RATIO = 0.04
+MIC_POSE = "win"
+MIC_MAX_CHROMA = 24
+MIC_MIN_PIXELS = 500
+MIC_MIN_OUTLINE_PIXELS = 50
+MIC_EDGE_PX = 4
+MIC_EDGE_MAX_VALUE = 150
+NEIGHBOURS = ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1))
 SELF_TEST_COLOURS = [
     (30, 120, 200),
     (40, 170, 80),
@@ -165,10 +175,19 @@ def convert_characters(size: int, dry_run: bool, manifest: dict[str, list[str]])
             with Image.open(sheet) as raw:
                 frames = cut_sheet(raw, CHARACTER_SHEET, size, str(sheet.relative_to(ROOT)))
         for state, source in singles.items():
-            _convert_single(source, out_dir / f"{state}{OUTPUT_SUFFIX}", size, dry_run, frame=frames.get(state))
+            _convert_single(
+                source,
+                out_dir / f"{state}{OUTPUT_SUFFIX}",
+                size,
+                dry_run,
+                frame=frames.get(state),
+                strip_mic=state == MIC_POSE,
+            )
         written = set(singles)
         if sheet.exists():
-            written |= _convert_sheet(sheet, CHARACTER_SHEET, out_dir, size, dry_run, skip=set(singles))
+            written |= _convert_sheet(
+                sheet, CHARACTER_SHEET, out_dir, size, dry_run, skip=set(singles), strip_mic=True
+            )
         processed += len(written)
         if written:
             manifest[character_id] = [state for state in STATES if state in written]
@@ -254,6 +273,21 @@ def self_test() -> int:
         f"faint specks shrank the revision: {fitted_box} vs {frame_box}"
     )
     print("ok revised pose keeps its sheet scale despite faint specks")
+    mic_grey = (70, 72, 70, 255)
+    for label, mic_box in (("detached", (140, 40, 180, 90)), ("touching", (118, 40, 158, 90))):
+        pose = Image.new("RGBA", (200, 200), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(pose)
+        draw.rectangle((40, 30, 120, 190), fill=body)
+        draw.rectangle(mic_box, fill=mic_grey)
+        cleaned = remove_mic(pose)
+        assert not _has_colour(cleaned, mic_grey[:3]), f"{label} mic survived"
+        assert _opaque_bbox(cleaned) == (40, 30, 121, 191), f"{label} mic removal hurt the body"
+    face = Image.new("RGBA", (200, 200), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(face)
+    draw.rectangle((40, 30, 120, 190), fill=body)
+    draw.rectangle((60, 60, 95, 95), fill=mic_grey)
+    assert _has_colour(remove_mic(face), mic_grey[:3]), "a dark face feature inside the body was erased"
+    print("ok win-pose mic removed, detached or touching; face features kept")
     print("self-test passed")
     return 0
 
@@ -330,13 +364,22 @@ def _single_poses(folder: Path) -> dict[str, Path]:
     return poses
 
 
-def _convert_single(source: Path, target: Path, size: int, dry_run: bool, frame: Image.Image | None = None) -> None:
+def _convert_single(
+    source: Path,
+    target: Path,
+    size: int,
+    dry_run: bool,
+    frame: Image.Image | None = None,
+    strip_mic: bool = False,
+) -> None:
     print(f"{source.relative_to(ROOT)} -> {target.relative_to(ROOT)}")
     if dry_run:
         return
     with Image.open(source) as raw:
         keyed = key_out_magenta(raw)
     sprite = fit_replacement(keyed, frame) if frame is not None else trim_and_square(keyed, size)
+    if strip_mic:
+        sprite = remove_mic(sprite)
     target.parent.mkdir(parents=True, exist_ok=True)
     _save(sprite, target)
 
@@ -361,8 +404,113 @@ def fit_replacement(image: Image.Image, frame: Image.Image) -> Image.Image:
     return result
 
 
+def remove_mic(sprite: Image.Image) -> Image.Image:
+    """Erase the neutral-grey microphone from a win pose.
+
+    A detached mic is erased whole, band and all. A mic touching the body is found by
+    colour instead (the animals are never neutral grey), then its dark antialiased rim.
+    """
+    image = sprite.convert("RGBA")
+    pixels = image.load()
+    width = image.width
+
+    def point(index: int) -> tuple[int, int]:
+        return index % width, index // width
+
+    def neutral(index: int) -> bool:
+        r, g, b, a = pixels[point(index)]
+        return a > 0 and max(r, g, b) - min(r, g, b) <= MIC_MAX_CHROMA
+
+    blobs = _components(image, lambda index: pixels[point(index)][3] > 0)
+    if not blobs:
+        return image
+    erase: list[int] = []
+    for blob in blobs[1:]:
+        opaque = [index for index in blob if pixels[point(index)][3] >= OPAQUE_ALPHA]
+        if len(opaque) >= MIC_MIN_PIXELS and sum(map(neutral, opaque)) * 2 >= len(opaque):
+            erase += blob
+    if not erase:
+        body = set(blobs[0])
+        greys = _components(image, lambda index: index in body and neutral(index))
+        # Dark eyes and mouths are grey too, but only a held mic reaches the silhouette.
+        mics = [grey for grey in greys if len(grey) >= MIC_MIN_PIXELS and _borders_transparency(image, grey)]
+        if mics:
+            erase = _grow_dark_rim(image, mics[0])
+    for index in erase:
+        pixels[point(index)] = (0, 0, 0, 0)
+    return image
+
+
+def _components(image: Image.Image, include) -> list[list[int]]:
+    """8-connected groups of pixel indices where include(index) holds, largest first."""
+    width, height = image.size
+    seen = bytearray(width * height)
+    groups = []
+    for start in range(width * height):
+        if seen[start] or not include(start):
+            continue
+        seen[start] = 1
+        queue, group = [start], []
+        while queue:
+            index = queue.pop()
+            group.append(index)
+            x, y = index % width, index // width
+            for dx, dy in NEIGHBOURS:
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < width and 0 <= ny < height:
+                    neighbour = ny * width + nx
+                    if not seen[neighbour] and include(neighbour):
+                        seen[neighbour] = 1
+                        queue.append(neighbour)
+        groups.append(group)
+    return sorted(groups, key=len, reverse=True)
+
+
+def _borders_transparency(image: Image.Image, group: list[int]) -> bool:
+    width, height = image.size
+    pixels = image.load()
+    touching = 0
+    for index in group:
+        x, y = index % width, index // width
+        if any(
+            0 <= x + dx < width and 0 <= y + dy < height and pixels[x + dx, y + dy][3] == 0 for dx, dy in NEIGHBOURS
+        ):
+            touching += 1
+            if touching >= MIC_MIN_OUTLINE_PIXELS:
+                return True
+    return False
+
+
+def _grow_dark_rim(image: Image.Image, seed: list[int]) -> list[int]:
+    width, height = image.size
+    pixels = image.load()
+    region = set(seed)
+    frontier = list(seed)
+    for _ in range(MIC_EDGE_PX):
+        grown = []
+        for index in frontier:
+            x, y = index % width, index // width
+            for dx, dy in NEIGHBOURS:
+                nx, ny = x + dx, y + dy
+                if not (0 <= nx < width and 0 <= ny < height):
+                    continue
+                neighbour = ny * width + nx
+                r, g, b, a = pixels[nx, ny]
+                if neighbour not in region and a > 0 and max(r, g, b) < MIC_EDGE_MAX_VALUE:
+                    region.add(neighbour)
+                    grown.append(neighbour)
+        frontier = grown
+    return list(region)
+
+
 def _convert_sheet(
-    source: Path, layout: SheetLayout, out_dir: Path, size: int, dry_run: bool, skip: set[str]
+    source: Path,
+    layout: SheetLayout,
+    out_dir: Path,
+    size: int,
+    dry_run: bool,
+    skip: set[str],
+    strip_mic: bool = False,
 ) -> set[str]:
     with Image.open(source) as raw:
         sprites = cut_sheet(raw, layout, size, str(source.relative_to(ROOT)))
@@ -375,6 +523,8 @@ def _convert_sheet(
         print(f"{source.relative_to(ROOT)} [{name}] -> {target.relative_to(ROOT)}")
         written.add(name)
         if not dry_run:
+            if strip_mic and name == MIC_POSE:
+                sprite = remove_mic(sprite)
             target.parent.mkdir(parents=True, exist_ok=True)
             _save(sprite, target)
     return written

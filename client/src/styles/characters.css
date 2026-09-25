@@ -97,11 +97,7 @@
   animation: char-breathe 1s ease-in-out infinite;
 }
 
-/* win: arm up, mic drops */
-[data-state='win'] .c-mic {
-  opacity: 1;
-  animation: char-micfall 1.4s cubic-bezier(0.5, 0, 1, 1) infinite;
-}
+/* win: arm up */
 [data-state='win'] .c-arm-r {
   animation: char-armup 1.4s ease-out infinite;
 }
@@ -224,24 +220,6 @@
   75%,
   100% {
     transform: rotate(-95deg);
-  }
-}
-@keyframes char-micfall {
-  0%,
-  55% {
-    transform: translate(0, -130px);
-    opacity: 1;
-  }
-  78% {
-    transform: translate(0, 210px) rotate(70deg);
-    opacity: 1;
-  }
-  86% {
-    transform: translate(0, 190px) rotate(80deg);
-  }
-  100% {
-    transform: translate(0, 210px) rotate(80deg);
-    opacity: 0;
   }
 }
 @keyframes char-bounce {

@@ -123,7 +123,7 @@ test('three phones play a full game, survive a refresh, and reach the podium', a
   expect(catOwners.reduce((a, b) => a + b, 0)).toBe(1);
   const loser = catOwners[0] === 1 ? bob : ann;
   await loser.page.locator('.ccell:not([disabled])', { hasText: 'Monkey' }).click();
-  await cat.page.locator('.ccell:not([disabled])', { hasText: 'Frog' }).click();
+  await cat.page.locator('.ccell:not([disabled])', { hasText: 'Duck' }).click();
   await expect(cat.page.locator('.ccell--mine')).toHaveCount(1);
   // The painted characters must actually move; a selector slip once froze every sprite.
   const myPick = cat.page.locator('.ccell--mine .char-sprite img');

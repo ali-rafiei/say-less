@@ -20,10 +20,10 @@ export const CHARACTERS: readonly CharacterMeta[] = [
     accent: '#9B6B45',
   },
   {
-    id: 'frog',
-    name: 'Frog',
-    flavor: 'Dome eyes and a grin too wide for its face',
-    accent: '#7FA35A',
+    id: 'duck',
+    name: 'Duck',
+    flavor: 'Sleepy eyes, one cowlick and a red neckerchief',
+    accent: '#F1C753',
   },
   {
     id: 'bird',

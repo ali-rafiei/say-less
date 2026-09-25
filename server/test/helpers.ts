@@ -58,7 +58,7 @@ export function startToWriting(h: Harness, round: RoundIndex = 0): void {
   const chars = [
     'cat',
     'monkey',
-    'frog',
+    'duck',
     'bird',
     'axolotl',
     'bear',

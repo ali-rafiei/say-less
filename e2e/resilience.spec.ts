@@ -211,11 +211,11 @@ test('a reload or a double-tap in every phase keeps the seat, the screen and the
   const [ann, bob, cat, dan] = phones as [Phone, Phone, Phone, Phone];
 
   // LOBBY: a double-tapped character stays mine through a reload; nobody is duplicated.
-  await bob.page.locator('.ccell', { hasText: 'Frog' }).dblclick();
-  await expect(bob.page.locator('.ccell--mine')).toContainText('Frog');
+  await bob.page.locator('.ccell', { hasText: 'Duck' }).dblclick();
+  await expect(bob.page.locator('.ccell--mine')).toContainText('Duck');
   await letSecondTapLand(bob);
   await bob.page.reload();
-  await expect(bob.page.locator('.ccell--mine')).toContainText('Frog');
+  await expect(bob.page.locator('.ccell--mine')).toContainText('Duck');
   await expect(ann.page.locator('.pchip:not(.pchip--empty)')).toHaveCount(4);
 
   // ROUND_INTRO: a double-tapped Start sends one start; a reload during the intro lands on a prompt.
@@ -223,7 +223,7 @@ test('a reload or a double-tap in every phase keeps the seat, the screen and the
   await expect(cat.page.getByText('Say Some')).toBeVisible();
   await cat.page.reload();
   for (const p of phones) await expect(p.page.locator('.deck__card')).toContainText('1 of 2');
-  await expect(bob.page.locator('.corner-char .char-frog')).toHaveCount(1);
+  await expect(bob.page.locator('.corner-char .char-duck')).toHaveCount(1);
 
   // WRITING: a draft survives a reload; a submitted answer stays submitted.
   const danPrompt = await dan.page.locator('.deck__card .prompt').innerText();
@@ -329,7 +329,7 @@ test('a reload or a double-tap in every phase keeps the seat, the screen and the
   }
   await rematch(leader).dblclick();
   for (const p of phones) await expect(p.page.locator('.roomcode')).toHaveText(code);
-  await expect(bob.page.locator('.ccell--mine')).toContainText('Frog');
+  await expect(bob.page.locator('.ccell--mine')).toContainText('Duck');
   await expect(ann.page.locator('.pchip:not(.pchip--empty)')).toHaveCount(4);
   await letSecondTapLand(leader);
   expectClean(phones);
@@ -396,13 +396,13 @@ test('two tabs on one session hand the seat back and forth without a ghost', asy
 
   const takenOver = cat.page.getByRole('dialog', { name: 'Open in another tab' });
   await expect(takenOver).toBeVisible();
-  await tab2.locator('.ccell', { hasText: 'Frog' }).click();
-  await expect(tab2.locator('.ccell--mine')).toContainText('Frog');
+  await tab2.locator('.ccell', { hasText: 'Duck' }).click();
+  await expect(tab2.locator('.ccell--mine')).toContainText('Duck');
 
   await takenOver.getByRole('button', { name: 'Play here' }).click();
   await expect(takenOver).toBeHidden();
   await expect(tab2.getByRole('dialog', { name: 'Open in another tab' })).toBeVisible();
-  await expect(cat.page.locator('.ccell--mine')).toContainText('Frog');
+  await expect(cat.page.locator('.ccell--mine')).toContainText('Duck');
   await cat.page.locator('.ccell', { hasText: 'Bear' }).click();
   await expect(ann.page.locator('.pchip:not(.pchip--empty)')).toHaveCount(3);
   await expect(ann.page.locator('.pchip', { hasText: 'Cat' }).locator('.char-bear')).toBeVisible();
