@@ -455,10 +455,24 @@ describe('presence', () => {
     const h = makeRoom();
     h.room.disconnect('b');
     h.room.disconnect('c');
-    h.room.disconnect('a'); // leadership falls to a disconnected player
-    expect(h.room.leaderId).not.toBe('a');
+    h.room.disconnect('a'); // everyone is offline; the leader is held through the grace
+    expect(h.room.leaderId).toBe('a');
     h.room.reconnect('c');
     expect(h.room.leaderId).toBe('c');
+  });
+
+  it('keeps leadership for a leader who refreshes within the grace', () => {
+    // Arrange
+    const h = makeRoom();
+
+    // Act: the room creator's page reloads
+    h.room.disconnect('a');
+    vi.advanceTimersByTime(DISCONNECT_GRACE_MS - 1_000);
+    h.room.reconnect('a');
+    vi.advanceTimersByTime(DISCONNECT_GRACE_MS);
+
+    // Assert
+    expect(h.room.leaderId).toBe('a');
   });
 
   it('drops players whose slot expired mid-game when the podium is reached', () => {
@@ -469,9 +483,11 @@ describe('presence', () => {
     expect(h.room.players.map((p) => p.id)).toEqual(['a', 'b', 'c']);
   });
 
-  it('passes leadership to the longest-connected player and announces it', () => {
+  it('passes leadership to the longest-connected player once the grace runs out', () => {
     const h = makeRoom();
     h.room.disconnect('a');
+    expect(h.room.leaderId).toBe('a');
+    vi.advanceTimersByTime(DISCONNECT_GRACE_MS);
     expect(h.room.leaderId).toBe('b');
     expect(h.state().banner).toBe('B is now the leader');
   });

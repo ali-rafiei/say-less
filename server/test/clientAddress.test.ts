@@ -12,9 +12,11 @@ describe('clientKey', () => {
     expect(clientKey('::1', ['198.51.100.7'])).toBe('198.51.100.7');
   });
 
-  it('falls back to the peer when X-Forwarded-For is missing or not an address', () => {
-    expect(clientKey('127.0.0.1', undefined)).toBe('127.0.0.1');
-    expect(clientKey('127.0.0.1', 'not-an-ip')).toBe('127.0.0.1');
+  it('treats a loopback peer without a usable X-Forwarded-For as the machine itself', () => {
+    // In production every player comes through Caddy, which always sets the header, and
+    // the app listens on 127.0.0.1 only; a bare loopback connection is dev, tests or the box.
+    expect(clientKey('127.0.0.1', undefined)).toBeNull();
+    expect(clientKey('::1', 'not-an-ip')).toBeNull();
   });
 
   it('groups IPv6 clients by their /64, since one home network holds a whole /64', () => {

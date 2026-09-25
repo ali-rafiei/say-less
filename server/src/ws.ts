@@ -16,7 +16,7 @@ import type { SessionSigner } from './session.ts';
 
 interface Connection {
   socket: WebSocket;
-  clientKey: string;
+  clientKey: string | null;
   playerId: string | null;
   roomCode: string | null;
   lastIntentAt: number;
@@ -159,6 +159,12 @@ export class Gateway {
           if (conn.playerId !== returning) this.unbind(conn);
           this.bind(conn, room.code, returning, true);
           return;
+        }
+        // A token is only sent to rejoin its own room. One that is not a member here is from
+        // a room that is gone (tokens do not survive a restart, and codes can be reused), so
+        // seating its owner as a new player would drop them into a stranger's lobby.
+        if (typeof token === 'string' && token.length > 0) {
+          throw new RoomError('not_found', 'That room is gone');
         }
         const playerId = this.deps.signer.newPlayerId();
         room.addPlayer(playerId, message.payload.name);

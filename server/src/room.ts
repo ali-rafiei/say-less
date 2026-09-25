@@ -240,15 +240,21 @@ export class Room {
     const player = this.players.find((p) => p.id === playerId);
     if (!player || !player.connected) return;
     player.connected = false;
-    if (this.leaderId === playerId) this.passLeadership();
     const hold = this.phase === 'LOBBY' ? LOBBY_HOLD_MS : RECONNECT_HOLD_MS;
     player.removalTimer = setTimeout(() => this.expireSlot(playerId), hold);
     if (withGrace) {
+      // A leader whose page reloads keeps the Start button; it moves only if they stay gone.
       player.graceEndsAt = Date.now() + DISCONNECT_GRACE_MS;
       player.graceTimer = setTimeout(() => {
         player.graceTimer = null;
+        if (this.leaderId === playerId && !player.connected) {
+          this.passLeadership();
+          this.broadcast();
+        }
         this.afterPresenceChange();
       }, DISCONNECT_GRACE_MS);
+    } else if (this.leaderId === playerId) {
+      this.passLeadership();
     }
     this.afterPresenceChange();
     this.broadcast();

@@ -223,6 +223,10 @@ What the tests pin down:
   space) per screenshot into `layout-issues.json` without failing the run.
 - `client/test/` – the base-path prefix on UI images, song data, sound settings and the
   sound controls.
+- `e2e/resilience.spec.ts` (~3.3 min) – reload and double-tap in every phase with 150 ms of
+  relay latency, offline 40 s mid-write and backgrounded 60 s, two tabs on one session,
+  double-tapped Create Room, rejected submits and a wrong room code, clocks 90 s off, and a
+  server restart mid-game (starts its own server on port 8093).
 - `server/test/roomManager.test.ts`, `clientAddress.test.ts` – per-client room limits and
   which peer's X-Forwarded-For is trusted.
 
@@ -403,7 +407,20 @@ suppressed outside inputs) and images ignore pointer events and drags.
   socket (re)open with a stored session it sends `join_room` with the token; the
   gateway verifies the HMAC, re-binds the socket to the player, and the room re-sends
   `room_state`, `your_prompts` and any pending `roasted`.
-- A second tab with the same token takes over the seat; the old socket goes quiet.
+- A second tab with the same token takes over the seat; the old tab shows "Open in another
+  tab" with a Play here button (they coordinate over `BroadcastChannel`), so no ghost
+  player and no tab stuck on stale state.
+- A dead connection is detected by a heartbeat; the client opens a fresh socket at once and
+  closes the old one only after the new one hears from the server, so the server never
+  sees a gap. Coming back from the background does the same.
+- An intent that may have been lost (sent while offline or into a dying socket) shows
+  "Connection lost. Try that again." and re-enables the form with the draft kept. Start,
+  vote, final votes, rematch, create and join are sent at most once per phase, so a
+  double-tap never produces a second intent or an error toast.
+- A rejoin whose room no longer exists shows "That room is gone." once and clears the
+  session. The server refuses any join carrying a token that is not a member of that room
+  (tokens are per server process and codes can be reused), rather than seating a stale
+  phone in a stranger's lobby.
 - Disconnect mid-write: the player's unanswered prompts become "[left the chat]" _when
   the phase ends_; if they return before that, they can still write. Mid-vote: abstain.
 - Grace: a player dropped for under 15 s (`DISCONNECT_GRACE_MS`) still counts as playing,
@@ -417,8 +434,9 @@ suppressed outside inputs) and images ignore pointer events and drags.
 - Slot hold: 30 s in LOBBY, 3 min elsewhere; after that a disconnected player is removed
   only in LOBBY/PODIUM (mid-game the seat stays so matchups keep their references; they
   are dropped at the next start/rematch).
-- Leader disconnect: leadership passes to the longest-connected player; `banner`
-  announces it.
+- Leader disconnect: leadership is held through the 15 s grace, so a creator who reloads
+  keeps the Start button; then it passes to the longest-connected player and `banner`
+  announces it. An explicit leave passes it at once.
 - Empty rooms (no connected players) are destroyed after 5 min; an emptied lobby that
   never started a game after 60 s.
 - Room creation is capped per client (IPv4 address or IPv6 /64): 5 live rooms and 10
@@ -660,18 +678,18 @@ nothing in this list is a regression.
 
 - **Core art is complete.** All 60 poses, 23 UI images, app icons and share card are wired.
   Generation prompts and the optional background tiles and confetti are in `ASSETS.md`.
-- **Manual phone test.** The e2e suite drives three Chromium contexts at iPhone 13 size; a
-  real session with 6 people on 6 phones over the public URL has not happened yet. That is
-  the only way to catch real iOS Safari keyboard, audio-unlock and backgrounding behaviour.
-- **Two review passes were cut short** by a session limit and their findings were never
-  collected: a second adversarial pass over the server's anonymity guarantees (does
-  `publicRoastTokens` updating at a reveal leak which later matchup is roasted?), and a
-  Playwright-driven pass over the client's reconnect layer (offline 40 s mid-write, refresh
-  in every phase, two tabs on one session, rejected submit, rapid double-taps). Re-run both
-  before calling the client done.
-
-**Accepted for v1**
-
+- **Manual phone test.** The e2e suite drives Chromium and desktop WebKit at phone sizes,
+  up to twelve players; a real session on real phones over the public URL has not
+  happened yet. That is the only way to catch iOS Safari's keyboard, audio unlock, silent
+  switch and backgrounding behaviour, and to judge how a twelve-player round feels (about
+  six minutes of voting per round on the current timers).
+- **Listen to the music.** It was composed as data and verified by offline level renders,
+  never heard. Tempo, voicing and mix may want tuning by ear (`client/src/audio/songs.ts`).
+- **Known small leaks, accepted for now.** A roast-token holder can probe `spend_roast` and
+  learn from `already_roasted` that a player was roasted. An answer that auto-submitted
+  ("…") or "[left the chat]" hints at its author before the reveal. In emoji mode a lone
+  keycap mark counts as an emoji and regional-indicator pairs can spell letters. None of
+  these change scores.
 - **IPv4 reachability.** See Hosting; add a Cloudflare Tunnel if friends on IPv4-only
   Wi-Fi cannot connect. The GitHub Pages front end loads over IPv4, but its WebSocket
   still goes to the IPv6-only server.

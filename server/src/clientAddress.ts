@@ -1,14 +1,20 @@
 import { isIP } from 'node:net';
 
-/** Per-client limit key: X-Forwarded-For only from a loopback peer; IPv6 grouped by /64. */
+/**
+ * Per-client limit key: X-Forwarded-For only from a loopback peer; IPv6 grouped by /64.
+ * null means the machine itself: a loopback peer with no usable forwarded address. In
+ * production every player arrives through Caddy, which always sets the header, and the
+ * app listens on 127.0.0.1 only, so this is local dev, the test suite or an on-box script.
+ */
 export function clientKey(
   peer: string | undefined,
   forwardedFor: string | string[] | undefined,
-): string {
+): string | null {
   const direct = unmapIPv4(peer ?? '');
   const header = Array.isArray(forwardedFor) ? forwardedFor.join(',') : (forwardedFor ?? '');
   const forwarded = unmapIPv4(header.split(',').pop()?.trim() ?? '');
-  const address = isLoopback(direct) && isIP(forwarded) ? forwarded : direct;
+  if (isLoopback(direct) && !isIP(forwarded)) return null;
+  const address = isLoopback(direct) ? forwarded : direct;
   return isIP(address) === 6 ? ipv6Prefix64(address) : address;
 }
 

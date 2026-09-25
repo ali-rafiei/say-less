@@ -28,6 +28,17 @@ describe('room creation limits', () => {
     expect(() => rooms.create('elsewhere')).not.toThrow();
   });
 
+  it('does not limit rooms created from the machine itself, only the server-wide cap', () => {
+    // Arrange
+    const rooms = makeManager();
+
+    // Act: more than both per-client caps from a local connection (no client key)
+    for (let i = 0; i < LIMITS.ROOM_CREATIONS_PER_WINDOW + 2; i++) rooms.create(null);
+
+    // Assert
+    expect(rooms.size).toBe(LIMITS.ROOM_CREATIONS_PER_WINDOW + 2);
+  });
+
   it('frees a live-room slot when one of the client rooms closes', () => {
     const rooms = makeManager();
     const created = Array.from({ length: LIMITS.MAX_LIVE_ROOMS_PER_CLIENT }, () =>

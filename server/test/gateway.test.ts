@@ -129,7 +129,7 @@ describe('gateway', () => {
     expect(rooms.get(second)!.connectedCount).toBe(1);
   });
 
-  it('releases the old seat when a bound socket joins another room with its own token', async () => {
+  it("refuses a join carrying another room's token and keeps the current seat", async () => {
     // Arrange
     const c = await connect();
     c.send({ type: 'create_room', payload: { name: 'Hopper' } });
@@ -138,15 +138,35 @@ describe('gateway', () => {
     const other = rooms.create('other-client');
     other.addPlayer('host', 'Host');
     await new Promise((r) => setTimeout(r, 300)); // rate limit
-    // Act
+
+    // Act: a token is only ever sent to rejoin its own room
     c.send({
       type: 'join_room',
       payload: { code: other.code, name: 'Hopper', sessionToken: welcome.payload.sessionToken },
     });
-    await c.until('welcome');
+
     // Assert
-    expect(rooms.get(first)!.connectedCount).toBe(0);
-    expect(other.connectedCount).toBe(2);
+    expect((await c.until('error')).payload.code).toBe('not_found');
+    expect(rooms.get(first)!.connectedCount).toBe(1);
+    expect(other.players).toHaveLength(1);
+  });
+
+  it("refuses a stale token instead of seating its owner in a stranger's room", async () => {
+    // Arrange: after a server restart, a new room can reuse an old code
+    const host = await connect();
+    host.send({ type: 'create_room', payload: { name: 'Host' } });
+    const code = (await host.until('room_state')).payload.code;
+    const stale = await connect();
+
+    // Act
+    stale.send({
+      type: 'join_room',
+      payload: { code, name: 'Ghost', sessionToken: 'someone-else.not-a-valid-signature' },
+    });
+
+    // Assert
+    expect((await stale.until('error')).payload.code).toBe('not_found');
+    expect(rooms.get(code)!.players).toHaveLength(1);
   });
 
   it('keeps the current seat when creating a room fails because the server is full', async () => {

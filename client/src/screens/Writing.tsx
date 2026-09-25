@@ -25,6 +25,8 @@ export function Writing({ ctl, room, me }: Props) {
   const [spentOn, setSpentOn] = useState<string | null>(null);
 
   useEffect(() => setRoastDismissed(false), [ctl.roastedBy]);
+  // A rejected roast (someone got there first) leaves the token unspent: let them pick again.
+  useEffect(() => setSpentOn(null), [ctl.error?.at]);
   // Forget drafts for prompts the server has accepted.
   useEffect(() => {
     for (const p of ctl.prompts) {

@@ -29,16 +29,17 @@ export class RoomManager {
     return this.rooms.size;
   }
 
-  /** `client` is the creator's address key; see clientKey(). */
-  create(client: string): Room {
+  /** `client` is the creator's address key, or null for the machine itself; see clientKey(). */
+  create(client: string | null): Room {
     if (this.rooms.size >= MAX_ROOMS) {
       throw new RoomError('room_full', 'The server is full right now. Try again in a few minutes.');
     }
-    const recent = this.recentCreations(client);
+    const recent = client === null ? [] : this.recentCreations(client);
     const live = [...this.creatorOf.values()].filter((creator) => creator === client).length;
     if (
-      live >= LIMITS.MAX_LIVE_ROOMS_PER_CLIENT ||
-      recent.length >= LIMITS.ROOM_CREATIONS_PER_WINDOW
+      client !== null &&
+      (live >= LIMITS.MAX_LIVE_ROOMS_PER_CLIENT ||
+        recent.length >= LIMITS.ROOM_CREATIONS_PER_WINDOW)
     ) {
       throw new RoomError(
         'rate_limited',
@@ -54,8 +55,10 @@ export class RoomManager {
       ...(this.deps.random ? { random: this.deps.random } : {}),
     });
     this.rooms.set(code, room);
-    this.creatorOf.set(code, client);
-    this.creations.set(client, [...recent, Date.now()]);
+    if (client !== null) {
+      this.creatorOf.set(code, client);
+      this.creations.set(client, [...recent, Date.now()]);
+    }
     this.deps.log?.('room created', { code });
     return room;
   }
