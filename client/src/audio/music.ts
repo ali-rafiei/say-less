@@ -18,6 +18,7 @@ interface Playback {
 /** 16th-step sequencer; the caller pumps it ahead of the AudioContext clock. */
 export class MusicPlayer {
   private playback: Playback | null = null;
+  private readonly bookmarks = new LoopBookmarks();
 
   constructor(private readonly graph: AudioGraph) {}
 
@@ -52,6 +53,7 @@ export class MusicPlayer {
   }
 
   private start(song: Song, at: number, fromLoop: boolean): Playback {
+    const pattern = fromLoop ? song.loop : song.intro!;
     const { ctx } = this.graph;
     const dry = new GainNode(ctx, { gain: 0 });
     const wet = new GainNode(ctx, { gain: 0 });
@@ -63,8 +65,8 @@ export class MusicPlayer {
     }
     return {
       song,
-      pattern: fromLoop ? song.loop : song.intro!,
-      step: 0,
+      pattern,
+      step: fromLoop ? this.bookmarks.resume(pattern) : 0,
       time: at,
       land: false,
       lane: { dry, wet, gains: [dry, wet] },
@@ -72,6 +74,7 @@ export class MusicPlayer {
   }
 
   private fadeOut(p: Playback, now: number): void {
+    if (p.pattern === p.song.loop) this.bookmarks.remember(p.pattern, p.step);
     for (const gain of p.lane.gains) glide(gain.gain, 0, now, FADE_OUT / 4);
     setTimeout(() => p.lane.gains.forEach((gain) => gain.disconnect()), (FADE_OUT + 0.6) * 1000);
   }
@@ -83,6 +86,7 @@ export class MusicPlayer {
     p.step = 0;
     if (p.pattern !== p.song.loop) {
       p.pattern = p.song.loop;
+      p.step = this.bookmarks.resume(p.pattern);
       p.land = p.song.land ?? false;
     }
   }
@@ -181,5 +185,22 @@ function bassNote(symbol: string, chord: Chord, next: Chord): number {
       return next.root - 1;
     default:
       return chord.root;
+  }
+}
+
+/**
+ * Where each loop had got to when it last faded out, so it picks up there next time
+ * instead of replaying its opening: voting stops for every reveal and would otherwise
+ * repeat its first 20 seconds all game. Resumes on a bar line so the groove lands cleanly.
+ */
+export class LoopBookmarks {
+  private readonly steps = new Map<Pattern, number>();
+
+  remember(loop: Pattern, step: number): void {
+    this.steps.set(loop, step - (step % STEPS_PER_BAR));
+  }
+
+  resume(loop: Pattern): number {
+    return this.steps.get(loop) ?? 0;
   }
 }
