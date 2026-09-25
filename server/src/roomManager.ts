@@ -1,4 +1,11 @@
-import { EMPTY_ROOM_TTL_MS, MAX_ROOMS, type ServerMessage } from './shared.ts';
+import {
+  EMPTY_LOBBY_TTL_MS,
+  EMPTY_ROOM_TTL_MS,
+  LIMITS,
+  MAX_ROOMS,
+  ROOM_CREATION_WINDOW_MS,
+  type ServerMessage,
+} from './shared.ts';
 import type { PromptDeck } from './prompts.ts';
 import { Room, RoomError } from './room.ts';
 import { generateRoomCode } from './roomCode.ts';
@@ -13,6 +20,8 @@ export interface RoomManagerDeps {
 export class RoomManager {
   private readonly rooms = new Map<string, Room>();
   private readonly expiryTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly creatorOf = new Map<string, string>();
+  private readonly creations = new Map<string, number[]>();
 
   constructor(private readonly deps: RoomManagerDeps) {}
 
@@ -20,9 +29,21 @@ export class RoomManager {
     return this.rooms.size;
   }
 
-  create(): Room {
+  /** `client` is the creator's address key; see clientKey(). */
+  create(client: string): Room {
     if (this.rooms.size >= MAX_ROOMS) {
       throw new RoomError('room_full', 'The server is full right now. Try again in a few minutes.');
+    }
+    const recent = this.recentCreations(client);
+    const live = [...this.creatorOf.values()].filter((creator) => creator === client).length;
+    if (
+      live >= LIMITS.MAX_LIVE_ROOMS_PER_CLIENT ||
+      recent.length >= LIMITS.ROOM_CREATIONS_PER_WINDOW
+    ) {
+      throw new RoomError(
+        'rate_limited',
+        'That is a lot of new rooms. Try again in a few minutes.',
+      );
     }
     let code = generateRoomCode(this.deps.random);
     while (this.rooms.has(code)) code = generateRoomCode(this.deps.random);
@@ -33,6 +54,8 @@ export class RoomManager {
       ...(this.deps.random ? { random: this.deps.random } : {}),
     });
     this.rooms.set(code, room);
+    this.creatorOf.set(code, client);
+    this.creations.set(client, [...recent, Date.now()]);
     this.deps.log?.('room created', { code });
     return room;
   }
@@ -58,10 +81,14 @@ export class RoomManager {
 
   private scheduleExpiry(room: Room): void {
     this.touch(room.code);
-    const timer = setTimeout(() => {
-      this.expiryTimers.delete(room.code);
-      if (room.connectedCount === 0) this.destroy(room.code);
-    }, EMPTY_ROOM_TTL_MS);
+    const neverStarted = room.phase === 'LOBBY' && room.gamesPlayed === 0;
+    const timer = setTimeout(
+      () => {
+        this.expiryTimers.delete(room.code);
+        if (room.connectedCount === 0) this.destroy(room.code);
+      },
+      neverStarted ? EMPTY_LOBBY_TTL_MS : EMPTY_ROOM_TTL_MS,
+    );
     this.expiryTimers.set(room.code, timer);
   }
 
@@ -70,7 +97,19 @@ export class RoomManager {
     if (!room) return;
     room.close();
     this.rooms.delete(code);
+    this.creatorOf.delete(code);
     this.touch(code);
     this.deps.log?.('room closed', { code });
+  }
+
+  /** Prunes every client's history to the window so the map cannot grow without bound. */
+  private recentCreations(client: string): number[] {
+    const since = Date.now() - ROOM_CREATION_WINDOW_MS;
+    for (const [key, times] of this.creations) {
+      const kept = times.filter((t) => t > since);
+      if (kept.length > 0) this.creations.set(key, kept);
+      else this.creations.delete(key);
+    }
+    return this.creations.get(client) ?? [];
   }
 }

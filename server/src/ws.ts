@@ -6,7 +6,9 @@ import {
   type ErrorCode,
   type ServerMessage,
 } from './shared.ts';
+import type { IncomingMessage } from 'node:http';
 import type { WebSocket, WebSocketServer } from 'ws';
+import { clientKey } from './clientAddress.ts';
 import { RoomError, sanitizeName } from './room.ts';
 import { normalizeRoomCode } from './roomCode.ts';
 import type { RoomManager } from './roomManager.ts';
@@ -14,6 +16,7 @@ import type { SessionSigner } from './session.ts';
 
 interface Connection {
   socket: WebSocket;
+  clientKey: string;
   playerId: string | null;
   roomCode: string | null;
   lastIntentAt: number;
@@ -39,7 +42,7 @@ export class Gateway {
   constructor(private readonly deps: GatewayDeps) {}
 
   attach(server: WebSocketServer): void {
-    server.on('connection', (socket) => this.onConnection(socket));
+    server.on('connection', (socket, request) => this.onConnection(socket, request));
     const heartbeat = setInterval(() => {
       for (const conn of this.connections) {
         if (!conn.alive) {
@@ -59,9 +62,10 @@ export class Gateway {
     conn.socket.send(JSON.stringify(message));
   }
 
-  private onConnection(socket: WebSocket): void {
+  private onConnection(socket: WebSocket, request: IncomingMessage): void {
     const conn: Connection = {
       socket,
+      clientKey: clientKey(request.socket.remoteAddress, request.headers['x-forwarded-for']),
       playerId: null,
       roomCode: null,
       lastIntentAt: 0,
@@ -134,7 +138,7 @@ export class Gateway {
         if (sanitizeName(message.payload.name).length === 0) {
           throw new RoomError('bad_name', 'Pick a name between 1 and 12 characters');
         }
-        const room = this.deps.rooms.create();
+        const room = this.deps.rooms.create(conn.clientKey);
         const playerId = this.deps.signer.newPlayerId();
         try {
           room.addPlayer(playerId, message.payload.name);

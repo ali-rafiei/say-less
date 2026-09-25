@@ -39,6 +39,9 @@ export const LIMITS = {
   ROAST_FROM_ROUND: 1 as RoundIndex,
   PROMPT_MAX_CHARS: 120,
   MAX_CUSTOM_PROMPTS: 60,
+  /** per client address (IPv4, or IPv6 /64): a whole household shares one */
+  MAX_LIVE_ROOMS_PER_CLIENT: 5,
+  ROOM_CREATIONS_PER_WINDOW: 10,
 } as const;
 
 export const POINTS = {
@@ -55,8 +58,13 @@ export const AUTO_SUBMIT_TEXT = '…';
 export const LEFT_TEXT = '[left the chat]';
 
 export const RECONNECT_HOLD_MS = 3 * 60_000;
+/** A player dropped for less than this still counts as playing (an app switch, not a dead phone). */
+export const DISCONNECT_GRACE_MS = 15_000;
 export const LOBBY_HOLD_MS = 30_000;
 export const EMPTY_ROOM_TTL_MS = 5 * 60_000;
+/** an emptied lobby that never started a game */
+export const EMPTY_LOBBY_TTL_MS = 60_000;
+export const ROOM_CREATION_WINDOW_MS = 10 * 60_000;
 export const MAX_ROOMS = 300;
 export const RATE_LIMIT_MS = 250;
 

@@ -1,6 +1,6 @@
-# Runs on the Cybera instance. Caddy uses host networking so it binds :80/:443
-# on the host's IPv4 and IPv6 directly (no Docker port-publishing surprises);
-# the app is only reachable from localhost.
+# Runs on the Cybera instance. Both services use host networking: Caddy binds :80/:443
+# on the host's IPv4 and IPv6 directly, and the app listens on 127.0.0.1:8080 only, so it
+# is reachable from Caddy and nothing else.
 services:
   app:
     build:
@@ -8,10 +8,13 @@ services:
       dockerfile: deploy/Dockerfile
     image: say-less:latest
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:8080:8080"
+    # Host networking so Caddy's connections arrive from 127.0.0.1: the per-IP room
+    # limits trust X-Forwarded-For only from a loopback peer, and through Docker's port
+    # mapping every peer would be the bridge gateway, putting all players in one bucket.
+    network_mode: host
     environment:
       - PORT=8080
+      - HOST=127.0.0.1
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }

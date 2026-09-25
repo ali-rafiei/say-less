@@ -22,8 +22,9 @@ class Client {
       else this.inbox.push(message);
     });
   }
-  static async connect(port: number): Promise<Client> {
-    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws`);
+  static async connect(port: number, forwardedFor?: string): Promise<Client> {
+    const headers = forwardedFor ? { 'x-forwarded-for': forwardedFor } : undefined;
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws`, { headers });
     await once(ws, 'open');
     return new Client(ws);
   }
@@ -76,8 +77,8 @@ describe('gateway', () => {
     await new Promise<void>((resolve) => http.close(() => resolve()));
   });
 
-  async function connect(): Promise<Client> {
-    const c = await Client.connect(port);
+  async function connect(forwardedFor?: string): Promise<Client> {
+    const c = await Client.connect(port, forwardedFor);
     clients.push(c);
     return c;
   }
@@ -134,7 +135,7 @@ describe('gateway', () => {
     c.send({ type: 'create_room', payload: { name: 'Hopper' } });
     const welcome = await c.until('welcome');
     const first = (await c.until('room_state')).payload.code;
-    const other = rooms.create();
+    const other = rooms.create('other-client');
     other.addPlayer('host', 'Host');
     await new Promise((r) => setTimeout(r, 300)); // rate limit
     // Act
@@ -154,7 +155,7 @@ describe('gateway', () => {
     c.send({ type: 'create_room', payload: { name: 'Stayer' } });
     await c.until('welcome');
     const first = (await c.until('room_state')).payload.code;
-    while (rooms.size < MAX_ROOMS) rooms.create();
+    for (let i = 0; rooms.size < MAX_ROOMS; i++) rooms.create(`filler-${i}`);
     await new Promise((r) => setTimeout(r, 300));
     // Act
     c.send({ type: 'create_room', payload: { name: 'Stayer' } });
@@ -170,7 +171,7 @@ describe('gateway', () => {
     c.send({ type: 'create_room', payload: { name: 'Stayer' } });
     await c.until('welcome');
     const first = (await c.until('room_state')).payload.code;
-    const full = rooms.create();
+    const full = rooms.create('other-client');
     for (let i = 0; i < LIMITS.MAX_PLAYERS; i++) full.addPlayer(`p${i}`, `P${i}`);
     await new Promise((r) => setTimeout(r, 300));
     // Act
@@ -179,6 +180,23 @@ describe('gateway', () => {
     // Assert
     expect(error.payload.code).toBe('room_full');
     expect(rooms.get(first)!.connectedCount).toBe(1);
+  });
+
+  it('limits room creation per client address behind the local proxy', async () => {
+    // Arrange: two households, told apart by the proxy's X-Forwarded-For
+    const hopper = await connect('198.51.100.1');
+    for (let i = 0; i < LIMITS.MAX_LIVE_ROOMS_PER_CLIENT; i++) {
+      hopper.send({ type: 'create_room', payload: { name: 'Hopper' } });
+      await hopper.until('welcome');
+      await new Promise((r) => setTimeout(r, 300)); // rate limit
+    }
+    // Act
+    hopper.send({ type: 'create_room', payload: { name: 'Hopper' } });
+    const neighbour = await connect('198.51.100.2');
+    neighbour.send({ type: 'create_room', payload: { name: 'Neighbour' } });
+    // Assert
+    expect((await hopper.until('error')).payload.code).toBe('rate_limited');
+    expect((await neighbour.until('welcome')).type).toBe('welcome');
   });
 
   it('does not leak a room when the creator name is empty', async () => {

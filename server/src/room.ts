@@ -1,6 +1,7 @@
 import {
   AUTO_SUBMIT_TEXT,
   CHARACTER_IDS,
+  DISCONNECT_GRACE_MS,
   FINAL_ROUND,
   LEFT_TEXT,
   LIMITS,
@@ -57,6 +58,9 @@ interface Player {
   publicRoastTokens: number;
   slotExpired: boolean;
   removalTimer: ReturnType<typeof setTimeout> | null;
+  /** until then a disconnected player still counts as playing */
+  graceEndsAt: number;
+  graceTimer: ReturnType<typeof setTimeout> | null;
 }
 
 interface Answer {
@@ -79,6 +83,7 @@ interface Matchup {
 
 interface FinalRound {
   prompt: Prompt;
+  playerIds: string[];
   mode: AnswerMode;
   limit: number;
   answers: Map<string, Answer>;
@@ -171,6 +176,7 @@ export class Room {
     if (this.roastTimer) clearTimeout(this.roastTimer);
     for (const player of this.players) {
       if (player.removalTimer) clearTimeout(player.removalTimer);
+      if (player.graceTimer) clearTimeout(player.graceTimer);
     }
   }
 
@@ -198,6 +204,8 @@ export class Room {
       publicRoastTokens: LIMITS.ROAST_TOKENS_PER_GAME,
       slotExpired: false,
       removalTimer: null,
+      graceEndsAt: 0,
+      graceTimer: null,
     });
     if (!this.leaderId) this.leaderId = playerId;
     this.broadcast();
@@ -210,9 +218,14 @@ export class Room {
       clearTimeout(player.removalTimer);
       player.removalTimer = null;
     }
+    if (player.graceTimer) {
+      clearTimeout(player.graceTimer);
+      player.graceTimer = null;
+    }
     const wasConnected = player.connected;
     player.connected = true;
     player.slotExpired = false;
+    player.graceEndsAt = 0;
     if (!wasConnected) player.connectedSince = Date.now();
     const leader = this.players.find((p) => p.id === this.leaderId);
     if (!leader || !leader.connected) {
@@ -223,13 +236,20 @@ export class Room {
     this.sendPrivateState(playerId);
   }
 
-  disconnect(playerId: string): void {
+  disconnect(playerId: string, withGrace = true): void {
     const player = this.players.find((p) => p.id === playerId);
     if (!player || !player.connected) return;
     player.connected = false;
     if (this.leaderId === playerId) this.passLeadership();
     const hold = this.phase === 'LOBBY' ? LOBBY_HOLD_MS : RECONNECT_HOLD_MS;
     player.removalTimer = setTimeout(() => this.expireSlot(playerId), hold);
+    if (withGrace) {
+      player.graceEndsAt = Date.now() + DISCONNECT_GRACE_MS;
+      player.graceTimer = setTimeout(() => {
+        player.graceTimer = null;
+        this.afterPresenceChange();
+      }, DISCONNECT_GRACE_MS);
+    }
     this.afterPresenceChange();
     this.broadcast();
     if (this.connectedCount === 0) this.deps.onEmpty?.(this);
@@ -241,7 +261,7 @@ export class Room {
     if (this.phase === 'LOBBY' || this.phase === 'PODIUM') {
       this.removePlayer(playerId);
     } else {
-      this.disconnect(playerId);
+      this.disconnect(playerId, false);
     }
     if (this.connectedCount === 0) this.deps.onEmpty?.(this);
   }
@@ -273,6 +293,7 @@ export class Room {
     if (index === -1) return;
     const [player] = this.players.splice(index, 1);
     if (player?.removalTimer) clearTimeout(player.removalTimer);
+    if (player?.graceTimer) clearTimeout(player.graceTimer);
     if (this.leaderId === playerId) this.passLeadership();
     this.broadcast();
   }
@@ -446,7 +467,7 @@ export class Room {
       return;
     }
     if (this.phase === 'FINAL_WRITING' && this.final) {
-      if (this.final.prompt.id !== promptId)
+      if (this.final.prompt.id !== promptId || !this.final.playerIds.includes(playerId))
         throw new RoomError('invalid', 'That prompt is not yours');
       if (this.final.answers.has(playerId))
         throw new RoomError('already_submitted', 'You already answered');
@@ -521,10 +542,12 @@ export class Room {
     this.roastWindowEndsAt = null;
     this.promptsDealt = false;
     if (index === FINAL_ROUND) {
-      const prompt = this.drawPrompts(FINAL_ROUND, 1)[0]!;
+      // Everyone answers the final, so a custom prompt would always reach its author.
+      const prompt = this.deps.deck.draw(FINAL_ROUND, 1, this.usedPromptIds)[0]!;
       const mode = this.pickFinalMode();
       this.final = {
         prompt,
+        playerIds: this.dealtPlayers().map((p) => p.id),
         mode,
         limit: mode === 'emoji' ? LIMITS.MAX_EMOJI : roundSpec(FINAL_ROUND).limit,
         answers: new Map(),
@@ -547,25 +570,9 @@ export class Room {
     }
   }
 
-  /** Custom prompts first (shuffled, unused), then the bank for any shortfall. */
-  private drawPrompts(round: RoundIndex, count: number): Prompt[] {
-    const picked: Prompt[] = [];
-    if (this.settings.promptMode === 'custom') {
-      const fresh = this.shuffled(this.customPrompts.filter((p) => !this.usedPromptIds.has(p.id)));
-      for (const prompt of fresh.slice(0, count)) {
-        this.usedPromptIds.add(prompt.id);
-        picked.push({ id: prompt.id, text: prompt.text, rounds: [0, 1, 2] });
-      }
-    }
-    if (picked.length < count) {
-      picked.push(...this.deps.deck.draw(round, count - picked.length, this.usedPromptIds));
-    }
-    return picked;
-  }
-
   /** Ring pairing: player i vs player i+1 (mod N); N matchups. */
   private generateMatchups(round: RoundIndex): Matchup[] {
-    const order = this.shuffled(this.players.map((p) => p.id));
+    const order = this.shuffled(this.dealtPlayers().map((p) => p.id));
     const pairs = order.map(
       (playerId, i) => [playerId, order[(i + 1) % order.length]!] as [string, string],
     );
@@ -663,7 +670,7 @@ export class Room {
       this.roastWindowEndsAt = null;
     }
     if (this.phase === 'FINAL_WRITING' && this.final) {
-      for (const player of this.players) {
+      for (const player of this.finalPlayers()) {
         if (!this.final.answers.has(player.id)) {
           this.final.answers.set(player.id, this.fallbackAnswer(player, this.final.limit));
         }
@@ -879,10 +886,12 @@ export class Room {
 
   private allWritingDone(): boolean {
     if (this.phase === 'FINAL_WRITING' && this.final) {
-      return this.players.every((p) => !p.connected || this.final!.answers.has(p.id));
+      return this.finalPlayers().every((p) => !this.isPlaying(p) || this.final!.answers.has(p.id));
     }
     return this.matchups.every((m) =>
-      m.playerIds.every((id, slot) => m.answers[slot] !== null || !this.isConnected(id)),
+      m.playerIds.every(
+        (id, slot) => m.answers[slot] !== null || !this.isPlaying(this.requirePlayer(id)),
+      ),
     );
   }
 
@@ -900,7 +909,7 @@ export class Room {
   }
 
   private eligibleVoters(matchup: Matchup): Player[] {
-    return this.players.filter((p) => p.connected && !matchup.playerIds.includes(p.id));
+    return this.players.filter((p) => this.isPlaying(p) && !matchup.playerIds.includes(p.id));
   }
 
   private allVotesIn(): boolean {
@@ -911,7 +920,7 @@ export class Room {
   private allFinalVotesIn(): boolean {
     const final = this.final;
     if (!final) return true;
-    return this.players.filter((p) => p.connected).every((p) => p.id in final.votes);
+    return this.players.filter((p) => this.isPlaying(p)).every((p) => p.id in final.votes);
   }
 
   private currentMatchup(): Matchup {
@@ -920,8 +929,18 @@ export class Room {
     return matchup;
   }
 
-  private isConnected(playerId: string): boolean {
-    return this.players.find((p) => p.id === playerId)?.connected ?? false;
+  /** Players gone past the grace sit the round out while at least three remain connected. */
+  private dealtPlayers(): Player[] {
+    if (this.connectedCount < LIMITS.MIN_PLAYERS) return this.players;
+    return this.players.filter((p) => this.isPlaying(p));
+  }
+
+  private finalPlayers(): Player[] {
+    return this.players.filter((p) => this.final?.playerIds.includes(p.id));
+  }
+
+  private isPlaying(player: Player): boolean {
+    return player.connected || Date.now() < player.graceEndsAt;
   }
 
   private requirePlayer(playerId: string): Player {
@@ -1002,7 +1021,7 @@ export class Room {
       });
       return prompts;
     }
-    if (this.phase === 'FINAL_WRITING' && this.final) {
+    if (this.phase === 'FINAL_WRITING' && this.final?.playerIds.includes(playerId)) {
       return [
         {
           promptId: this.final.prompt.id,
@@ -1108,7 +1127,12 @@ export class Room {
         )
         .map((p) => p.id);
     }
-    if (this.phase === 'FINAL_WRITING' && this.final) return [...this.final.answers.keys()];
+    if (this.phase === 'FINAL_WRITING' && this.final) {
+      const { playerIds, answers } = this.final;
+      return this.players
+        .filter((p) => !playerIds.includes(p.id) || answers.has(p.id))
+        .map((p) => p.id);
+    }
     return [];
   }
 

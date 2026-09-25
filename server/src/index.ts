@@ -12,6 +12,7 @@ import { Gateway } from './ws.ts';
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, existsSync(join(here, '../../../content')) ? '../../..' : '../..');
 const port = Number(process.env.PORT ?? 8080);
+const host = process.env.HOST;
 const promptsPath = process.env.PROMPTS_PATH ?? join(repoRoot, 'content/prompts.json');
 const clientDist = process.env.CLIENT_DIST ?? join(repoRoot, 'client/dist');
 
@@ -47,8 +48,8 @@ const httpServer = createServer(app);
 const wss = new WebSocketServer({ server: httpServer, path: '/ws', maxPayload: 8_192 });
 gateway.attach(wss);
 
-httpServer.listen(port, () => {
-  log('listening', { port, prompts: deck.size, clientDist: existsSync(clientDist) });
+httpServer.listen(port, host, () => {
+  log('listening', { port, host, prompts: deck.size, clientDist: existsSync(clientDist) });
 });
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {

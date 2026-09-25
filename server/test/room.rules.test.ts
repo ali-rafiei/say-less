@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RoomError, revealDuration } from '../src/room.ts';
-import { LIMITS, type PublicMatchup } from '../src/shared.ts';
+import { DISCONNECT_GRACE_MS, LIMITS, type PublicMatchup } from '../src/shared.ts';
 import { advanceToPhaseEnd, answerAll, makeRoom, startToWriting, type Harness } from './helpers.ts';
 
 /** Advance through VOTING/MATCHUP_REVEAL until the round results, calling back on each reveal. */
@@ -22,6 +22,41 @@ function toRoundTwoWindow(h: Harness): void {
   vi.advanceTimersByTime(4_000);
   expect(h.room.phase).toBe('WRITING');
   expect(h.state().roundIndex).toBe(1);
+}
+
+function answerFor(h: Harness, playerId: string): void {
+  for (const prompt of h.room.yourPrompts(playerId)) {
+    if (prompt.submittedText === null) {
+      h.room.submitAnswer(playerId, prompt.promptId, `${playerId} answer`);
+    }
+  }
+}
+
+/** Opens voting on a matchup that has at least two voters and returns them. */
+function openMatchupWithTwoVoters(h: Harness): [string, string] {
+  startToWriting(h);
+  answerAll(h, (id) => `${id} answer`);
+  for (;;) {
+    expect(h.room.phase).toBe('VOTING');
+    const state = h.state();
+    const authors = state.matchups[state.currentMatchupIndex]!.answers.map(
+      (x) => x.text!.split(' ')[0]!,
+    );
+    const voters = h.room.players.filter((p) => !authors.includes(p.id)).map((p) => p.id);
+    if (voters.length >= 2) return [voters[0]!, voters[1]!];
+    vi.advanceTimersByTime(20_000);
+    advanceToPhaseEnd(h);
+  }
+}
+
+function toFinalWriting(h: Harness): void {
+  toRoundTwoWindow(h);
+  vi.advanceTimersByTime(10_000);
+  answerAll(h, (id, limit) => `${id} ${'x '.repeat(limit - 1)}`);
+  drainRound(h);
+  vi.advanceTimersByTime(8_000);
+  vi.advanceTimersByTime(4_000);
+  expect(h.room.phase).toBe('FINAL_WRITING');
 }
 
 describe('redaction', () => {
@@ -154,6 +189,56 @@ describe('answers and timers', () => {
     });
     expect(texts.get('a')).toEqual(['…', '…']);
     expect(texts.get('c')).toEqual(['[left the chat]', '[left the chat]']);
+  });
+
+  it('keeps writing open for a player who dropped for less than the grace period', () => {
+    // Arrange: everyone else is done when c's phone switches apps
+    const h = makeRoom();
+    startToWriting(h);
+    answerFor(h, 'a');
+    answerFor(h, 'b');
+    // Act
+    h.room.disconnect('c');
+    vi.advanceTimersByTime(DISCONNECT_GRACE_MS - 1_000);
+    // Assert: still writing, and c can come back and answer for real
+    expect(h.room.phase).toBe('WRITING');
+    h.room.reconnect('c');
+    answerFor(h, 'c');
+    expect(h.room.phase).toBe('VOTING');
+    const current = h.state().matchups[h.state().currentMatchupIndex]!;
+    expect(current.answers.map((x) => x.text)).not.toContain('[left the chat]');
+  });
+
+  it('stops waiting for a dropped player once the grace period is over', () => {
+    const h = makeRoom();
+    startToWriting(h);
+    answerFor(h, 'a');
+    answerFor(h, 'b');
+    h.room.disconnect('c');
+    vi.advanceTimersByTime(DISCONNECT_GRACE_MS);
+    expect(h.room.phase).not.toBe('WRITING');
+  });
+
+  it('does not wait at all for a player who chose to leave', () => {
+    const h = makeRoom();
+    startToWriting(h);
+    answerFor(h, 'a');
+    answerFor(h, 'b');
+    h.room.leave('c');
+    expect(h.room.phase).not.toBe('WRITING');
+  });
+
+  it('waits out the grace period for a voter who dropped, then reveals', () => {
+    // Arrange
+    const h = makeRoom(['a', 'b', 'c', 'd']);
+    const [first, second] = openMatchupWithTwoVoters(h);
+    h.room.castVote(first, h.state().currentMatchupIndex, 0);
+    // Act
+    h.room.disconnect(second);
+    // Assert
+    expect(h.room.phase).toBe('VOTING');
+    vi.advanceTimersByTime(DISCONNECT_GRACE_MS);
+    expect(h.room.phase).toBe('MATCHUP_REVEAL');
   });
 
   it('pays GREAT MINDS to identical answers and skips voting bonuses', () => {
@@ -461,6 +546,81 @@ describe('presence', () => {
   });
 });
 
+describe('sitting out', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  function playRoundOneWithout(h: Harness, goneId: string): void {
+    startToWriting(h);
+    answerAll(h, (id, limit) => `${id} ${'x '.repeat(limit - 1)}`);
+    h.room.disconnect(goneId);
+    drainRound(h);
+    vi.advanceTimersByTime(8_000);
+  }
+
+  it('deals the next round only to players still here, keeping the gone player on the board', () => {
+    // Arrange: d drops during round 1 voting and does not come back
+    const h = makeRoom(['a', 'b', 'c', 'd']);
+    playRoundOneWithout(h, 'd');
+    const dScore = h.state().players.find((p) => p.id === 'd')!.score;
+    // Act
+    vi.advanceTimersByTime(4_000 + 10_000);
+    // Assert: a three-player ring, nobody faces "[left the chat]"
+    expect(h.state().matchups).toHaveLength(3);
+    expect(h.room.yourPrompts('d')).toEqual([]);
+    for (const id of ['a', 'b', 'c']) expect(h.room.yourPrompts(id)).toHaveLength(2);
+    expect(h.state().submittedIds).toContain('d');
+    expect(h.state().players.find((p) => p.id === 'd')!.score).toBe(dScore);
+  });
+
+  it('deals a returning player back in at the next round', () => {
+    const h = makeRoom(['a', 'b', 'c', 'd']);
+    playRoundOneWithout(h, 'd');
+    vi.advanceTimersByTime(4_000 + 10_000);
+    h.room.reconnect('d');
+    expect(h.room.yourPrompts('d')).toEqual([]);
+    answerAll(h, (id, limit) => `${id} ${'x '.repeat(limit - 1)}`);
+    drainRound(h);
+    vi.advanceTimersByTime(8_000 + 4_000);
+    expect(h.room.phase).toBe('FINAL_WRITING');
+    expect(h.room.yourPrompts('d')).toHaveLength(1);
+  });
+
+  it('leaves a gone player out of the final and still ranks them on the podium', () => {
+    // Arrange
+    const h = makeRoom(['a', 'b', 'c', 'd']);
+    toRoundTwoWindow(h);
+    vi.advanceTimersByTime(10_000);
+    answerAll(h, (id, limit) => `${id} ${'x '.repeat(limit - 1)}`);
+    h.room.disconnect('d');
+    drainRound(h);
+    // Act
+    vi.advanceTimersByTime(8_000 + 4_000);
+    for (const id of ['a', 'b', 'c']) answerFor(h, id);
+    // Assert
+    expect(h.room.phase).toBe('FINAL_VOTING');
+    expect(
+      h
+        .state()
+        .final!.answers.map((x) => x.playerId)
+        .sort(),
+    ).toEqual(['a', 'b', 'c']);
+    h.room.castFinalVotes('a', 'b', 'c');
+    h.room.castFinalVotes('b', 'a', 'c');
+    h.room.castFinalVotes('c', 'a', 'b');
+    expect(h.room.phase).toBe('PODIUM');
+    expect(h.state().podium!.placements.map((p) => p.playerId)).toContain('d');
+  });
+
+  it('still deals everyone when fewer than three players would be left', () => {
+    const h = makeRoom(['a', 'b', 'c']);
+    playRoundOneWithout(h, 'c');
+    vi.advanceTimersByTime(4_000 + 10_000);
+    expect(h.state().matchups).toHaveLength(3);
+    expect(h.room.yourPrompts('a')).toHaveLength(2);
+  });
+});
+
 describe('revealDuration', () => {
   it('gives 6 s for short answers and scales to a 10 s cap for long ones', () => {
     expect(revealDuration(20)).toBe(6_000);
@@ -579,6 +739,17 @@ describe('custom prompts', () => {
     expect(() => h.room.addPrompt('b', '\u3164\u3164\u3164\u2800')).toThrowError(
       expect.objectContaining({ code: 'empty' }),
     );
+  });
+
+  it('draws the final prompt from the bank so its author never answers it', () => {
+    // Arrange: plenty of custom prompts left over for the final
+    const h = makeRoom();
+    h.room.updateSettings('a', { promptMode: 'custom' });
+    for (let i = 0; i < 20; i++) h.room.addPrompt('abc'[i % 3]!, `Custom prompt ${i}`);
+    // Act
+    toFinalWriting(h);
+    // Assert
+    expect(h.room.yourPrompts('a')[0]!.promptId).toMatch(/^p/);
   });
 
   it('ignores custom prompts in bank mode', () => {
