@@ -26,7 +26,7 @@ const PALETTES: Record<RoomPhase, string> = {
 
 export function App() {
   const ctl = useRoom();
-  const { room, me, error, dismissError, status, everConnected } = ctl;
+  const { room, me, error, dismissError, status, everConnected, displaced, playHere } = ctl;
 
   useEffect(() => {
     const unlock = () => sfx.unlock();
@@ -91,12 +91,23 @@ export function App() {
 
   return (
     <div className="app" data-palette={palette}>
-      {status !== 'open' && (
+      {status !== 'open' && !displaced && (
         <div className="conn" role="status">
           {status === 'connecting' ? (everConnected ? 'Reconnecting…' : 'Connecting…') : 'Offline'}
         </div>
       )}
       {screen}
+      {displaced && (
+        <div className="overlay" role="dialog" aria-label="Open in another tab">
+          <div className="card stack center">
+            <h2 className="display">Open in another tab</h2>
+            <p>This game is being played in another tab of this browser.</p>
+            <button className="btn btn--block" type="button" onClick={playHere}>
+              Play here
+            </button>
+          </div>
+        </div>
+      )}
       {error && (
         <button className="toast" type="button" role="alert" onClick={dismissError}>
           {error.message}

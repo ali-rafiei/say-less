@@ -10,8 +10,15 @@ import { sfx } from '../audio/sfx.ts';
 import { clearSession, loadSession, saveName, saveSession } from './session.ts';
 import { GameSocket, defaultSocketUrl, type SocketStatus } from './socket.ts';
 
+const TAB_CHANNEL = 'say-less.seat';
+
+interface SeatClaim {
+  sessionToken: string;
+  at: number;
+}
+
 export interface UiError {
-  code: ErrorCode;
+  code: ErrorCode | 'offline';
   message: string;
   at: number;
 }
@@ -30,6 +37,10 @@ export interface RoomController {
   /** serverNow - Date.now(); add to local time to compare with server deadlines */
   clockOffset: number;
   rejoining: boolean;
+  /** Another tab of this browser took over the seat. */
+  displaced: boolean;
+  /** Take the seat back from the other tab. */
+  playHere: () => void;
   createRoom: (name: string) => void;
   joinRoom: (code: string, name: string) => void;
   leaveRoom: () => void;
@@ -64,21 +75,41 @@ export function useRoom(): RoomController {
   const [rejoining, setRejoining] = useState(() => loadSession() !== null);
   const nameRef = useRef<string>(loadSession()?.name ?? '');
   const phaseRef = useRef<string | null>(null);
+  // Out of a room (left, kicked, room gone) the music goes back to the home groove.
+  useEffect(() => {
+    if (room) return;
+    phaseRef.current = null;
+    sfx.phase(null);
+  }, [room]);
   const roomRef = useRef<PublicRoomState | null>(null);
-  const joiningRef = useRef(false);
+  const joiningRef = useRef<'join' | 'rejoin' | null>(null);
+  const inflightRef = useRef(new Set<string>());
+  const tokenRef = useRef<string | null>(null);
+  const claimedAtRef = useRef(0);
+  const [displaced, setDisplaced] = useState(false);
   const [everConnected, setEverConnected] = useState(false);
 
   useEffect(() => {
     const socket = new GameSocket(defaultSocketUrl());
     socketRef.current = socket;
+    const tabs = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(TAB_CHANNEL);
+    if (tabs) {
+      tabs.onmessage = (event: MessageEvent<SeatClaim>) => {
+        const claim = event.data;
+        if (claim.sessionToken !== tokenRef.current || claim.at < claimedAtRef.current) return;
+        socket.close();
+        setDisplaced(true);
+      };
+    }
     const offStatus = socket.onStatus((next) => {
       setStatus(next);
+      inflightRef.current.clear();
       if (next === 'open') {
         setEverConnected(true);
         const session = loadSession();
         if (session) {
           setRejoining(true);
-          joiningRef.current = true;
+          joiningRef.current = 'rejoin';
           socket.sendNow({
             type: 'join_room',
             payload: { code: session.code, name: session.name, sessionToken: session.sessionToken },
@@ -89,7 +120,15 @@ export function useRoom(): RoomController {
     const offMessage = socket.onMessage((message) => {
       switch (message.type) {
         case 'welcome': {
-          joiningRef.current = false;
+          joiningRef.current = null;
+          inflightRef.current.clear();
+          tokenRef.current = message.payload.sessionToken;
+          claimedAtRef.current = Date.now();
+          tabs?.postMessage({
+            sessionToken: message.payload.sessionToken,
+            at: claimedAtRef.current,
+          } satisfies SeatClaim);
+          setDisplaced(false);
           setMe(message.payload.playerId);
           setRejoining(false);
           saveSession({
@@ -104,6 +143,7 @@ export function useRoom(): RoomController {
           setClockOffset(state.serverNow - Date.now());
           if (phaseRef.current !== state.phase) {
             phaseRef.current = state.phase;
+            inflightRef.current.clear();
             if (state.phase !== 'WRITING' && state.phase !== 'FINAL_WRITING') {
               setPrompts([]);
               setRoastedBy(null);
@@ -133,6 +173,7 @@ export function useRoom(): RoomController {
         case 'reveal':
           return;
         case 'left':
+          inflightRef.current.clear();
           clearSession();
           roomRef.current = null;
           setRoom(null);
@@ -142,18 +183,21 @@ export function useRoom(): RoomController {
           return;
         case 'error': {
           const { code, message: text } = message.payload;
-          if (joiningRef.current && (code === 'not_found' || code === 'bad_phase')) {
-            // The stored room is gone or no longer joinable: back to home, quietly.
-            joiningRef.current = false;
+          inflightRef.current.clear();
+          if (joiningRef.current === 'rejoin' && (code === 'not_found' || code === 'bad_phase')) {
+            // The stored room is gone or no longer joinable: back to home, quietly on a fresh load.
+            const wasPlaying = roomRef.current !== null;
+            joiningRef.current = null;
             clearSession();
             setRejoining(false);
             roomRef.current = null;
             setRoom(null);
             setMe(null);
             if (code === 'bad_phase') setError({ code, message: text, at: Date.now() });
+            else if (wasPlaying) setError({ code, message: 'That room is gone.', at: Date.now() });
             return;
           }
-          joiningRef.current = false;
+          joiningRef.current = null;
           if (code === 'rate_limited') return; // the socket paces sends; a stray one is harmless
           setError({ code, message: text, at: Date.now() });
           sfx.error();
@@ -163,15 +207,30 @@ export function useRoom(): RoomController {
           return;
       }
     });
+    const offDrop = socket.onDrop(() => {
+      inflightRef.current.clear();
+      setError({ code: 'offline', message: 'Connection lost. Try that again.', at: Date.now() });
+    });
     socket.connect();
     return () => {
       offStatus();
       offMessage();
+      offDrop();
+      tabs?.close();
       socket.close();
     };
   }, []);
 
   const send = useCallback((message: ClientMessage) => socketRef.current?.send(message), []);
+  /** Once-per-phase intents: a double-tap must not become a second, rejected intent. */
+  const sendOnce = useCallback(
+    (key: string, message: ClientMessage) => {
+      if (inflightRef.current.has(key)) return;
+      inflightRef.current.add(key);
+      send(message);
+    },
+    [send],
+  );
 
   const api = useMemo<
     Omit<
@@ -186,6 +245,7 @@ export function useRoom(): RoomController {
       | 'error'
       | 'clockOffset'
       | 'rejoining'
+      | 'displaced'
       | 'everConnected'
     >
   >(
@@ -193,18 +253,27 @@ export function useRoom(): RoomController {
       createRoom: (name) => {
         nameRef.current = name;
         saveName(name);
-        joiningRef.current = true;
-        send({ type: 'create_room', payload: { name } });
+        joiningRef.current = 'join';
+        sendOnce('join', { type: 'create_room', payload: { name } });
       },
       joinRoom: (code, name) => {
         nameRef.current = name;
         saveName(name);
-        joiningRef.current = true;
-        send({ type: 'join_room', payload: { code, name } });
+        joiningRef.current = 'join';
+        sendOnce('join', { type: 'join_room', payload: { code, name } });
+      },
+      playHere: () => {
+        setDisplaced(false);
+        if (!loadSession()) {
+          roomRef.current = null;
+          setRoom(null);
+          setMe(null);
+        }
+        socketRef.current?.connect();
       },
       startOver: () => {
         clearSession();
-        joiningRef.current = false;
+        joiningRef.current = null;
         setRejoining(false);
         roomRef.current = null;
         setRoom(null);
@@ -218,7 +287,7 @@ export function useRoom(): RoomController {
         setPrompts([]);
       },
       updateSettings: (patch) => send({ type: 'update_settings', payload: patch }),
-      startGame: () => send({ type: 'start_game', payload: {} }),
+      startGame: () => sendOnce('start_game', { type: 'start_game', payload: {} }),
       pickCharacter: (characterId) => send({ type: 'pick_character', payload: { characterId } }),
       addPrompt: (text) => send({ type: 'add_prompt', payload: { text } }),
       removePrompt: (promptId) => send({ type: 'remove_prompt', payload: { promptId } }),
@@ -226,13 +295,13 @@ export function useRoom(): RoomController {
       submitAnswer: (promptId, text) =>
         send({ type: 'submit_answer', payload: { promptId, text } }),
       castVote: (matchupIndex, answerIndex) =>
-        send({ type: 'cast_vote', payload: { matchupIndex, answerIndex } }),
+        sendOnce('cast_vote', { type: 'cast_vote', payload: { matchupIndex, answerIndex } }),
       castFinalVotes: (first, second) =>
-        send({ type: 'cast_final_votes', payload: { first, second } }),
-      rematch: () => send({ type: 'rematch', payload: {} }),
+        sendOnce('cast_final_votes', { type: 'cast_final_votes', payload: { first, second } }),
+      rematch: () => sendOnce('rematch', { type: 'rematch', payload: {} }),
       dismissError: () => setError(null),
     }),
-    [send],
+    [send, sendOnce],
   );
 
   return {
@@ -246,6 +315,7 @@ export function useRoom(): RoomController {
     error,
     clockOffset,
     rejoining,
+    displaced,
     everConnected,
     ...api,
   };
