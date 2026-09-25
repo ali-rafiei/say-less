@@ -2,16 +2,26 @@
 # requires-python = ">=3.11"
 # dependencies = ["pillow>=10"]
 # ///
-"""Turn magenta-background PNGs into transparent, trimmed, square sprites.
+"""Turn magenta-background PNGs (single images or sheets) into transparent, trimmed, square sprites.
 
 Usage (from the repo root):
     uv run tools/dechroma.py                # processes art/raw/** into client/public/sprites and client/public/ui
     uv run tools/dechroma.py --size 768     # different output size
-    uv run tools/dechroma.py --dry-run      # report only
+    uv run tools/dechroma.py --dry-run      # report only (sheets are still cut in memory to check the cells)
+    uv run tools/dechroma.py --self-test    # cut synthetic sheets and check the cells
 
 Input layout (see ASSETS.md):
-    art/raw/characters/<characterId>/<state>.png   -> client/public/sprites/<characterId>/<state>.png
-    art/raw/ui/<name>.png                          -> client/public/ui/<name>.png
+    art/raw/characters/<characterId>.png           sheet, 3x2: idle writing waiting / win lose
+                                                   -> client/public/sprites/<characterId>/<state>.png
+    art/raw/characters/<characterId>/<state>.png   single pose; wins over that pose's sheet cell
+    art/raw/sheets/<sheet>.png                     UI sheet, cells as in SHEETS -> client/public/ui/<name>.png
+    art/raw/ui/<name>.png                          single UI image; wins over a sheet cell of the same name
+
+Sheets are cut by projection: key out the magenta, find bands of rows holding any
+opaque pixel, then runs of columns inside each band. Runs closer than 4% of the sheet
+size are merged so a detached sweat drop or falling mic stays with its character. If
+the cells found do not match the expected grid, the sheet is split evenly instead and a
+warning is printed.
 
 Also rewrites client/public/sprites/manifest.json so the game knows which
 character/state pairs have a raster sprite and should skip the SVG placeholder.
@@ -20,21 +30,194 @@ character/state pairs have a raster sprite and should skip the SVG placeholder.
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
 import json
+import random
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW_CHARACTERS = ROOT / "art" / "raw" / "characters"
+RAW_SHEETS = ROOT / "art" / "raw" / "sheets"
 RAW_UI = ROOT / "art" / "raw" / "ui"
 OUT_SPRITES = ROOT / "client" / "public" / "sprites"
 OUT_UI = ROOT / "client" / "public" / "ui"
-CHARACTER_IDS = ["lemon", "raccoon", "icecream", "grandma", "sock", "cactus", "toast", "pigeon", "ghost", "blob"]
+CHARACTER_IDS = [
+    "cat",
+    "monkey",
+    "frog",
+    "bird",
+    "axolotl",
+    "bear",
+    "rabbit",
+    "fish",
+    "blob",
+    "otter",
+    "penguin",
+    "hedgehog",
+]
 STATES = ["idle", "writing", "waiting", "win", "lose"]
 
 KEY = (255, 0, 255)
+OPAQUE_ALPHA = 128
+MERGE_GAP_RATIO = 0.04
+SELF_TEST_COLOURS = [
+    (30, 120, 200),
+    (40, 170, 80),
+    (230, 200, 40),
+    (20, 20, 40),
+    (120, 200, 210),
+    (250, 150, 60),
+    (90, 60, 40),
+    (160, 220, 120),
+]
+SELF_TEST_DROP = (140, 210, 255)
+
+
+@dataclass(frozen=True)
+class SheetLayout:
+    columns: int
+    rows: int
+    cells: tuple[str | None, ...]
+    shared_scale: bool = False
+
+    @property
+    def names(self) -> list[str]:
+        return [name for name in self.cells if name is not None]
+
+    @property
+    def names_per_row(self) -> list[list[str]]:
+        """Named cells grouped by grid row; rows with no named cell are left out."""
+        rows = [self.cells[r * self.columns : (r + 1) * self.columns] for r in range(self.rows)]
+        named = [[name for name in row if name is not None] for row in rows]
+        return [row for row in named if row]
+
+
+CHARACTER_SHEET = SheetLayout(3, 2, (*STATES, None), shared_scale=True)
+SHEETS = {
+    "stamps": SheetLayout(3, 2, ("micdrop", "silenced", "greatminds", "backfire", "robbed", None)),
+    "icons": SheetLayout(4, 2, ("flame", "crown", "sound-on", "sound-off", "mic", "pencil", "tile", "seat")),
+    "podium": SheetLayout(3, 1, ("stand-1", "stand-2", "stand-3"), shared_scale=True),
+    "howto": SheetLayout(
+        3,
+        2,
+        ("howto-gather", "howto-answer", "howto-vote", "howto-micdrop", "howto-roast", "howto-final"),
+    ),
+}
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--size", type=int, default=512, help="output side length in px (default 512)")
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--self-test", action="store_true", help="cut synthetic sheets and check the result")
+    args = parser.parse_args()
+    if args.self_test:
+        return self_test()
+
+    manifest: dict[str, list[str]] = {}
+    processed = convert_characters(args.size, args.dry_run, manifest)
+    processed += convert_ui(args.size, args.dry_run)
+
+    if not args.dry_run:
+        OUT_SPRITES.mkdir(parents=True, exist_ok=True)
+        (OUT_SPRITES / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+        print(f"wrote {OUT_SPRITES.relative_to(ROOT)}/manifest.json")
+    print(f"{processed} file(s) processed")
+    if processed == 0:
+        print("Nothing found under art/raw/. See ASSETS.md for the expected layout.", file=sys.stderr)
+        return 1
+    return 0
+
+
+def convert_characters(size: int, dry_run: bool, manifest: dict[str, list[str]]) -> int:
+    if not RAW_CHARACTERS.exists():
+        return 0
+    processed = 0
+    for character_id in _raw_character_ids():
+        if character_id not in CHARACTER_IDS:
+            print(f"skip unknown character {character_id}", file=sys.stderr)
+            continue
+        out_dir = OUT_SPRITES / character_id
+        singles = _single_poses(RAW_CHARACTERS / character_id)
+        for state, source in singles.items():
+            _convert_single(source, out_dir / f"{state}.png", size, dry_run)
+        written = set(singles)
+        sheet = RAW_CHARACTERS / f"{character_id}.png"
+        if sheet.exists():
+            written |= _convert_sheet(sheet, CHARACTER_SHEET, out_dir, size, dry_run, skip=set(singles))
+        processed += len(written)
+        if written:
+            manifest[character_id] = [state for state in STATES if state in written]
+    return processed
+
+
+def convert_ui(size: int, dry_run: bool) -> int:
+    singles = sorted(RAW_UI.glob("*.png")) if RAW_UI.exists() else []
+    processed = 0
+    if RAW_SHEETS.exists():
+        for sheet in sorted(RAW_SHEETS.glob("*.png")):
+            layout = SHEETS.get(sheet.stem)
+            if layout is None:
+                print(f"skip unknown sheet {sheet.name} (known: {', '.join(SHEETS)})", file=sys.stderr)
+                continue
+            processed += len(_convert_sheet(sheet, layout, OUT_UI, size, dry_run, skip={s.stem for s in singles}))
+    for single in singles:
+        _convert_single(single, OUT_UI / single.name, size, dry_run)
+        processed += 1
+    return processed
+
+
+def self_test() -> int:
+    size = 96
+    rng = random.Random(7)
+    for label, layout in {"characters": CHARACTER_SHEET, **SHEETS}.items():
+        sheet, colours, boxes = _synthetic_sheet(layout, rng)
+        if layout is CHARACTER_SHEET:
+            _draw_detached_drop(sheet, boxes, beside="writing", row=["idle", "writing", "waiting"])
+        warnings = io.StringIO()
+        with contextlib.redirect_stderr(warnings):
+            sprites = cut_sheet(sheet, layout, size, f"synthetic {label}")
+        assert not warnings.getvalue(), f"{label}: unexpected warning {warnings.getvalue()!r}"
+        _check_cells(label, layout, sprites, colours, size, same_baseline=label in ("characters", "podium"))
+        if layout is CHARACTER_SHEET:
+            holders = [name for name, sprite in sprites.items() if _has_colour(sprite, SELF_TEST_DROP)]
+            assert holders == ["writing"], f"{label}: detached drop landed in {holders}, expected ['writing']"
+        if label == "podium":
+            widths, heights = zip(*(_opaque_size(sprites[name]) for name in layout.names))
+            assert max(widths) - min(widths) <= 1, f"podium: stand widths {widths} differ"
+            assert list(heights) == sorted(heights, reverse=True), f"podium: stand heights {heights} lost their order"
+        print(f"ok {label}: {' '.join(sprites)}")
+
+    sheet, colours, boxes = _synthetic_sheet(CHARACTER_SHEET, rng)
+    _draw_bridge(sheet, boxes["idle"], boxes["writing"], colours["idle"])
+    warnings = io.StringIO()
+    with contextlib.redirect_stderr(warnings):
+        sprites = cut_sheet(sheet, CHARACTER_SHEET, size, "synthetic bridged characters")
+    assert "even 3x2 grid" in warnings.getvalue(), f"bridged sheet did not fall back: {warnings.getvalue()!r}"
+    _check_cells("bridged characters", CHARACTER_SHEET, sprites, colours, size, same_baseline=True)
+    print(f"ok bridged characters (even-grid fallback): {' '.join(sprites)}")
+    print("self-test passed")
+    return 0
+
+
+def cut_sheet(sheet: Image.Image, layout: SheetLayout, size: int, label: str) -> dict[str, Image.Image]:
+    """Key a sheet and return one square sprite per named cell; empty cells are left out with a warning."""
+    keyed = key_out_magenta(sheet)
+    crops = {}
+    for name, box in _find_cells(keyed, layout, label).items():
+        crop = keyed.crop(box)
+        if crop.getbbox() is None:
+            print(f"warning: {label}: cell {name} is empty, skipped", file=sys.stderr)
+            continue
+        crops[name] = crop
+    if layout.shared_scale:
+        return _square_together(crops, size)
+    return {name: trim_and_square(crop, size) for name, crop in crops.items()}
 
 
 def key_out_magenta(image: Image.Image, soft_lo: int = 40, soft_hi: int = 140) -> Image.Image:
@@ -69,7 +252,24 @@ def trim_and_square(image: Image.Image, size: int, padding_ratio: float = 0.06) 
     return canvas.resize((size, size), Image.LANCZOS)
 
 
-def process(source: Path, target: Path, size: int, dry_run: bool) -> None:
+def _raw_character_ids() -> list[str]:
+    entries = (p for p in RAW_CHARACTERS.iterdir() if p.is_dir() or p.suffix == ".png")
+    return sorted({p.name if p.is_dir() else p.stem for p in entries})
+
+
+def _single_poses(folder: Path) -> dict[str, Path]:
+    if not folder.is_dir():
+        return {}
+    poses = {}
+    for state_file in sorted(folder.glob("*.png")):
+        if state_file.stem not in STATES:
+            print(f"skip unknown state {state_file}", file=sys.stderr)
+            continue
+        poses[state_file.stem] = state_file
+    return poses
+
+
+def _convert_single(source: Path, target: Path, size: int, dry_run: bool) -> None:
     print(f"{source.relative_to(ROOT)} -> {target.relative_to(ROOT)}")
     if dry_run:
         return
@@ -80,40 +280,179 @@ def process(source: Path, target: Path, size: int, dry_run: bool) -> None:
     sprite.save(target, optimize=True)
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--size", type=int, default=512, help="output side length in px (default 512)")
-    parser.add_argument("--dry-run", action="store_true")
-    args = parser.parse_args()
+def _convert_sheet(
+    source: Path, layout: SheetLayout, out_dir: Path, size: int, dry_run: bool, skip: set[str]
+) -> set[str]:
+    with Image.open(source) as raw:
+        sprites = cut_sheet(raw, layout, size, str(source.relative_to(ROOT)))
+    written = set()
+    for name, sprite in sprites.items():
+        target = out_dir / f"{name}.png"
+        if name in skip:
+            print(f"{source.relative_to(ROOT)} [{name}] skipped: a single file replaces this cell")
+            continue
+        print(f"{source.relative_to(ROOT)} [{name}] -> {target.relative_to(ROOT)}")
+        written.add(name)
+        if not dry_run:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            sprite.save(target, optimize=True)
+    return written
 
-    manifest: dict[str, list[str]] = {}
-    processed = 0
-    if RAW_CHARACTERS.exists():
-        for character_dir in sorted(p for p in RAW_CHARACTERS.iterdir() if p.is_dir()):
-            if character_dir.name not in CHARACTER_IDS:
-                print(f"skip unknown character folder {character_dir.name}", file=sys.stderr)
-                continue
-            for state_file in sorted(character_dir.glob("*.png")):
-                if state_file.stem not in STATES:
-                    print(f"skip unknown state {state_file}", file=sys.stderr)
-                    continue
-                process(state_file, OUT_SPRITES / character_dir.name / f"{state_file.stem}.png", args.size, args.dry_run)
-                manifest.setdefault(character_dir.name, []).append(state_file.stem)
-                processed += 1
-    if RAW_UI.exists():
-        for ui_file in sorted(RAW_UI.glob("*.png")):
-            process(ui_file, OUT_UI / ui_file.name, args.size, args.dry_run)
-            processed += 1
 
-    if not args.dry_run:
-        OUT_SPRITES.mkdir(parents=True, exist_ok=True)
-        (OUT_SPRITES / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
-        print(f"wrote {OUT_SPRITES.relative_to(ROOT)}/manifest.json")
-    print(f"{processed} file(s) processed")
-    if processed == 0:
-        print("Nothing found under art/raw/. See ASSETS.md for the expected layout.", file=sys.stderr)
-        return 1
-    return 0
+def _find_cells(keyed: Image.Image, layout: SheetLayout, label: str) -> dict[str, tuple[int, int, int, int]]:
+    mask = keyed.getchannel("A").point(lambda a: 255 if a >= OPAQUE_ALPHA else 0)
+    column_gap = int(keyed.width * MERGE_GAP_RATIO)
+    found = []
+    for top, bottom in _runs(_occupied_rows(mask), int(keyed.height * MERGE_GAP_RATIO)):
+        band = mask.crop((0, top, mask.width, bottom)).transpose(Image.Transpose.TRANSPOSE)
+        found.append([(left, top, right, bottom) for left, right in _runs(_occupied_rows(band), column_gap)])
+    found_per_row = [len(row) for row in found]
+    expected_per_row = [len(row) for row in layout.names_per_row]
+    if found_per_row == expected_per_row:
+        return dict(zip(layout.names, (box for row in found for box in row)))
+    print(
+        f"warning: {label}: found {sum(found_per_row)} cells (rows of {found_per_row}), "
+        f"expected {sum(expected_per_row)} (rows of {expected_per_row}); "
+        f"cutting an even {layout.columns}x{layout.rows} grid instead",
+        file=sys.stderr,
+    )
+    return _even_grid(keyed.size, layout)
+
+
+def _occupied_rows(mask: Image.Image) -> list[bool]:
+    data = mask.tobytes()
+    width = mask.width
+    return [bool(data[y * width : (y + 1) * width].strip(b"\0")) for y in range(mask.height)]
+
+
+def _runs(flags: list[bool], merge_gap: int) -> list[tuple[int, int]]:
+    """Half-open [start, end) spans of consecutive True flags, joining spans separated by less than merge_gap."""
+    runs: list[tuple[int, int]] = []
+    start = None
+    for index, flag in enumerate([*flags, False]):
+        if flag and start is None:
+            start = index
+        elif not flag and start is not None:
+            if runs and start - runs[-1][1] < merge_gap:
+                runs[-1] = (runs[-1][0], index)
+            else:
+                runs.append((start, index))
+            start = None
+    return runs
+
+
+def _even_grid(sheet_size: tuple[int, int], layout: SheetLayout) -> dict[str, tuple[int, int, int, int]]:
+    width, height = sheet_size
+    boxes = {}
+    for index, name in enumerate(layout.cells):
+        if name is None:
+            continue
+        column, row = index % layout.columns, index // layout.columns
+        boxes[name] = (
+            column * width // layout.columns,
+            row * height // layout.rows,
+            (column + 1) * width // layout.columns,
+            (row + 1) * height // layout.rows,
+        )
+    return boxes
+
+
+def _square_together(crops: dict[str, Image.Image], size: int, padding_ratio: float = 0.06) -> dict[str, Image.Image]:
+    """Trim every crop, then scale them all by the same factor and stand them on one shared baseline."""
+    trimmed = {name: crop.crop(crop.getbbox()) for name, crop in crops.items()}
+    if not trimmed:
+        return {}
+    longest = max(max(image.size) for image in trimmed.values())
+    side = int(longest * (1 + 2 * padding_ratio))
+    baseline = side - (side - longest) // 2
+    squared = {}
+    for name, image in trimmed.items():
+        canvas = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+        canvas.paste(image, ((side - image.width) // 2, baseline - image.height))
+        squared[name] = canvas.resize((size, size), Image.LANCZOS)
+    return squared
+
+
+def _synthetic_sheet(
+    layout: SheetLayout, rng: random.Random
+) -> tuple[Image.Image, dict[str, tuple[int, int, int]], dict[str, tuple[int, int, int, int]]]:
+    """Magenta canvas with one coloured shape per named cell, drifted off the even grid."""
+    cell = 160
+    sheet = Image.new("RGB", (layout.columns * cell, layout.rows * cell), KEY)
+    draw = ImageDraw.Draw(sheet)
+    colours: dict[str, tuple[int, int, int]] = {}
+    boxes: dict[str, tuple[int, int, int, int]] = {}
+    podium_heights = {"stand-1": 110, "stand-2": 80, "stand-3": 55}
+    for index, name in enumerate(layout.cells):
+        if name is None:
+            continue
+        column, row = index % layout.columns, index // layout.columns
+        centre_x = column * cell + cell // 2 + rng.randint(-10, 10)
+        width = 80 if name in podium_heights else rng.randint(50, 90)
+        height = podium_heights.get(name) or rng.randint(60, 100)
+        if layout.shared_scale:
+            bottom = row * cell + 145 + rng.randint(-3, 3)
+        else:
+            bottom = row * cell + cell // 2 + height // 2 + rng.randint(-10, 10)
+        box = (centre_x - width // 2, bottom - height, centre_x + width // 2, bottom)
+        colours[name] = SELF_TEST_COLOURS[len(colours)]
+        boxes[name] = box
+        if name in podium_heights:
+            draw.rectangle(box, fill=colours[name])
+        else:
+            draw.ellipse(box, fill=colours[name])
+    return sheet, colours, boxes
+
+
+def _draw_detached_drop(
+    sheet: Image.Image, boxes: dict[str, tuple[int, int, int, int]], beside: str, row: list[str]
+) -> None:
+    """A small shape above and to the right of one character, clear of it by less than the merge gap."""
+    row_top = min(boxes[name][1] for name in row)
+    right = boxes[beside][2]
+    ImageDraw.Draw(sheet).ellipse((right + 6, row_top - 20, right + 20, row_top - 6), fill=SELF_TEST_DROP)
+
+
+def _draw_bridge(
+    sheet: Image.Image, left: tuple[int, int, int, int], right: tuple[int, int, int, int], colour: tuple[int, int, int]
+) -> None:
+    middle = (left[1] + left[3]) // 2
+    ImageDraw.Draw(sheet).rectangle((left[2] - 4, middle - 4, right[0] + 4, middle + 4), fill=colour)
+
+
+def _check_cells(
+    label: str,
+    layout: SheetLayout,
+    sprites: dict[str, Image.Image],
+    colours: dict[str, tuple[int, int, int]],
+    size: int,
+    same_baseline: bool,
+) -> None:
+    assert list(sprites) == layout.names, f"{label}: cut {list(sprites)}, expected {layout.names}"
+    for name, sprite in sprites.items():
+        assert sprite.size == (size, size), f"{label}/{name}: size {sprite.size}"
+        assert sprite.getbbox() is not None, f"{label}/{name}: empty"
+        dominant = _dominant_colour(sprite)
+        assert dominant == colours[name], f"{label}/{name}: holds colour {dominant}, expected {colours[name]}"
+    if same_baseline:
+        bottoms = {name: sprite.getbbox()[3] for name, sprite in sprites.items()}
+        assert max(bottoms.values()) - min(bottoms.values()) <= 1, f"{label}: baselines differ {bottoms}"
+
+
+def _dominant_colour(sprite: Image.Image) -> tuple[int, int, int]:
+    counts = sprite.getcolors(sprite.width * sprite.height) or []
+    opaque = [(count, rgba[:3]) for count, rgba in counts if rgba[3] == 255]
+    return max(opaque)[1]
+
+
+def _has_colour(sprite: Image.Image, colour: tuple[int, int, int], tolerance: int = 16) -> bool:
+    counts = sprite.getcolors(sprite.width * sprite.height) or []
+    return any(rgba[3] == 255 and max(abs(rgba[i] - colour[i]) for i in range(3)) <= tolerance for _, rgba in counts)
+
+
+def _opaque_size(sprite: Image.Image) -> tuple[int, int]:
+    left, top, right, bottom = sprite.getbbox()
+    return right - left, bottom - top
 
 
 if __name__ == "__main__":
