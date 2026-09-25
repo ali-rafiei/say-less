@@ -469,7 +469,11 @@ suppressed outside inputs) and images ignore pointer events and drags.
   (`music.ts`, 25 ms tick, 100 ms horizon), song data per phase (`songs.ts`: lobby F major
   92 bpm, writing A minor 96 bpm with a clock tick, voting C major 124 bpm, results D
   dorian vamp, podium fanfare; silence during reveals), instruments, effect recipes, and
-  a bus graph with reverb, compressor, limiter and ducking under effects. Music sits
+  a bus graph. Each looping song is an arrangement of named sections played in order, so
+  it runs a long time before repeating: lobby 64 bars (about 2:47), writing 40 bars
+  (100 s, longer than any writing phase), voting 36, podium 32 after its fanfare, results 16. A loop that fades out resumes on the bar it had reached (`LoopBookmarks`), so the
+  voting music carries on across matchups instead of restarting at every reveal. The
+  graph has reverb, compressor, limiter and ducking under effects. Music sits
   about 10 dB under effects. `SoundControls` gives separate Music and Sound effects
   switches (`say-less.music`, `say-less.muted` in localStorage); it lives in the header,
   and in the top corner of Home, Lobby and Podium. Nothing plays before the first tap,
@@ -482,13 +486,15 @@ suppressed outside inputs) and images ignore pointer events and drags.
 
 Roster and accent colors: `shared/src/characters.ts`. Placeholder art:
 `client/src/characters/svg/*.svg`, drawn to a strict group contract
-(`c-shadow, c-body > c-face > c-eyes/c-mouth, c-arm-l, c-arm-r, c-mic, c-pencil,
+(`c-shadow, c-body > c-face > c-eyes/c-mouth, c-arm-l, c-arm-r, c-pencil,
 c-sweat, c-gag`) so CSS can pose them: idle breathe, writing scribble + pencil + sweat,
-waiting glance, win arm-up + falling mic, lose deflate with per-character gags
+waiting glance, win arm-up + bounce, lose deflate with per-character gags
 (rabbit ears and axolotl gills droop, blob puddles, fish blows bubbles, bird head-bobs).
 
-The roster is the Reel Town cast (cat, monkey, frog, bird, axolotl, bear, rabbit, fish,
-blob) plus otter, penguin and hedgehog, so the same animals appear in both games. Twelve
+The roster is the Reel Town cast (cat, monkey, bird, axolotl, bear, rabbit, fish, blob)
+plus duck, otter, penguin and hedgehog, so most of the animals appear in both games. The
+duck replaced the Reel Town frog; only the How to play "gather" picture still shows the
+frog (the share card was recast with the cat, monkey, bird and rabbit). Twelve
 characters because the room holds twelve players and every player needs a unique one.
 Every character and pose now has painted art, so the SVGs are only a fallback for a pose
 missing from `client/public/sprites/manifest.json`. Raster sprites are animated as a whole

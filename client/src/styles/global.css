@@ -220,10 +220,6 @@ p {
 .btn--secondary {
   background: var(--paper);
 }
-.btn--danger {
-  background: var(--danger);
-  color: var(--paper);
-}
 .btn--block {
   width: 100%;
 }
@@ -295,13 +291,6 @@ p {
 }
 .dim {
   color: var(--fg-dim);
-}
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
 }
 
 .toast {

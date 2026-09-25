@@ -34,7 +34,7 @@ optional sets.
 | ---- | ------------------------------------ | -------------------------------- | ----------- | -------------------------------------------- | ----- |
 | [x]  | `art/raw/characters/cat.png`         | Cat, 5 poses                     | 3x2, 5      | `client/public/sprites/cat/<pose>.webp`      | yes   |
 | [x]  | `art/raw/characters/monkey.png`      | Monkey, 5 poses                  | 3x2, 5      | `client/public/sprites/monkey/<pose>.webp`   | yes   |
-| [x]  | `art/raw/characters/frog.png`        | Frog, 5 poses                    | 3x2, 5      | `client/public/sprites/frog/<pose>.webp`     | yes   |
+| [x]  | `art/raw/characters/duck.png`        | Duck, 5 poses                    | 3x2, 5      | `client/public/sprites/duck/<pose>.webp`     | yes   |
 | [x]  | `art/raw/characters/bird.png`        | Bird, 5 poses                    | 3x2, 5      | `client/public/sprites/bird/<pose>.webp`     | yes   |
 | [x]  | `art/raw/characters/axolotl.png`     | Axolotl, 5 poses                 | 3x2, 5      | `client/public/sprites/axolotl/<pose>.webp`  | yes   |
 | [x]  | `art/raw/characters/bear.png`        | Bear, 5 poses                    | 3x2, 5      | `client/public/sprites/bear/<pose>.webp`     | yes   |
@@ -125,7 +125,7 @@ be a good still.
 | ---------- | -------- | --------- | -------------------------------------------------- |
 | `cat`      | Cat      | `#EEA373` | Reel Town                                          |
 | `monkey`   | Monkey   | `#9B6B45` | Reel Town                                          |
-| `frog`     | Frog     | `#7FA35A` | Reel Town                                          |
+| `duck`     | Duck     | `#F1C753` | new, replaced the Reel Town frog                   |
 | `bird`     | Bird     | `#5F7FB4` | Reel Town                                          |
 | `axolotl`  | Axolotl  | `#F0B3BD` | Reel Town; the pink must stay pale, see its prompt |
 | `bear`     | Bear     | `#8C6444` | Reel Town                                          |
@@ -150,7 +150,7 @@ The accent is the colour the game paints behind a character's name chip and vote
 | Pose      | Where the game shows it                                                                                                                                                                                 |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `idle`    | Lobby character grid, lobby player chips (56 px), roast targets (44 px), voter faces on reveal cards (26 px, the smallest use), tie cards, middle of the scoreboard, podium 2nd place, final-round list |
-| `writing` | Corner mascot while you type (84 px), "Waiting on..." chips of players still writing                                                                                                                    |
+| `writing` | Corner mascot while you type (84 px), waiting-room chips of players still writing                                                                                                                       |
 | `waiting` | Voting screen when one of the two answers is yours (96 px)                                                                                                                                              |
 | `win`     | Your own pick in the lobby grid, winning reveal card, scoreboard leader, podium 1st place (110 px), full-screen mic-drop overlay (220 px, the largest use)                                              |
 | `lose`    | Losing reveal card, scoreboard last place, podium 3rd place                                                                                                                                             |
@@ -251,12 +251,13 @@ Props: only the pencil, notepad, sweat drop and microphone named above, each kep
 the character. No other objects, no speech bubbles, no motion lines, no stars, no confetti.
 ```
 
-### 2.3 Frog
+### 2.3 Duck
 
-Save as `art/raw/characters/frog.png`
+Save as `art/raw/characters/duck.png`. The duck replaced the Reel Town frog; its sheet was
+generated outside this prompt set, so this prompt describes the art as it stands.
 
 ```
-Sheet: Frog character poses, for the game Say Less.
+Sheet: Duck character poses, for the game Say Less.
 
 Background: a perfectly flat, uniform, pure magenta #FF00FF background filling the whole
 canvas edge to edge. No magenta, hot pink or fuchsia anywhere in the character or props.
@@ -265,10 +266,10 @@ Style: exactly the attached Reel Town style: soft low-poly model painted flat, g
 faceted shading lit from the upper left, matte, simple big graphic eyes, warm muted
 colours, no outlines, no text, no ground shadow.
 
-Character (keep on-model with the Frog in the attached references): broad flattened head
-with integrated raised eye bumps, huge wide simple smile, squat broad green body, very
-short arms and large splayed webbed feet, a short blue vest with two small buttons, cream
-lower face and belly. Clearly frog anatomy.
+Character (new, designed in the same language as the references): a round yellow duckling
+with a single curled cowlick on top of the head, sleepy half-lidded eyes, a wide flat
+orange bill, a cream belly, small feathered yellow wings, orange webbed feet and a red
+neckerchief knotted at the front.
 
 Layout: square 2048x2048 canvas, 3 columns x 2 rows. Row 1, left to right: idle, writing,
 waiting. Row 2, left to right: win, lose, then an empty bottom-right cell with nothing in
@@ -279,20 +280,17 @@ empty magenta gaps between cells; nothing touches or crosses into a neighbouring
 labels, no panels, no borders.
 
 Poses:
-1. idle: standing relaxed, short arms at its sides, neutral happy wide smile.
+1. idle: standing relaxed, wings at its sides, unimpressed sleepy look.
 2. writing: holding a short yellow pencil stub (grey metal band, cream eraser, no pink) and
-   scribbling on a small cream notepad held in the other hand, concentrating, one small
-   pale-blue sweat drop just beside the head.
-3. waiting: nervous, eyes glancing sideways, a tight wobbly grimace instead of the smile,
-   hands clasped in front of the belly, one small pale-blue sweat drop just beside the head.
-4. win: triumphant, one short arm raised high, having just let go of a black handheld
-   microphone that is falling mid-air right beside the raised hand, close to the body;
-   confident huge grin.
-5. lose: deflated and squashed noticeably shorter and wider, sad eyes, arms drooping, the
-   eye bumps drooping and half-lidded, sagging down the sides of the head.
+   scribbling on a small cream notepad held in the other wing, frowning in concentration,
+   one small pale-blue sweat drop just beside the head.
+3. waiting: nervous, eyes glancing sideways, bill pressed into a wobbly line, wings
+   clasped in front of the belly, one small pale-blue sweat drop just beside the head.
+4. win: one wing raised high in a wave, bill open in a smug grin, no props.
+5. lose: slumped noticeably shorter, droopy eyes, wings hanging, cowlick flattened.
 
-Props: only the pencil, notepad, sweat drop and microphone named above, each kept close to
-the character. No other objects, no speech bubbles, no motion lines, no stars, no confetti.
+Props: only the pencil, notepad and sweat drop named above, each kept close to the
+character. No other objects, no speech bubbles, no motion lines, no stars, no confetti.
 ```
 
 ### 2.4 Bird
@@ -883,7 +881,7 @@ overlap or touch so it reads as one cluster, with nothing floating loose. Wide e
 magenta gaps between cells, nothing crossing into a neighbouring cell, no scenery, no
 frames.
 Row 1, left to right:
-1. gather: the Cat, the Frog and the Bear huddled together, each holding a phone, around a
+1. gather: the Cat, the Duck and the Bear huddled together, each holding a phone, around a
    cream card showing the room code "KZPW".
 2. answer: the Rabbit writing on a small notepad with a yellow pencil, a row of yellow word
    tiles floating just above it with the last few tiles cracking and falling away.
@@ -903,17 +901,18 @@ The only text allowed is "KZPW", "A" and "B". No other text, no captions.
 The Otter, Penguin and Hedgehog are not in the reference sheets. If they come out off-model,
 paste their character description from section 2 into this prompt.
 
+The `howto-gather` picture in the game predates the duck and still shows the frog; send
+this prompt again (or just cell 1 of it) to bring it in line with the roster.
+
 ### 3.5 Logo (single image)
 
 Save as `art/raw/ui/logo.png`
 
-How the game draws it now (`.logo__say` / `.logo__less` in `client/src/styles/screens.css`):
-"SAY" is huge and yellow with a navy edge and a hard navy drop shadow offset down-right.
-"LESS" sits beneath it, about 45% of the size, cream, with very wide letter spacing, and it
-fades out: solid for the top 55% of its height, then fading to fully transparent at its
-bottom edge, as if the word is being cut off mid-sentence. Paint LESS **solid**: a fade
-painted into the magenta keys out as a grey-pink smear, so the game applies the same fade
-as a CSS mask over the wired image.
+The home screen shows this image through `UIArt` (`.logo__art` in
+`client/src/styles/art.css`): "SAY" huge and yellow with a navy edge and a hard navy drop
+shadow, "LESS" beneath it, smaller, cream, with wide letter spacing. The game fades the
+bottom of LESS out with a CSS mask, as if the word is cut off mid-sentence, so paint LESS
+**solid**: a fade painted into the magenta keys out as a grey-pink smear.
 
 ```
 Single image: the "SAY LESS" wordmark, for the game Say Less.
@@ -1003,9 +1002,9 @@ everything important inside the central band 1536 wide by 806 tall. Background: 
 "SAY" huge in yellow #FFD23F with a navy edge and hard drop shadow, "LESS" beneath it in
 cream #FFFAF0, smaller with wide letter spacing, and under that the tagline in cream
 rounded bold letters: "Everyone's got something to say. You've got fewer words to say it."
-Right half: four cast members from the attached references, the Cat, the Frog, the Bear and
-the Axolotl (pale pink, not magenta), standing together, one of them dropping a black
-handheld microphone. Spell the text exactly as given. No other text.
+Right half: four cast members from the attached references, the Cat, the Monkey, the Bird
+and the Rabbit, standing together as a compact group, one of them dropping a black handheld
+microphone beside a raised paw or wing. Spell the text exactly as given. No other text.
 ```
 
 ### 3.7 Optional, not wired: background tiles and confetti
@@ -1112,7 +1111,8 @@ Nothing to generate: every sound is synthesized at runtime in `client/src/audio/
      fish's mouth, and any medium grey. If an area went see-through, lower `soft_hi` (try
      110), or ask ChatGPT to make that colour warmer (more peach, less pink) or darker.
    - Every file holds the item its name says (the right pose, the right icon). The sweat
-     drop is in `writing` and `waiting`, the falling mic in `win`.
+     drop is in `writing` and `waiting`. The tool erases the falling mic from `win`, so
+     the game shows only the raised arm; check no grey mic or dark rim is left behind.
    - The five poses of one character are at the same scale and stand on the same baseline.
      The tool scales them together and aligns their feet, so a pose that looks tiny means
      another pose in the sheet is oversized (usually a mic drawn far away).
