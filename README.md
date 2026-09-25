@@ -61,7 +61,8 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
 5. **Round 2 "Say Less"** – 6 words, 60 s, ×1.5. The first 10 s of the writing phase is
    the **roast window**: each player holds one roast token for the whole game and may
    spend it on one opponent, cutting that opponent's next answer to 2 words. If the
-   roasted player wins the matchup anyway, they steal the roaster's points from it.
+   roasted player wins the matchup anyway, they steal the roaster's points from it. The
+   leader can switch roasts off in the lobby (`settings.roasts`), which skips the window.
 6. **Final round "Say Nothing… Almost"** – 3 words (or 5 emoji), 45 s, ×2. One shared
    prompt, everyone answers, everyone ranks their top two (not themselves).
 7. **Podium**: top three on blocks, winner mic-drops on loop, superlatives ticker,
@@ -103,7 +104,7 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
 | Server   | Node 22+, TypeScript, Express 5                                             | Express only serves static files and `/healthz`                                                          |
 | Tests    | Vitest (unit + state machine with fake timers), Playwright (3-phone e2e)    |                                                                                                          |
 | Fonts    | `@fontsource-variable/fredoka` (display), `@fontsource/nunito` (body)       | Self-hosted, OFL licensed; no runtime dependency on Google Fonts                                         |
-| Sounds   | WebAudio synthesis in `client/src/audio/sfx.ts`                             | Ships no audio assets; typewriter, mic drop thud, roast sting, ticks                                     |
+| Sounds   | WebAudio synthesis in `client/src/audio/`                                   | Ships no audio assets; per-phase procedural music plus typewriter, mic drop, roast, win/lose effects     |
 | Deploy   | Docker multi-stage image + Caddy (auto Let's Encrypt) on an Ubuntu 24.04 VM | See [Hosting](#hosting-on-cybera)                                                                        |
 
 ---
@@ -140,7 +141,7 @@ say-less/
 │   ├── src/screens/       Home, Lobby, CharSelect, RoundIntro, Writing, Voting, MatchupReveal, RoundResults, FinalVoting, Podium
 │   ├── src/styles/        global.css (tokens, palettes, no-select), characters.css (5 states), screens.css
 │   ├── src/characters/svg Ten placeholder SVGs following the group contract in its README.md
-│   ├── src/audio/sfx.ts   Synthesized sound effects + mute
+│   ├── src/audio/         Synthesized music (sequencer, songs) and sound effects
 │   └── public/sprites/    Optional PNG sprite overrides + manifest.json (see ASSETS.md)
 ├── content/prompts.json   373 prompts tagged by round
 ├── e2e/full-game.spec.ts  Playwright: three phone browsers play a whole game
@@ -173,15 +174,22 @@ npm run build        # server → server/dist, client → client/dist
 npm start            # serves client/dist and /ws on :8080
 ```
 
-Environment variables (server): `PORT` (8080), `PROMPTS_PATH`, `CLIENT_DIST`.
+Environment variables (server): `PORT` (8080), `HOST` (all interfaces when unset; the
+deployment sets 127.0.0.1), `PROMPTS_PATH`, `CLIENT_DIST`. E2E: `E2E_PORT` (8090),
+`E2E_BASE_URL`, `E2E_RESOLVE`, `E2E_DEVICES=1`, `SHOTS_DIR`.
 
 ---
 
 ## Tests and quality gates
 
 ```bash
-npm test               # vitest: shared rules + server state machine (fake timers), ~0.3 s
-npx playwright test    # builds the client, boots the server on :8090, plays a full game (~90 s)
+npm test               # vitest: shared rules, server state machine, client components (~3 s)
+npx playwright test    # builds the client, boots the server on :8090: device smoke, 3-player
+                       # and 12-player games (~5.5 min)
+npx playwright test --project android        # Pixel 7 Chromium
+npx playwright test --project iphone-webkit  # WebKit at iPhone 13 size
+node tools/evidence.mjs --base http://localhost:8190 --out evidence/<date>
+                       # scripted 4-player game per device, screenshot of every stage
 npm run typecheck      # tsc for shared, server, client
 npm run lint           # eslint
 npm run format:check   # prettier
@@ -205,7 +213,18 @@ What the tests pin down:
 - `e2e/full-game.spec.ts` – three iPhone-sized Chromium contexts: create/join, settings,
   character race, refresh during writing lands back on the prompt, roast overlay and
   2-word counter, all votes, final card wall, podium with "Most Mic Drops", rematch
-  returns to the same room code. Screenshots per phase land in `e2e/shots/` (gitignored).
+  returns to the same room code, and a check that the painted sprites are animating.
+  Screenshots per phase land in `e2e/shots/` (gitignored).
+- `e2e/twelve-players.spec.ts` – twelve contexts play a full game; every player's round
+  change must equal the sum of their reveal deltas, the final points and podium totals
+  must reconcile, and a 13th phone is turned away.
+- `e2e/devices.spec.ts` – home to first answer on each device project; `e2e/helpers.ts`
+  records layout issues (overflow, clipped text, small tap targets, low contrast, blank
+  space) per screenshot into `layout-issues.json` without failing the run.
+- `client/test/` – the base-path prefix on UI images, song data, sound settings and the
+  sound controls.
+- `server/test/roomManager.test.ts`, `clientAddress.test.ts` – per-client room limits and
+  which peer's X-Forwarded-For is trusted.
 
 CI (`.github/workflows/ci.yml`) runs all of the above plus a Docker build that boots the
 image and curls `/healthz`.
@@ -228,7 +247,10 @@ Source of truth: `shared/src/constants.ts` and `shared/src/scoring.ts`.
 
 1. Trim, collapse whitespace, split on whitespace; each token is one word.
 2. Hyphenated and apostrophe words are one word (`mother-in-law's` = 1).
-3. A token made only of punctuation counts 0 (so "…" is 0 words).
+3. A token made only of punctuation, combining marks or invisible format characters
+   (zero-width space, bidi overrides) counts 0, so "…" is 0 words and an invisible answer
+   is `empty`. Braille blank (U+2800) and the Hangul fillers look like spaces and count as
+   spaces, so they cannot glue a sentence into one "word".
 4. Hard cap 120 characters regardless of word count.
 5. Client soft-blocks: an edit that would exceed the limit and is longer than the current
    text is ignored (deletions always allowed). Server rejects with `over_limit`.
@@ -259,9 +281,10 @@ per point among non-winners), Roast Victim, The Silencer, Fastest Submitter.
 
 ### Matchups
 
-Custom mode: unused custom prompts are drawn first (shuffled), the bank supplies the
-rest, and the prompt-to-matchup rotation with the fewest author collisions is chosen so
-nobody answers their own prompt whenever that is possible.
+Custom mode: all unused custom prompts are matched to pairs that do not include their
+author (maximum bipartite matching), leftover pairs take any other unused custom prompt,
+then the bank fills the rest, so nobody answers their own prompt whenever that is
+possible. The final-round prompt always comes from the bank, since everyone answers it.
 
 Players are shuffled into a ring; matchup _i_ is player _i_ vs player _i+1 (mod N)_ with
 prompt _i_. Every player writes exactly two answers, every prompt gets exactly two
@@ -275,8 +298,15 @@ unused prompt, then to reuse.
   of round 2's writing phase (`roundIndex === 1`, `phase === WRITING`, before prompts
   are dealt).
 - One roast per target per round; a second spender gets `already_roasted`. No self-roast.
-- Applies to the target's _first_ matchup of the round (their first prompt). The target
-  gets a private `roasted` message and a full-screen overlay before the prompt appears.
+- Applies to the target's first matchup that does not already carry a roast; one roast per
+  matchup, and an earlier roast may move to its own target's other matchup before prompts
+  are dealt (on a ring this always succeeds). The target gets a private `roasted` message
+  and a full-screen overlay before the prompt appears.
+- Backfire: whenever the roasted target beats the roaster, the winner gets a `steal` award
+  (stamped BACKFIRE!), even if the roaster scored 0; `stolen` (ROBBED) only appears when
+  points actually move. Without the 0-point stamp a backfire could never show in 3 or 4
+  player games, where the roaster always loses 1-0 or 2-0.
+- `settings.roasts = false` (lobby toggle, default on) skips the window entirely.
 - Unused tokens are worthless at the podium.
 
 ### Emoji final
@@ -356,6 +386,7 @@ Implemented in `Room.publicMatchup` / `Room.publicFinal` and covered by
 | Answer text                                       | that matchup's VOTING phase opens                                                 |
 | Answer author, word count, effective limit, roast | that matchup's MATCHUP_REVEAL                                                     |
 | Individual votes                                  | MATCHUP_REVEAL                                                                    |
+| Who has voted (`votedIds`) during VOTING          | never: each viewer sees only their own id, since the non-voters are the authors   |
 | Final answers                                     | FINAL_VOTING (author visible because final votes are cast by player id, per spec) |
 | Final individual votes                            | PODIUM                                                                            |
 | Another player's prompts                          | never sent                                                                        |
@@ -374,14 +405,26 @@ suppressed outside inputs) and images ignore pointer events and drags.
   `room_state`, `your_prompts` and any pending `roasted`.
 - A second tab with the same token takes over the seat; the old socket goes quiet.
 - Disconnect mid-write: the player's unanswered prompts become "[left the chat]" _when
-  the phase ends_; if they return before that, they can still write. Mid-vote: abstain;
-  the matchup resolves as soon as the remaining connected non-authors have voted.
+  the phase ends_; if they return before that, they can still write. Mid-vote: abstain.
+- Grace: a player dropped for under 15 s (`DISCONNECT_GRACE_MS`) still counts as playing,
+  so an iPhone switching apps does not end writing or voting early for everyone. After
+  the grace a per-player timer re-checks and they are ignored, so a dead phone never
+  stalls the game. An explicit leave gets no grace.
+- Sitting out: when a round starts with three or more players connected, players gone
+  past the grace are not dealt in (so nobody faces "[left the chat]" all round). They
+  keep their score, count as done, see the waiting room with an explanation if they
+  return, can vote, and are dealt back in next round.
 - Slot hold: 30 s in LOBBY, 3 min elsewhere; after that a disconnected player is removed
   only in LOBBY/PODIUM (mid-game the seat stays so matchups keep their references; they
   are dropped at the next start/rematch).
 - Leader disconnect: leadership passes to the longest-connected player; `banner`
   announces it.
-- Empty rooms (no connected players) are destroyed after 5 min.
+- Empty rooms (no connected players) are destroyed after 5 min; an emptied lobby that
+  never started a game after 60 s.
+- Room creation is capped per client (IPv4 address or IPv6 /64): 5 live rooms and 10
+  creations per 10 minutes (`LIMITS` in `shared/src/constants.ts`). X-Forwarded-For is
+  trusted only from a loopback peer, which is why the app container runs on host
+  networking bound to 127.0.0.1 behind Caddy.
 
 ---
 
@@ -400,11 +443,20 @@ suppressed outside inputs) and images ignore pointer events and drags.
   (`AnswerText`), with an optional typewriter effect where shorter answers type slower
   per character. Profanity masking applies for everyone but the author when the filter
   is on.
-- **Character component** inlines the SVG and sets `data-state`; `characters.css`
-  animates the named groups. If `client/public/sprites/manifest.json` lists a
-  character/state, a PNG `<img>` is rendered instead.
-- **Sounds** are synthesized on demand; the AudioContext unlocks on first tap; a mute
-  toggle sits in the header and persists in `localStorage`.
+- **Character component** renders the painted WebP sprite for every character/state
+  listed in `client/public/sprites/manifest.json` (all of them today) and falls back to
+  the inline SVG; `characters.css` animates either. The full-game test fails if a sprite
+  is not animating.
+- **Audio** is all WebAudio, no files: `client/src/audio/` holds a look-ahead sequencer
+  (`music.ts`, 25 ms tick, 100 ms horizon), song data per phase (`songs.ts`: lobby F major
+  92 bpm, writing A minor 96 bpm with a clock tick, voting C major 124 bpm, results D
+  dorian vamp, podium fanfare; silence during reveals), instruments, effect recipes, and
+  a bus graph with reverb, compressor, limiter and ducking under effects. Music sits
+  about 10 dB under effects. `SoundControls` gives separate Music and Sound effects
+  switches (`say-less.music`, `say-less.muted` in localStorage); it lives in the header,
+  and in the top corner of Home, Lobby and Podium. Nothing plays before the first tap,
+  the context suspends when the tab is hidden, and iOS's silent switch is respected.
+- **Scrolling** resets to the top on every phase and matchup change.
 
 ---
 
@@ -566,6 +618,11 @@ flat-vector art direction, one unique character per player.
 
 ## Decisions log
 
+- **2026-09-25** Music is procedural WebAudio like the effects, not audio files: zero
+  download, no licensing, and it can react per phase. It was designed, not listened to,
+  during development; levels were verified by offline renders (music about -32 dBFS RMS,
+  effects about -22, no clipping). Roasts became a lobby setting at the user's request.
+  Art is served as WebP (2.2 MB instead of 12 MB).
 - **2026-09-25** The whole `art/` folder is gitignored; only processed art under
   `client/public/` is committed. `og:image` points at the GitHub Pages copy of the share
   card because the game server is IPv6-only and most link-preview crawlers fetch over IPv4.

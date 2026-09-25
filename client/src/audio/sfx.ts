@@ -1,143 +1,208 @@
 import type { RoomPhase } from '@say-less/shared';
+import * as effects from './effects.ts';
+import { AudioGraph } from './graph.ts';
+import { MusicPlayer } from './music.ts';
+import { songFor } from './songs.ts';
+
+const EFFECTS_MUTED_KEY = 'say-less.muted';
+const MUSIC_KEY = 'say-less.music';
+const SCHEDULE_EVERY_MS = 25;
+const SCHEDULE_AHEAD = 0.1;
 
 /**
- * All sounds are synthesized with WebAudio so the game ships no audio assets.
+ * All sounds and music are synthesized with WebAudio so the game ships no audio assets.
  * The context is created lazily on the first user gesture (browser autoplay rules).
  */
 class Sfx {
+  /** Effects muted; music has its own switch. */
+  muted = read(EFFECTS_MUTED_KEY) === '1';
+  musicOn = read(MUSIC_KEY) !== '0';
   private ctx: AudioContext | null = null;
-  muted = (() => {
-    try {
-      return localStorage.getItem('say-less.muted') === '1';
-    } catch {
-      return false;
+  private graph: AudioGraph | null = null;
+  private music: MusicPlayer | null = null;
+  private timer: ReturnType<typeof setInterval> | null = null;
+  private currentPhase: RoomPhase | null = null;
+  private readonly listeners = new Set<() => void>();
+
+  constructor() {
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => this.onVisibilityChange());
     }
-  })();
+  }
+
+  subscribe = (listener: () => void): (() => void) => {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  };
 
   setMuted(muted: boolean): void {
     this.muted = muted;
-    try {
-      localStorage.setItem('say-less.muted', muted ? '1' : '0');
-    } catch {
-      // ignore
-    }
+    write(EFFECTS_MUTED_KEY, muted ? '1' : '0');
+    this.notify();
+  }
+
+  setMusicOn(on: boolean): void {
+    this.musicOn = on;
+    write(MUSIC_KEY, on ? '1' : '0');
+    this.notify();
+    if (!this.graph || !this.music) return;
+    this.graph.setMusicOn(on);
+    this.music.play(on ? songFor(this.currentPhase) : null, true);
+    this.startScheduler();
   }
 
   unlock(): void {
-    if (!this.ctx) {
-      try {
-        this.ctx = new AudioContext();
-      } catch {
-        this.ctx = null;
-      }
+    if (!this.ctx || this.ctx.state === 'closed') this.createContext();
+    const ctx = this.ctx;
+    if (!ctx) return;
+    // iOS reports "interrupted" after calls and Siri; only a gesture can resume it.
+    if (ctx.state !== 'running') void ctx.resume().catch(() => undefined);
+    if (this.musicOn && this.music && !this.music.playing) {
+      this.music.play(songFor(this.currentPhase), true);
     }
-    if (this.ctx?.state === 'suspended') void this.ctx.resume();
+    this.startScheduler();
   }
 
   tap(): void {
-    this.tone({ freq: 620, type: 'square', duration: 0.05, gain: 0.05 });
+    this.play(effects.tap);
   }
 
   typewriter(): void {
-    this.noise({ duration: 0.03, gain: 0.12, highpass: 2500 });
+    this.play(effects.typewriter);
   }
 
   micDrop(): void {
-    this.tone({ freq: 160, type: 'sine', duration: 0.25, gain: 0.3, slideTo: 50 });
-    setTimeout(() => this.noise({ duration: 0.35, gain: 0.35, highpass: 200 }), 200);
-    setTimeout(() => this.noise({ duration: 0.12, gain: 0.15, highpass: 200 }), 520);
+    this.play(effects.micDrop);
   }
 
   roast(): void {
-    this.tone({ freq: 880, type: 'sawtooth', duration: 0.5, gain: 0.12, slideTo: 220 });
-    this.noise({ duration: 0.6, gain: 0.08, highpass: 4000 });
+    this.play(effects.roast);
   }
 
   win(): void {
-    [523, 659, 784, 1046].forEach((freq, i) =>
-      setTimeout(() => this.tone({ freq, type: 'triangle', duration: 0.18, gain: 0.12 }), i * 90),
-    );
+    this.play(effects.win);
   }
 
   lose(): void {
-    this.tone({ freq: 300, type: 'triangle', duration: 0.4, gain: 0.12, slideTo: 120 });
+    this.play(effects.lose);
   }
 
   shatter(): void {
-    this.noise({ duration: 0.25, gain: 0.25, highpass: 1500 });
-    this.tone({ freq: 1200, type: 'square', duration: 0.08, gain: 0.05 });
+    this.play(effects.shatter);
   }
 
   tick(): void {
-    this.tone({ freq: 1000, type: 'square', duration: 0.03, gain: 0.04 });
+    this.play(effects.tick);
   }
 
   error(): void {
-    this.tone({ freq: 200, type: 'square', duration: 0.12, gain: 0.08 });
+    this.play(effects.error);
   }
 
-  phase(phase: RoomPhase): void {
+  /** `null` is the home screen. */
+  phase(phase: RoomPhase | null): void {
+    this.currentPhase = phase;
     switch (phase) {
       case 'ROUND_INTRO':
-        this.shatter();
-        return;
+        // Lands with the round intro's tiles shattering.
+        this.play(effects.shatter, 0.9);
+        break;
       case 'PODIUM':
-        this.win();
-        return;
+        this.play(effects.win);
+        break;
       case 'VOTING':
       case 'FINAL_VOTING':
-        this.tone({ freq: 440, type: 'triangle', duration: 0.12, gain: 0.08 });
-        return;
+        this.play(effects.votingChime);
+        break;
       default:
-        return;
+        break;
+    }
+    if (this.musicOn && this.music) {
+      this.music.play(songFor(phase));
+      this.startScheduler();
     }
   }
 
-  private tone(opts: {
-    freq: number;
-    type: OscillatorType;
-    duration: number;
-    gain: number;
-    slideTo?: number;
-  }): void {
-    const ctx = this.ready();
-    if (!ctx) return;
-    const osc = ctx.createOscillator();
-    const amp = ctx.createGain();
-    osc.type = opts.type;
-    osc.frequency.setValueAtTime(opts.freq, ctx.currentTime);
-    if (opts.slideTo)
-      osc.frequency.exponentialRampToValueAtTime(opts.slideTo, ctx.currentTime + opts.duration);
-    amp.gain.setValueAtTime(opts.gain, ctx.currentTime);
-    amp.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + opts.duration);
-    osc.connect(amp).connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + opts.duration + 0.02);
+  private play(effect: effects.Effect, delay = 0): void {
+    const graph = this.ready();
+    if (!graph) return;
+    const t = graph.ctx.currentTime + delay;
+    const length = effect(graph, t) - t;
+    graph.duck(t, length > 0.2 ? 0.35 : 0.7, length);
   }
 
-  private noise(opts: { duration: number; gain: number; highpass: number }): void {
-    const ctx = this.ready();
-    if (!ctx) return;
-    const frames = Math.floor(ctx.sampleRate * opts.duration);
-    const buffer = ctx.createBuffer(1, frames, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < frames; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / frames);
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'highpass';
-    filter.frequency.value = opts.highpass;
-    const amp = ctx.createGain();
-    amp.gain.value = opts.gain;
-    source.connect(filter).connect(amp).connect(ctx.destination);
-    source.start();
+  private ready(): AudioGraph | null {
+    if (this.muted || !this.ctx || !this.graph) return null;
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return null;
+    // Anything scheduled on a stopped clock would burst out on resume.
+    if (this.ctx.state !== 'running' && this.ctx.state !== 'suspended') return null;
+    if (this.ctx.state === 'suspended') void this.ctx.resume().catch(() => undefined);
+    return this.graph;
   }
 
-  private ready(): AudioContext | null {
-    if (this.muted) return null;
-    if (!this.ctx) return null;
-    if (this.ctx.state === 'suspended') void this.ctx.resume();
-    return this.ctx;
+  private createContext(): void {
+    try {
+      this.ctx = new AudioContext();
+    } catch {
+      this.ctx = null;
+      return;
+    }
+    this.graph = new AudioGraph(this.ctx, this.musicOn);
+    this.music = new MusicPlayer(this.graph);
+    this.ctx.addEventListener('statechange', () => this.startScheduler());
+  }
+
+  private startScheduler(): void {
+    if (this.timer !== null || !this.music?.playing) return;
+    this.timer = setInterval(() => this.schedule(), SCHEDULE_EVERY_MS);
+  }
+
+  private stopScheduler(): void {
+    if (this.timer === null) return;
+    clearInterval(this.timer);
+    this.timer = null;
+  }
+
+  private schedule(): void {
+    const { ctx, music } = this;
+    if (!ctx || !music?.playing || document.visibilityState === 'hidden') {
+      this.stopScheduler();
+      return;
+    }
+    if (ctx.state !== 'running') return;
+    music.pump(ctx.currentTime, ctx.currentTime + SCHEDULE_AHEAD);
+  }
+
+  private onVisibilityChange(): void {
+    const ctx = this.ctx;
+    if (!ctx || ctx.state === 'closed') return;
+    if (document.visibilityState === 'hidden') {
+      this.stopScheduler();
+      void ctx.suspend().catch(() => undefined);
+    } else {
+      void ctx.resume().catch(() => undefined);
+      this.startScheduler();
+    }
+  }
+
+  private notify(): void {
+    for (const listener of this.listeners) listener();
+  }
+}
+
+function read(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function write(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // storage blocked (private mode): the setting lasts for this visit only
   }
 }
 

@@ -114,7 +114,7 @@ export function Writing({ ctl, room, me }: Props) {
                       className="roast__target"
                       disabled={spentOn !== null}
                       onClick={() => {
-                        sfx.tap();
+                        sfx.roast();
                         setSpentOn(p.id);
                         ctl.spendRoast(p.id);
                       }}

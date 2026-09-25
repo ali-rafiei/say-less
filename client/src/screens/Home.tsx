@@ -1,4 +1,5 @@
 import { LIMITS } from '@say-less/shared';
+import { SoundControls } from '../components/SoundControls.tsx';
 import { useEffect, useState, type FormEvent } from 'react';
 import { UIArt } from '../components/UIArt.tsx';
 import { sfx } from '../audio/sfx.ts';
@@ -61,6 +62,9 @@ export function Home({ ctl }: { ctl: RoomController }) {
 
   return (
     <main className="screen home">
+      <div className="screen-sound">
+        <SoundControls />
+      </div>
       <Logo />
       <p className="center dim tagline">
         Everyone's got something to say. You've got fewer words to say it.

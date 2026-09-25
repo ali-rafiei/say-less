@@ -1,4 +1,5 @@
 import { UIArt } from '../components/UIArt.tsx';
+import { SoundControls } from '../components/SoundControls.tsx';
 import { characterMeta, type PublicRoomState } from '@say-less/shared';
 import { sfx } from '../audio/sfx.ts';
 import { AnswerText } from '../components/AnswerText.tsx';
@@ -22,6 +23,9 @@ export function Podium({ ctl, room, me }: Props) {
 
   return (
     <main className="screen screen--wide podium">
+      <div className="screen-sound">
+        <SoundControls />
+      </div>
       <h1 className="display center podium__title">Podium</h1>
       <div className="blocks">
         {columns.map((group, i) => {

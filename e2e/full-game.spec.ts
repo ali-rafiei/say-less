@@ -55,7 +55,9 @@ async function voteThroughRound(players: Player[], label: string, matchups: numb
     for (const p of players) {
       const enabled = p.page.locator('button.vcard:not([disabled])');
       if ((await enabled.count()) > 0) {
-        await enabled.first().click();
+        // Back Ann's one-word answer whenever it is on the ballot, so her mic drop is certain.
+        const yes = enabled.filter({ has: p.page.locator('.answer-text', { hasText: /^Yes$/ }) });
+        await ((await yes.count()) > 0 ? yes.first() : enabled.first()).click();
       }
     }
     await players[0]!.page.locator('.rcard').first().waitFor();

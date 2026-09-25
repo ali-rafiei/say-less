@@ -1,4 +1,5 @@
 import { UIArt } from '../components/UIArt.tsx';
+import { SoundControls } from '../components/SoundControls.tsx';
 import { CHARACTERS, LIMITS, type PublicRoomState } from '@say-less/shared';
 import { useState, type FormEvent } from 'react';
 import { sfx } from '../audio/sfx.ts';
@@ -52,6 +53,9 @@ export function Lobby({ ctl, room, me }: Props) {
 
   return (
     <main className="screen screen--wide lobby">
+      <div className="screen-sound">
+        <SoundControls />
+      </div>
       <div className="stack center">
         <span className="dim">Room code</span>
         <div className="roomcode display">{room.code}</div>

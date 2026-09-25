@@ -1,8 +1,6 @@
-import { UIArt } from './UIArt.tsx';
 import { ROUNDS, type PublicRoomState } from '@say-less/shared';
-import { useState } from 'react';
-import { sfx } from '../audio/sfx.ts';
 import { LimitChips } from './LimitChips.tsx';
+import { SoundControls } from './SoundControls.tsx';
 import { TimerRing } from './TimerRing.tsx';
 
 interface Props {
@@ -13,7 +11,6 @@ interface Props {
 }
 
 export function Header({ room, clockOffset, limit, limitLabel }: Props) {
-  const [muted, setMuted] = useState(sfx.muted);
   const inRound = room.phase !== 'LOBBY' && room.phase !== 'PODIUM';
   const round = ROUNDS[room.roundIndex];
   return (
@@ -36,17 +33,7 @@ export function Header({ room, clockOffset, limit, limitLabel }: Props) {
           clockOffset={clockOffset}
           size={48}
         />
-        <button
-          className="mute"
-          type="button"
-          aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
-          onClick={() => {
-            sfx.setMuted(!muted);
-            setMuted(!muted);
-          }}
-        >
-          <UIArt name={muted ? 'sound-off' : 'sound-on'} />
-        </button>
+        <SoundControls />
       </div>
     </header>
   );

@@ -41,14 +41,17 @@ export function MatchupReveal({ ctl, room, me }: Props) {
   const micDropper = result?.awards.find((a) => a.kind === 'micDrop')?.playerId ?? null;
   const micDropCharacter = room.players.find((p) => p.id === micDropper)?.characterId ?? null;
 
+  const myIndex = matchup?.answers.findIndex((a) => a.playerId === me) ?? -1;
+  const iLost = result?.winnerIndex != null && myIndex >= 0 && result.winnerIndex !== myIndex;
   useEffect(() => {
     if (!result) return;
     const t = setTimeout(() => {
-      if (micDropper) sfx.micDrop();
+      if (iLost) sfx.lose();
+      else if (micDropper) sfx.micDrop();
       else if (result.winnerIndex !== null) sfx.win();
     }, 1200);
     return () => clearTimeout(t);
-  }, [result, micDropper]);
+  }, [result, micDropper, iLost]);
 
   if (!matchup || !result) return null;
   const total = result.voteCounts[0] + result.voteCounts[1];
