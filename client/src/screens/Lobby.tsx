@@ -112,9 +112,7 @@ export function Lobby({ ctl, room, me }: Props) {
               >
                 <Character characterId={c.id} state={isMine ? 'win' : 'idle'} size="100%" />
                 <span className="ccell__name display">{c.name}</span>
-                {owner && (
-                  <span className="ccell__owner">{owner.id === me ? 'You' : owner.name}</span>
-                )}
+                {owner && <span className="ccell__owner">{owner.name}</span>}
               </button>
             );
           })}

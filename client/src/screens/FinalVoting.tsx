@@ -50,7 +50,6 @@ export function FinalVoting({ ctl, room, me }: Props) {
               onClick={() => answer.playerId && toggle(answer.playerId)}
             >
               {rank >= 0 && <span className="wcard__rank display">{rank + 1}</span>}
-              {mine && <span className="wcard__rank wcard__rank--mine display">you</span>}
               <AnswerText
                 text={answer.text ?? '…'}
                 compact

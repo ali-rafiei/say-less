@@ -900,10 +900,6 @@
   color: var(--ink);
   font-size: 18px;
 }
-.wcard__rank--mine {
-  background: var(--paper);
-  font-size: 13px;
-}
 /* ---------- podium ---------- */
 .podium__title {
   font-size: clamp(40px, 12vw, 64px);
