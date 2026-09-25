@@ -134,7 +134,6 @@ export class Gateway {
         if (sanitizeName(message.payload.name).length === 0) {
           throw new RoomError('bad_name', 'Pick a name between 1 and 12 characters');
         }
-        this.unbind(conn);
         const room = this.deps.rooms.create();
         const playerId = this.deps.signer.newPlayerId();
         try {
@@ -143,6 +142,7 @@ export class Gateway {
           this.deps.rooms.destroy(room.code);
           throw error;
         }
+        this.unbind(conn);
         this.bind(conn, room.code, playerId);
         return;
       }
@@ -151,13 +151,14 @@ export class Gateway {
         const room = this.deps.rooms.require(code);
         const token = message.payload.sessionToken;
         const returning = this.deps.signer.verify(typeof token === 'string' ? token : undefined);
-        if (!(returning && conn.playerId === returning)) this.unbind(conn);
         if (returning && room.hasPlayer(returning)) {
+          if (conn.playerId !== returning) this.unbind(conn);
           this.bind(conn, room.code, returning, true);
           return;
         }
         const playerId = this.deps.signer.newPlayerId();
         room.addPlayer(playerId, message.payload.name);
+        this.unbind(conn);
         this.bind(conn, room.code, playerId);
         return;
       }

@@ -89,10 +89,10 @@ export function scoreMatchup(input: MatchupScoringInput): MatchupResult {
     }
     if (roast && roast.targetId === winner.playerId && roast.spenderId === loser.playerId) {
       const stolen = delta[loser.playerId] ?? 0;
-      if (stolen > 0) {
-        addAward(awards, delta, { playerId: loser.playerId, kind: 'stolen', points: -stolen });
-        addAward(awards, delta, { playerId: winner.playerId, kind: 'steal', points: stolen });
-      }
+      addAward(awards, delta, { playerId: loser.playerId, kind: 'stolen', points: -stolen });
+      // Recorded even at 0 points: the backfire itself is the payoff.
+      awards.push({ playerId: winner.playerId, kind: 'steal', points: stolen });
+      delta[winner.playerId] = (delta[winner.playerId] ?? 0) + stolen;
     }
   }
 

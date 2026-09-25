@@ -98,6 +98,26 @@ describe('redaction', () => {
     expect(current.promptId).not.toBe('');
   });
 
+  it('shows each player only their own entry in votedIds while a matchup is open', () => {
+    // Arrange: five players, so every matchup has three voters
+    const h = makeRoom(['a', 'b', 'c', 'd', 'e']);
+    startToWriting(h);
+    answerAll(h, (id) => `${id} answer`);
+    const state = h.state();
+    const authors = state.matchups[state.currentMatchupIndex]!.answers.map(
+      (x) => x.text!.split(' ')[0]!,
+    );
+    const voter = h.room.players.find((p) => !authors.includes(p.id))!.id;
+    // Act
+    h.room.castVote(voter, state.currentMatchupIndex, 0);
+    // Assert: the non-voters (authors among them) cannot be read off the broadcast
+    expect(h.room.phase).toBe('VOTING');
+    for (const player of h.room.players) {
+      const votedIds = h.last(player.id, 'room_state')!.payload.votedIds;
+      expect(votedIds).toEqual(player.id === voter ? [voter] : []);
+    }
+  });
+
   it('never includes another player prompts in the public state', () => {
     const h = makeRoom();
     startToWriting(h);
@@ -231,6 +251,29 @@ describe('roast tokens', () => {
     h.room.submitAnswer('b', roasted.promptId, 'one two');
   });
 
+  it('lands every roast even when two targets share their first matchup', () => {
+    // With three players every pair of targets shares a matchup, so some seeds put two
+    // roasts on the same one.
+    for (let seed = 1; seed <= 20; seed++) {
+      // Arrange
+      const h = makeRoom(['a', 'b', 'c'], seed);
+      toRoundTwoWindow(h);
+      // Act
+      h.room.spendRoast('a', 'b');
+      h.room.spendRoast('b', 'c');
+      h.room.spendRoast('c', 'a');
+      vi.advanceTimersByTime(10_000);
+      // Assert
+      for (const player of h.room.players) {
+        const limits = h.room
+          .yourPrompts(player.id)
+          .map((p) => p.effectiveLimit)
+          .sort();
+        expect(limits).toEqual([2, 6]);
+      }
+    }
+  });
+
   it('backfires: the roasted winner steals the roaster points from that matchup', () => {
     // Matchups are generated before the roast window, so search seeds until the
     // roasted matchup (b's first) is a-vs-b. Deterministic given the PRNG.
@@ -355,6 +398,24 @@ describe('presence', () => {
     expect(h.room.players.map((p) => p.name)).toEqual(['A', 'A (2)', 'a (3)']);
   });
 
+  it('rejects names made only of blank-looking characters', () => {
+    const h = makeRoom(['a']);
+    expect(() => h.room.addPlayer('b', '\u3164\u2800\u3164')).toThrowError(
+      expect.objectContaining({ code: 'bad_name' }),
+    );
+  });
+
+  it('never splits an emoji when shortening a duplicate name for its suffix', () => {
+    const h = makeRoom(['a']);
+    h.room.addPlayer('b', 'x😀😀😀😀😀😀😀😀😀😀😀');
+    h.room.addPlayer('c', 'x😀😀😀😀😀😀😀😀😀😀😀');
+    expect(h.room.players.map((p) => p.name)).toEqual([
+      'A',
+      'x😀😀😀😀😀😀😀😀😀😀😀',
+      'x😀😀😀😀😀😀😀 (2)',
+    ]);
+  });
+
   it('refuses new joins mid-game and full rooms', () => {
     const h = makeRoom();
     startToWriting(h);
@@ -455,6 +516,38 @@ describe('custom prompts', () => {
     );
     expect(dealt.has('First by A')).toBe(true);
     expect(dealt.has('Second by A')).toBe(true);
+  });
+
+  it('keeps authors off their own prompts when there are more custom prompts than pairs', () => {
+    // Four pairs, five prompts: dealing all three of A's would force a collision, but
+    // dealing two of A's plus B's and C's never does.
+    for (let seed = 1; seed <= 40; seed++) {
+      // Arrange
+      const h = makeRoom(['a', 'b', 'c', 'd'], seed);
+      h.room.updateSettings('a', { promptMode: 'custom' });
+      for (const text of ['A one', 'A two', 'A three', 'B one', 'C one']) {
+        h.room.addPrompt(text[0]!.toLowerCase(), `${text} ${seed}`);
+      }
+      // Act
+      startToWriting(h);
+      // Assert
+      const dealt = h.room.players.flatMap((p) => h.room.yourPrompts(p.id));
+      expect(new Set(dealt.map((p) => p.promptId)).size).toBe(4);
+      expect(dealt.every((p) => p.promptId.startsWith('c'))).toBe(true);
+      for (const player of h.room.players) {
+        const texts = h.room.yourPrompts(player.id).map((p) => p.text);
+        expect(texts.some((text) => text.startsWith(`${player.name} `))).toBe(false);
+      }
+    }
+  });
+
+  it('keeps a space where a prompt had a line break and rejects blank-looking prompts', () => {
+    const h = makeRoom();
+    h.room.addPrompt('b', 'Worst thing\nto hear');
+    expect(h.state().customPrompts.map((p) => p.text)).toEqual(['Worst thing to hear']);
+    expect(() => h.room.addPrompt('b', '\u3164\u3164\u3164\u2800')).toThrowError(
+      expect.objectContaining({ code: 'empty' }),
+    );
   });
 
   it('ignores custom prompts in bank mode', () => {

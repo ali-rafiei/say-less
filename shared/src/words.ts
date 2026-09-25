@@ -1,7 +1,10 @@
 import { LIMITS } from './constants.ts';
 import type { AnswerMode } from './types.ts';
 
-const PUNCTUATION_ONLY = /^[\p{P}\s]*$/u;
+/** Punctuation, combining marks and invisible format characters on their own are not a word. */
+const NOT_A_WORD = /^[\p{P}\p{M}\p{Cc}\p{Cf}\s]*$/u;
+/** Braille blank and Hangul fillers render as blank space but are not \s. */
+const BLANK_LOOKALIKES = /[\u115F\u1160\u2800\u3164\uFFA0]/gu;
 const HAS_LETTER = /\p{L}/u;
 const HAS_DIGIT = /\p{N}/u;
 const EMOJI_BASE = /\p{Extended_Pictographic}|\p{Regional_Indicator}|⃣/u;
@@ -13,14 +16,14 @@ function graphemes(text: string): string[] {
 }
 
 export function normalizeWhitespace(text: string): string {
-  return text.trim().replace(/\s+/g, ' ');
+  return text.replace(BLANK_LOOKALIKES, ' ').trim().replace(/\s+/g, ' ');
 }
 
-/** Tokens that count as words: whitespace-split, punctuation-only tokens dropped. */
+/** Tokens that count as words: whitespace-split, tokens with nothing visible dropped. */
 export function words(text: string): string[] {
   const normalized = normalizeWhitespace(text);
   if (normalized === '') return [];
-  return normalized.split(' ').filter((token) => !PUNCTUATION_ONLY.test(token));
+  return normalized.split(' ').filter((token) => !NOT_A_WORD.test(token));
 }
 
 export function countWords(text: string): number {

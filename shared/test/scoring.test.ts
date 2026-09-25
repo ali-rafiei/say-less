@@ -76,6 +76,23 @@ describe('scoreMatchup', () => {
     });
   });
 
+  it('records a backfire when the roasted target beats a roaster who had no points to steal', () => {
+    // Arrange: four players, so two voters; both pick the roasted target
+    const result = scoreMatchup({
+      answers: [
+        answer({ playerId: 'roaster', wordCount: 6, effectiveLimit: 6 }),
+        answer({ playerId: 'target', wordCount: 2, effectiveLimit: 2 }),
+      ],
+      votes: votesFor([0, 2]),
+      roast: { spenderId: 'roaster', targetId: 'target' },
+      multiplier: 1.5,
+    });
+    // Assert: the stamp is there, no points move, nobody is marked robbed
+    expect(result.awards).toContainEqual({ playerId: 'target', kind: 'steal', points: 0 });
+    expect(result.awards.some((a) => a.kind === 'stolen')).toBe(false);
+    expect(result.delta).toEqual({ roaster: 0, target: 675 });
+  });
+
   it('does not steal when the roaster is not in the matchup', () => {
     const result = scoreMatchup({
       answers: [

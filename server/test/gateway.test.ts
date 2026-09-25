@@ -7,7 +7,7 @@ import { PromptDeck } from '../src/prompts.ts';
 import { RoomManager } from '../src/roomManager.ts';
 import { SessionSigner } from '../src/session.ts';
 import { Gateway } from '../src/ws.ts';
-import type { ClientMessage, ServerMessage } from '../src/shared.ts';
+import { LIMITS, MAX_ROOMS, type ClientMessage, type ServerMessage } from '../src/shared.ts';
 import { fixturePrompts } from './helpers.ts';
 
 /** Real sockets against the real gateway on an ephemeral port. */
@@ -126,6 +126,59 @@ describe('gateway', () => {
     expect(second).not.toBe(first);
     expect(rooms.get(first)!.connectedCount).toBe(0);
     expect(rooms.get(second)!.connectedCount).toBe(1);
+  });
+
+  it('releases the old seat when a bound socket joins another room with its own token', async () => {
+    // Arrange
+    const c = await connect();
+    c.send({ type: 'create_room', payload: { name: 'Hopper' } });
+    const welcome = await c.until('welcome');
+    const first = (await c.until('room_state')).payload.code;
+    const other = rooms.create();
+    other.addPlayer('host', 'Host');
+    await new Promise((r) => setTimeout(r, 300)); // rate limit
+    // Act
+    c.send({
+      type: 'join_room',
+      payload: { code: other.code, name: 'Hopper', sessionToken: welcome.payload.sessionToken },
+    });
+    await c.until('welcome');
+    // Assert
+    expect(rooms.get(first)!.connectedCount).toBe(0);
+    expect(other.connectedCount).toBe(2);
+  });
+
+  it('keeps the current seat when creating a room fails because the server is full', async () => {
+    // Arrange
+    const c = await connect();
+    c.send({ type: 'create_room', payload: { name: 'Stayer' } });
+    await c.until('welcome');
+    const first = (await c.until('room_state')).payload.code;
+    while (rooms.size < MAX_ROOMS) rooms.create();
+    await new Promise((r) => setTimeout(r, 300));
+    // Act
+    c.send({ type: 'create_room', payload: { name: 'Stayer' } });
+    const error = await c.until('error');
+    // Assert
+    expect(error.payload.code).toBe('room_full');
+    expect(rooms.get(first)!.connectedCount).toBe(1);
+  });
+
+  it('keeps the current seat when joining a full room fails', async () => {
+    // Arrange
+    const c = await connect();
+    c.send({ type: 'create_room', payload: { name: 'Stayer' } });
+    await c.until('welcome');
+    const first = (await c.until('room_state')).payload.code;
+    const full = rooms.create();
+    for (let i = 0; i < LIMITS.MAX_PLAYERS; i++) full.addPlayer(`p${i}`, `P${i}`);
+    await new Promise((r) => setTimeout(r, 300));
+    // Act
+    c.send({ type: 'join_room', payload: { code: full.code, name: 'Stayer' } });
+    const error = await c.until('error');
+    // Assert
+    expect(error.payload.code).toBe('room_full');
+    expect(rooms.get(first)!.connectedCount).toBe(1);
   });
 
   it('does not leak a room when the creator name is empty', async () => {

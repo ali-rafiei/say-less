@@ -18,6 +18,24 @@ describe('countWords', () => {
   it('returns 0 for empty input', () => {
     expect(countWords('   ')).toBe(0);
   });
+
+  it('splits on blank characters that render as spaces', () => {
+    // Arrange: Braille blank and Hangul fillers look like spaces but are not \s
+    const disguised = ['one\u2800two', 'three\u3164four', 'five\uFFA0six'].join(' ');
+    // Act / Assert
+    expect(countWords(disguised)).toBe(6);
+    expect(validateAnswer('one\u2800two\u2800three', 2, 'words').error).toBe('over_limit');
+  });
+
+  it('does not count tokens with nothing visible in them', () => {
+    expect(countWords('\u200B')).toBe(0);
+    expect(countWords('\u202E \u0301\u0301 real')).toBe(1);
+    expect(validateAnswer('\u2800\u3164\u200B', 12, 'words').error).toBe('empty');
+  });
+
+  it('still counts an emoji ZWJ sequence as one word', () => {
+    expect(countWords('👨‍👩‍👧 rules')).toBe(2);
+  });
 });
 
 describe('analyzeEmoji', () => {

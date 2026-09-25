@@ -9,6 +9,7 @@ import {
   TIMERS,
   computePlacements,
   computeSuperlatives,
+  normalizeWhitespace,
   roundSpec,
   scoreFinal,
   scoreMatchup,
@@ -103,15 +104,12 @@ function freshStats(): PlayerStats {
   };
 }
 
-function cleanName(raw: string): string {
-  return raw
-    .replace(/[\p{C}]/gu, '')
-    .trim()
-    .replace(/\s+/g, ' ');
+function cleanText(raw: string): string {
+  return normalizeWhitespace(normalizeWhitespace(raw).replace(/\p{C}/gu, ''));
 }
 
 export function sanitizeName(raw: string): string {
-  return Array.from(cleanName(raw)).slice(0, LIMITS.NAME_MAX).join('').trim();
+  return Array.from(cleanText(raw)).slice(0, LIMITS.NAME_MAX).join('').trim();
 }
 
 export class Room {
@@ -293,7 +291,11 @@ export class Room {
     if (!taken.has(base.toLowerCase())) return base;
     for (let n = 2; n < 100; n++) {
       const suffix = ` (${n})`;
-      const candidate = base.slice(0, LIMITS.NAME_MAX - suffix.length).trimEnd() + suffix;
+      const candidate =
+        Array.from(base)
+          .slice(0, LIMITS.NAME_MAX - suffix.length)
+          .join('')
+          .trimEnd() + suffix;
       if (!taken.has(candidate.toLowerCase())) return candidate;
     }
     throw new RoomError('bad_name', 'Too many players share that name');
@@ -319,10 +321,7 @@ export class Room {
   addPrompt(playerId: string, rawText: string): void {
     this.requirePhase('LOBBY');
     this.requirePlayer(playerId);
-    const text = rawText
-      .replace(/[\p{C}]/gu, '')
-      .trim()
-      .replace(/\s+/g, ' ');
+    const text = cleanText(rawText);
     if (text.length < 3) throw new RoomError('empty', 'Write a prompt first');
     if (text.length > LIMITS.PROMPT_MAX_CHARS) {
       throw new RoomError('too_long', `Keep prompts under ${LIMITS.PROMPT_MAX_CHARS} characters`);
@@ -403,9 +402,12 @@ export class Room {
     if (this.matchups.some((m) => m.roast?.targetId === targetId)) {
       throw new RoomError('already_roasted', `${target.name} has already been roasted this round`);
     }
-    const matchup = this.matchups.find((m) => m.playerIds.includes(targetId));
-    if (!matchup) throw new RoomError('invalid', 'That player has no prompt this round');
-    matchup.roast = { spenderId: playerId, targetId };
+    if (!this.matchups.some((m) => m.playerIds.includes(targetId))) {
+      throw new RoomError('invalid', 'That player has no prompt this round');
+    }
+    if (!this.placeRoast({ spenderId: playerId, targetId }, new Set())) {
+      throw new Error(`No matchup can take a roast on ${targetId}`);
+    }
     spender.roastTokens -= 1;
     // Nothing public changes until the reveal: a visible token drop would name the target.
     this.sendPrivateState(playerId);
@@ -555,18 +557,13 @@ export class Room {
     return picked;
   }
 
-  /**
-   * Ring pairing: player i vs player i+1 (mod N); N matchups. Custom prompts are placed
-   * on pairs that do not include their author whenever such a placement exists; the
-   * bank fills the remaining pairs.
-   */
+  /** Ring pairing: player i vs player i+1 (mod N); N matchups. */
   private generateMatchups(round: RoundIndex): Matchup[] {
     const order = this.shuffled(this.players.map((p) => p.id));
-    const drawn = this.drawPrompts(round, order.length);
     const pairs = order.map(
       (playerId, i) => [playerId, order[(i + 1) % order.length]!] as [string, string],
     );
-    const prompts = this.placePrompts(drawn, pairs);
+    const prompts = this.promptsForPairs(round, pairs);
     // Public slot order and matchup order must not follow the ring, or a revealed
     // matchup would name a neighbour in the next one.
     const matchups: Matchup[] = order.map((_, i) => {
@@ -585,50 +582,35 @@ export class Room {
     return this.shuffled(matchups);
   }
 
-  /**
-   * One prompt per pair. Each custom prompt may not sit on either pair its author is in,
-   * so this is a small matching problem: depth-first over the custom prompts with the
-   * set of taken pairs as the memo key (at most 12 prompts x 4096 masks). When no
-   * collision-free placement exists (one author wrote most of the prompts), custom
-   * prompts still take a pair each, preferring pairs without their author.
-   */
-  private placePrompts(drawn: Prompt[], pairs: [string, string][]): Prompt[] {
-    const authorOf = new Map(this.customPrompts.map((p) => [p.id, p.authorId]));
-    const custom = drawn.filter((p) => authorOf.has(p.id));
-    const bank = drawn.filter((p) => !authorOf.has(p.id));
-    const clashes = (prompt: Prompt, slot: number) =>
-      pairs[slot]!.includes(authorOf.get(prompt.id) ?? '');
-
-    const deadEnds = new Set<string>();
-    const search = (index: number, taken: number, slots: number[]): number[] | null => {
-      if (index === custom.length) return slots;
-      const key = `${index}:${taken}`;
-      if (deadEnds.has(key)) return null;
+  /** Custom prompts matched away from their authors first, leftovers next, then the bank. */
+  private promptsForPairs(round: RoundIndex, pairs: [string, string][]): Prompt[] {
+    const fresh =
+      this.settings.promptMode === 'custom'
+        ? this.shuffled(this.customPrompts.filter((p) => !this.usedPromptIds.has(p.id)))
+        : [];
+    const holder: (number | undefined)[] = pairs.map(() => undefined);
+    const augment = (index: number, seen: Set<number>): boolean => {
       for (let slot = 0; slot < pairs.length; slot++) {
-        if (taken & (1 << slot) || clashes(custom[index]!, slot)) continue;
-        const found = search(index + 1, taken | (1 << slot), [...slots, slot]);
-        if (found) return found;
+        if (seen.has(slot) || pairs[slot]!.includes(fresh[index]!.authorId)) continue;
+        seen.add(slot);
+        const current = holder[slot];
+        if (current === undefined || augment(current, seen)) {
+          holder[slot] = index;
+          return true;
+        }
       }
-      deadEnds.add(key);
-      return null;
+      return false;
     };
-
-    let placement = search(0, 0, []);
-    if (!placement) {
-      placement = [];
-      let taken = 0;
-      for (const prompt of custom) {
-        const free = pairs.map((_, slot) => slot).filter((slot) => !(taken & (1 << slot)));
-        const slot = free.find((candidate) => !clashes(prompt, candidate)) ?? free[0]!;
-        taken |= 1 << slot;
-        placement.push(slot);
-      }
+    for (let index = 0; index < fresh.length && holder.includes(undefined); index++) {
+      augment(index, new Set());
     }
-
-    const bySlot: (Prompt | undefined)[] = pairs.map(() => undefined);
-    placement.forEach((slot, index) => (bySlot[slot] = custom[index]));
-    const rest = [...bank];
-    return bySlot.map((prompt) => prompt ?? rest.shift()!);
+    const leftovers = fresh.filter((_, index) => !holder.includes(index));
+    const custom = holder.map((index) => (index === undefined ? leftovers.shift() : fresh[index]));
+    for (const prompt of custom) if (prompt) this.usedPromptIds.add(prompt.id);
+    const bank = this.deps.deck.draw(round, custom.filter((p) => !p).length, this.usedPromptIds);
+    return custom.map((prompt) =>
+      prompt ? { id: prompt.id, text: prompt.text, rounds: [0, 1, 2] } : bank.shift()!,
+    );
   }
 
   private startWriting(): void {
@@ -898,6 +880,19 @@ export class Room {
     );
   }
 
+  /** One roast per matchup; a clash moves the earlier roast to its target's other matchup. */
+  private placeRoast(roast: Roast, seen: Set<Matchup>): boolean {
+    for (const matchup of this.matchups) {
+      if (!matchup.playerIds.includes(roast.targetId) || seen.has(matchup)) continue;
+      seen.add(matchup);
+      if (!matchup.roast || this.placeRoast(matchup.roast, seen)) {
+        matchup.roast = roast;
+        return true;
+      }
+    }
+    return false;
+  }
+
   private eligibleVoters(matchup: Matchup): Player[] {
     return this.players.filter((p) => p.connected && !matchup.playerIds.includes(p.id));
   }
@@ -1111,15 +1106,23 @@ export class Room {
     return [];
   }
 
-  private votedIds(): string[] {
-    if (this.phase === 'VOTING') return Object.keys(this.currentMatchup().votes);
+  /** Matchup voters are private: whoever is missing from the list would name the authors. */
+  private votedIds(viewerId?: string): string[] {
+    if (this.phase === 'VOTING') {
+      return viewerId !== undefined && viewerId in this.currentMatchup().votes ? [viewerId] : [];
+    }
     if (this.phase === 'FINAL_VOTING' && this.final) return Object.keys(this.final.votes);
     return [];
   }
 
   private broadcast(): void {
     if (this.closed) return;
-    this.broadcastAll({ type: 'room_state', payload: this.publicState() });
+    const state = this.publicState();
+    for (const player of this.players) {
+      if (!player.connected) continue;
+      const payload = { ...state, votedIds: this.votedIds(player.id) };
+      this.deps.send(player.id, { type: 'room_state', payload });
+    }
   }
 
   private broadcastAll(message: ServerMessage): void {
