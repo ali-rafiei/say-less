@@ -142,7 +142,7 @@ say-less/
 │   ├── src/characters/svg Ten placeholder SVGs following the group contract in its README.md
 │   ├── src/audio/sfx.ts   Synthesized sound effects + mute
 │   └── public/sprites/    Optional PNG sprite overrides + manifest.json (see ASSETS.md)
-├── content/prompts.json   245 prompts tagged by round
+├── content/prompts.json   373 prompts tagged by round
 ├── e2e/full-game.spec.ts  Playwright: three phone browsers play a whole game
 ├── deploy/                Dockerfile, docker-compose.yml, Caddyfile, cloud-init.yaml, provision.sh, deploy.sh
 ├── cloud/                 OpenStack CLI wrapper + credential bootstrap (secrets gitignored under cloud/secrets/)
@@ -439,10 +439,16 @@ This keys out the magenta, despills edges, trims, squares, resizes to 512 and wr
 
 ## Prompt bank
 
-`content/prompts.json`: 245 prompts, `{ id, text, rounds }` where `rounds ⊆ [0,1,2]`.
-245 are usable in round 1, 233 in round 2, 158 as final prompts. Tone is absurd and
-cheeky; nothing about real people, groups or brands; no adult tier. Add prompts by
-appending with the next id; the server validates unique ids at boot.
+`content/prompts.json`: 373 prompts, `{ id, text, rounds }` where `rounds ⊆ [0,1,2]`.
+367 are usable in round 1, 372 in round 2, 286 as final prompts (tag 2 only goes on
+prompts that land in one to three words). Tone is absurd and cheeky; nothing about real
+people, groups, brands, religion or politics; no adult tier; plain ASCII, blanks written
+`___`. The bank had an editorial pass on 2026-09-24 (154 kept, 77 rewritten, 14 retired,
+142 added). `server/test/prompts.bank.test.ts` locks the bar: minimum counts per round,
+unique ids that never reuse a retired one, length, punctuation, no near-duplicates (same
+first five words), at most 8 prompts sharing an opening pair of words, and a banned list
+of brands and public figures. Add prompts by appending with the next id and run
+`npm test`.
 
 ---
 
@@ -498,7 +504,7 @@ sudo tail -f /var/log/say-less-bootstrap.log
 cd /opt/say-less/deploy && sudo docker compose logs -f
 ```
 
-Health: `curl -6 https://38dcd.yeg.rac.sh/healthz` → `{"ok":true,"rooms":N,"prompts":245}`.
+Health: `curl -6 https://38dcd.yeg.rac.sh/healthz` → `{"ok":true,"rooms":N,"prompts":373}`.
 
 Rollback: `ssh … 'cd /opt/say-less && git reset --hard <sha> && cd deploy && sudo docker compose up -d --build'`.
 
@@ -579,11 +585,6 @@ nothing in this list is a regression.
 
 - **Final art.** Sprites and UI images per `ASSETS.md`; wire the UI images (logo, stamps)
   once delivered. Placeholders are playable but generic.
-- **Prompt bank quality pass.** The bank is 245 prompts and playable, but it has never had
-  an editorial pass: some prompts are near-duplicates, some tagged for the final round need
-  more than three words to be funny, and structures repeat. Target: >=260 prompts with
-  > =170 tagged round 1, >=170 round 2, >=90 final, no more than ~8 sharing their first two
-  > words. A `node` script should assert those invariants.
 - **Manual phone test.** The e2e suite drives three Chromium contexts at iPhone 13 size; a
   real session with 6 people on 6 phones over the public URL has not happened yet. That is
   the only way to catch real iOS Safari keyboard, audio-unlock and backgrounding behaviour.
