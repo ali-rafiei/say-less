@@ -35,7 +35,7 @@ async function answerAllPrompts(
     const field = player.page.locator('.winput__field');
     if (!(await field.isVisible().catch(() => false))) {
       await player.page
-        .locator('.winput__field, .writing .card:has-text("Waiting on")')
+        .locator('.winput__field, .waitroom')
         .first()
         .waitFor({ timeout: 15_000 });
       if (!(await field.isVisible().catch(() => false))) return seen;
@@ -126,6 +126,9 @@ test('three phones play a full game, survive a refresh, and reach the podium', a
   await loser.page.locator('.ccell:not([disabled])', { hasText: 'Monkey' }).click();
   await cat.page.locator('.ccell:not([disabled])', { hasText: 'Frog' }).click();
   await expect(cat.page.locator('.ccell--mine')).toHaveCount(1);
+  // The painted characters must actually move; a selector slip once froze every sprite.
+  const myPick = cat.page.locator('.ccell--mine .char-sprite img');
+  await expect.poll(() => myPick.evaluate((img) => img.getAnimations().length)).toBeGreaterThan(0);
   await shot(ann.page, '03-lobby-characters');
   await ann.page.getByRole('button', { name: 'Start Game' }).click();
 

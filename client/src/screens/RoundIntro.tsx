@@ -18,7 +18,8 @@ export function RoundIntro({ room }: { ctl: RoomController; room: PublicRoomStat
         {limit} {emoji ? 'emoji' : limit === 1 ? 'word' : 'words'}
       </p>
       <p className="dim">
-        ×{round.multiplier} points{room.roundIndex === 1 ? ' · roast tokens unlocked' : ''}
+        ×{round.multiplier} points
+        {room.roundIndex === 1 && room.settings.roasts ? ' · roast tokens unlocked' : ''}
       </p>
     </main>
   );

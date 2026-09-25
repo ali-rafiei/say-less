@@ -46,14 +46,20 @@
 .chip--art.chip--doomed {
   filter: grayscale(1);
 }
+/* The pictures are the markers, so the list needs neither numbers nor their indent. */
+.howto__list {
+  padding-left: 0;
+  list-style: none;
+}
 .howto__step {
-  display: flow-root;
-  margin-bottom: 18px;
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  align-items: start;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 .howto__art {
-  width: 82px;
-  float: left;
-  margin: 0 12px 6px 0;
+  width: 72px;
 }
 .overlay__fire.ui-art {
   width: 100px;
@@ -65,14 +71,14 @@
   line-height: 0;
 }
 .stamp--art .ui-art {
-  width: 110px;
+  width: 92px;
 }
 .stamp-banner {
   background: none;
   text-align: center;
 }
 .stamp-banner .ui-art {
-  width: min(280px, 80%);
+  width: min(200px, 56%);
 }
 .micdrop-stamp {
   line-height: 0;

@@ -38,6 +38,10 @@ export function Writing({ ctl, room, me }: Props) {
     }
   }, [ctl.prompts, room.code]);
 
+  const answeredCount = room.players.filter(
+    (p) => p.id === me || room.submittedIds.includes(p.id),
+  ).length;
+
   const limit =
     current?.effectiveLimit ?? (room.final?.mode === 'emoji' ? room.final.limit : round.limit);
   const unit = (current?.mode ?? room.final?.mode) === 'emoji' ? 'emoji' : 'words';
@@ -125,7 +129,6 @@ export function Writing({ ctl, room, me }: Props) {
                 : 'No token left. Hope nobody remembers you.'}
             </p>
           )}
-          <p className="dim small">Prompts arrive when the window closes.</p>
         </section>
       )}
 
@@ -159,29 +162,42 @@ export function Writing({ ctl, room, me }: Props) {
       )}
 
       {!current && ctl.prompts.length > 0 && (
-        <section className="card stack center">
+        <section className="card stack center waitroom">
           <h2 className="display">
-            <UIArt name="pencil" /> Waiting on…
+            <UIArt name="pencil" /> {answeredCount} of {room.players.length} done
           </h2>
           <div className="pgrid">
-            {room.players
-              .filter((p) => !room.submittedIds.includes(p.id) && p.id !== me)
-              .map((p) => (
-                <PlayerChip key={p.id} player={p} state="writing" size={56} />
-              ))}
-            {room.players.filter((p) => !room.submittedIds.includes(p.id) && p.id !== me).length ===
-              0 && <p className="dim">Everyone's in. Tallying…</p>}
+            {room.players.map((p) => {
+              const done = p.id === me || room.submittedIds.includes(p.id);
+              return (
+                <PlayerChip
+                  key={p.id}
+                  player={p}
+                  isMe={p.id === me}
+                  state={done ? 'waiting' : 'writing'}
+                  size={56}
+                  badge={done ? 'done' : null}
+                />
+              );
+            })}
           </div>
+          <p className="dim small">
+            {answeredCount === room.players.length
+              ? "Everyone's in. Tallying…"
+              : 'Still writing: the ones with pencils.'}
+          </p>
         </section>
       )}
 
-      <div className="corner-char">
-        <Character
-          characterId={myPlayer?.characterId ?? null}
-          state={current ? 'writing' : 'idle'}
-          size={84}
-        />
-      </div>
+      {(current || roastWindow) && (
+        <div className="corner-char">
+          <Character
+            characterId={myPlayer?.characterId ?? null}
+            state={current ? 'writing' : 'idle'}
+            size={84}
+          />
+        </div>
+      )}
     </main>
   );
 }

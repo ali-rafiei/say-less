@@ -118,7 +118,12 @@ export class Room {
   phaseStartedAt: number;
   roundIndex: RoundIndex = 0;
   leaderId = '';
-  settings: RoomSettings = { profanityFilter: false, emojiFinal: 'off', promptMode: 'bank' };
+  settings: RoomSettings = {
+    profanityFilter: false,
+    emojiFinal: 'off',
+    promptMode: 'bank',
+    roasts: true,
+  };
   gamesPlayed = 0;
   banner: string | null = null;
 
@@ -311,6 +316,7 @@ export class Room {
     if (patch.emojiFinal === 'off' || patch.emojiFinal === 'always') {
       this.settings.emojiFinal = patch.emojiFinal;
     }
+    if (typeof patch.roasts === 'boolean') this.settings.roasts = patch.roasts;
     if (patch.promptMode === 'bank' || patch.promptMode === 'custom') {
       this.settings.promptMode = patch.promptMode;
     }
@@ -621,7 +627,7 @@ export class Room {
       return;
     }
     this.enterPhase('WRITING', spec.writingMs);
-    if (this.roundIndex >= LIMITS.ROAST_FROM_ROUND) {
+    if (this.settings.roasts && this.roundIndex >= LIMITS.ROAST_FROM_ROUND) {
       this.roastWindowEndsAt = Date.now() + TIMERS.ROAST_WINDOW;
       this.roastTimer = setTimeout(() => {
         this.roastTimer = null;

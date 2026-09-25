@@ -20,6 +20,8 @@ export interface RoomSettings {
   emojiFinal: EmojiFinalSetting;
   /** 'custom' deals player-written prompts first and fills any shortfall from the bank */
   promptMode: PromptMode;
+  /** false skips the round 2 roast window, so nobody can cut an opponent to 2 words */
+  roasts: boolean;
 }
 
 export interface CustomPrompt {

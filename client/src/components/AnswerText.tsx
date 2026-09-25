@@ -4,14 +4,17 @@ import { sfx } from '../audio/sfx.ts';
 
 interface Props {
   text: string;
+  /** Smaller type for grids of many answers (the final-round wall). */
+  compact?: boolean;
   /** Mask profanity for everyone but the author (author sees their own text). */
   filter?: boolean;
   typewriter?: boolean;
   className?: string;
 }
 
-function fontSizeFor(text: string): string {
+function fontSizeFor(text: string, compact: boolean): string {
   const n = text.length;
+  if (compact) return n <= 14 ? 'clamp(22px, 6vw, 30px)' : 'clamp(17px, 4.6vw, 24px)';
   if (n <= 10) return 'clamp(34px, 10vw, 52px)';
   if (n <= 24) return 'clamp(28px, 8vw, 44px)';
   if (n <= 48) return 'clamp(24px, 6.4vw, 36px)';
@@ -20,7 +23,13 @@ function fontSizeFor(text: string): string {
 }
 
 /** Answers always render in the display font at the largest size that fits. */
-export function AnswerText({ text, filter = false, typewriter = false, className = '' }: Props) {
+export function AnswerText({
+  text,
+  compact = false,
+  filter = false,
+  typewriter = false,
+  className = '',
+}: Props) {
   const shown = filter ? maskProfanity(text) : text;
   const [visible, setVisible] = useState(typewriter ? 0 : shown.length);
 
@@ -45,7 +54,10 @@ export function AnswerText({ text, filter = false, typewriter = false, className
 
   const chars = Array.from(shown);
   return (
-    <span className={`answer-text display ${className}`} style={{ fontSize: fontSizeFor(shown) }}>
+    <span
+      className={`answer-text display ${className}`}
+      style={{ fontSize: fontSizeFor(shown, compact) }}
+    >
       {chars.slice(0, visible).join('')}
       {typewriter && visible < chars.length && <span className="caret">▍</span>}
     </span>

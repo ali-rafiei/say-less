@@ -150,36 +150,48 @@ export function HowToPlay({ onClose }: { onClose: () => void }) {
         <ol className="howto__list">
           <li className="howto__step">
             <UIArt name="howto-gather" className="howto__art" />
-            <b>
-              Gather {LIMITS.MIN_PLAYERS} to {LIMITS.MAX_PLAYERS} people.
-            </b>{' '}
-            One creates a room and shares the code; everyone joins on their own phone and grabs a
-            character.
+            <span>
+              <b>
+                Gather {LIMITS.MIN_PLAYERS} to {LIMITS.MAX_PLAYERS} people.
+              </b>{' '}
+              One creates a room and shares the code; everyone joins on their own phone and grabs a
+              character.
+            </span>
           </li>
           <li className="howto__step">
             <UIArt name="howto-answer" className="howto__art" />
-            <b>Answer prompts.</b> Each round you get two absurd prompts. Write the funniest answer
-            you can under the word limit: <b>12 words</b>, then <b>6</b>, then <b>3</b>.
+            <span>
+              <b>Answer prompts.</b> Each round you get two absurd prompts. Write the funniest
+              answer you can under the word limit: <b>12 words</b>, then <b>6</b>, then <b>3</b>.
+            </span>
           </li>
           <li className="howto__step">
             <UIArt name="howto-vote" className="howto__art" />
-            <b>Vote.</b> Answers to the same prompt face off anonymously. Everyone who didn't write
-            them picks the funnier one. 100 points per vote, more in later rounds.
+            <span>
+              <b>Vote.</b> Answers to the same prompt face off anonymously. Everyone who didn't
+              write them picks the funnier one. 100 points per vote, more in later rounds.
+            </span>
           </li>
           <li className="howto__step">
             <UIArt name="howto-micdrop" className="howto__art" />
-            <b>Mic Drop.</b> Win with half the word budget or less for a bonus. Sweep every vote for
-            a <b>Silenced!</b> bonus.
+            <span>
+              <b>Mic Drop.</b> Win with half the word budget or less for a bonus. Sweep every vote
+              for a <b>Silenced!</b> bonus.
+            </span>
           </li>
           <li className="howto__step">
             <UIArt name="howto-roast" className="howto__art" />
-            <b>Roast.</b> From round 2, spend your one roast token to cut an opponent to 2 words. If
-            they win anyway, they steal your points.
+            <span>
+              <b>Roast.</b> From round 2, spend your one roast token to cut an opponent to 2 words.
+              If they win anyway, they steal your points. The host can switch roasts off.
+            </span>
           </li>
           <li className="howto__step">
             <UIArt name="howto-final" className="howto__art" />
-            <b>Final round.</b> One prompt, 3 words (or 5 emoji), everyone answers, everyone ranks
-            their top two. Highest total takes the podium.
+            <span>
+              <b>Final round.</b> One prompt, 3 words (or 5 emoji), everyone answers, everyone ranks
+              their top two. Highest total takes the podium.
+            </span>
           </li>
         </ol>
         <button className="btn btn--block" type="button" onClick={onClose}>

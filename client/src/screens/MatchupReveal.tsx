@@ -85,13 +85,26 @@ export function MatchupReveal({ ctl, room, me }: Props) {
                 <Character
                   characterId={player?.characterId ?? null}
                   state={state}
-                  size={60}
+                  size={76}
                   className="rcard__char"
                 />
                 <span className="rcard__name display" style={{ background: meta?.accent }}>
                   {player?.name ?? '?'}
                   {player?.id === me ? ' (you)' : ''}
                 </span>
+                <div className="stamps">
+                  {stampsFor(matchup, answer.playerId)
+                    .filter((s) => !(result.greatMinds && s === 'GREAT MINDS'))
+                    .map((s, i) => (
+                      <span
+                        key={s}
+                        className="stamp stamp--art"
+                        style={{ animationDelay: `${1.4 + i * 0.3}s` }}
+                      >
+                        <UIArt name={stampArt[s]!} label={s} />
+                      </span>
+                    ))}
+                </div>
               </div>
               <AnswerText
                 text={answer.text ?? '…'}
@@ -117,17 +130,6 @@ export function MatchupReveal({ ctl, room, me }: Props) {
                   {delta >= 0 ? '+' : ''}
                   {delta}
                 </div>
-              </div>
-              <div className="stamps">
-                {stampsFor(matchup, answer.playerId).map((s, i) => (
-                  <span
-                    key={s}
-                    className="stamp stamp--art"
-                    style={{ animationDelay: `${1.4 + i * 0.3}s` }}
-                  >
-                    <UIArt name={stampArt[s]!} label={s} />
-                  </span>
-                ))}
               </div>
             </div>
           );

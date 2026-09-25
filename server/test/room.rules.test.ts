@@ -212,6 +212,37 @@ describe('roast tokens', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
+  it('are on by default, and only the leader can switch them off', () => {
+    // Arrange
+    const h = makeRoom();
+
+    // Act / Assert
+    expect(h.state().settings.roasts).toBe(true);
+    expect(() => h.room.updateSettings('b', { roasts: false })).toThrowError(
+      expect.objectContaining({ code: 'not_leader' }),
+    );
+    h.room.updateSettings('a', { roasts: 'no' as never });
+    expect(h.state().settings.roasts).toBe(true);
+    h.room.updateSettings('a', { roasts: false });
+    expect(h.state().settings.roasts).toBe(false);
+  });
+
+  it('skip the round 2 roast window entirely when switched off', () => {
+    // Arrange
+    const h = makeRoom();
+    h.room.updateSettings('a', { roasts: false });
+
+    // Act
+    toRoundTwoWindow(h);
+
+    // Assert: prompts arrive at once and nobody can roast
+    expect(h.state().roastWindowEndsAt).toBeNull();
+    expect(h.room.yourPrompts('a')).toHaveLength(2);
+    expect(() => h.room.spendRoast('a', 'b')).toThrowError(
+      expect.objectContaining({ code: 'bad_phase' }),
+    );
+  });
+
   it('cannot be spent in round 1', () => {
     const h = makeRoom();
     startToWriting(h);

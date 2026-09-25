@@ -201,7 +201,7 @@ p {
   box-shadow: 0 1px 0 var(--ink);
 }
 .btn:disabled {
-  filter: grayscale(0.7) brightness(0.8);
+  opacity: 0.45;
   cursor: not-allowed;
   transform: none;
   box-shadow: 0 6px 0 var(--ink);
@@ -259,6 +259,8 @@ p {
 }
 
 .card {
+  /* .dim text inside a light card must be dark, whatever the phase palette says. */
+  --fg-dim: rgba(26, 26, 46, 0.62);
   background: var(--card);
   color: var(--card-fg);
   border: 4px solid var(--ink);

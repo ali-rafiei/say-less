@@ -162,6 +162,25 @@ export function Lobby({ ctl, room, me }: Props) {
           </button>
         </div>
         <div className="row row--between">
+          <span>
+            Roasts
+            <span className="dim small setting__hint">cut a rival to 2 words in round 2</span>
+          </span>
+          <button
+            className={`toggle ${room.settings.roasts ? 'toggle--on' : ''}`}
+            type="button"
+            disabled={!isLeader}
+            aria-pressed={room.settings.roasts}
+            aria-label="Roasts"
+            onClick={() => {
+              sfx.tap();
+              ctl.updateSettings({ roasts: !room.settings.roasts });
+            }}
+          >
+            {room.settings.roasts ? 'On' : 'Off'}
+          </button>
+        </div>
+        <div className="row row--between">
           <span>Emoji final round</span>
           <button
             className={`toggle ${room.settings.emojiFinal === 'always' ? 'toggle--on' : ''}`}

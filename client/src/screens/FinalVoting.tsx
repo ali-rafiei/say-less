@@ -1,4 +1,4 @@
-import { characterMeta, type PublicRoomState } from '@say-less/shared';
+import type { PublicRoomState } from '@say-less/shared';
 import { useEffect, useState } from 'react';
 import { sfx } from '../audio/sfx.ts';
 import { AnswerText } from '../components/AnswerText.tsx';
@@ -53,6 +53,7 @@ export function FinalVoting({ ctl, room, me }: Props) {
               {mine && <span className="wcard__rank wcard__rank--mine display">you</span>}
               <AnswerText
                 text={answer.text ?? '…'}
+                compact
                 filter={room.settings.profanityFilter && !mine}
               />
             </button>
@@ -76,17 +77,6 @@ export function FinalVoting({ ctl, room, me }: Props) {
       ) : (
         <p className="center dim">Not enough other answers to vote on.</p>
       )}
-      <div className="legend row row--wrap center">
-        {room.players.map((p) => (
-          <span
-            key={p.id}
-            className="legend__item"
-            style={{ background: characterMeta(p.characterId)?.accent }}
-          >
-            {p.name}
-          </span>
-        ))}
-      </div>
     </main>
   );
 }

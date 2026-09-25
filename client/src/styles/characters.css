@@ -272,44 +272,77 @@
   }
 }
 
-/* Raster sprites (see ASSETS.md) have no named groups: the whole image moves. */
+/* Raster sprites (see ASSETS.md) have no named groups: the whole image moves. The state
+   sits on the same element as .char-sprite, hence the compound selectors. Distances are
+   percentages so a 26 px voter face and the 220 px mic-drop hero move alike. */
 .char-sprite img {
   transform-origin: 50% 100%;
 }
-[data-state='idle'] .char-sprite img {
-  animation: char-breathe 2s ease-in-out infinite;
+.char-sprite[data-state='idle'] img {
+  animation: sprite-breathe 2.4s ease-in-out infinite;
 }
-[data-state='writing'] .char-sprite img {
-  animation: char-scribble-body 0.6s ease-in-out infinite;
+.char-sprite[data-state='writing'] img {
+  animation: sprite-scribble 0.6s ease-in-out infinite;
 }
-[data-state='waiting'] .char-sprite img {
-  animation: char-fidget 1.6s ease-in-out infinite;
+.char-sprite[data-state='waiting'] img {
+  animation: sprite-fidget 1.6s ease-in-out infinite;
 }
-[data-state='win'] .char-sprite img {
-  animation: char-bounce 0.7s ease-in-out infinite;
+.char-sprite[data-state='win'] img {
+  animation: sprite-hop 0.8s ease-in-out infinite;
 }
-[data-state='lose'] .char-sprite img {
-  animation: char-deflate 0.6s ease-out forwards;
+/* The painted lose pose is already slumped; squashing it again reads as a glitch. */
+.char-sprite[data-state='lose'] img {
+  animation: sprite-sulk 2.8s ease-in-out infinite;
 }
-@keyframes char-scribble-body {
+@keyframes sprite-breathe {
   0%,
   100% {
-    transform: rotate(-1.5deg) scaleY(1);
+    transform: scale(1, 1);
   }
   50% {
-    transform: rotate(1.5deg) scaleY(1.02);
+    transform: scale(0.99, 1.025);
   }
 }
-@keyframes char-fidget {
+@keyframes sprite-scribble {
+  0%,
+  100% {
+    transform: rotate(-1.5deg);
+  }
+  50% {
+    transform: rotate(1.5deg) scaleY(1.015);
+  }
+}
+@keyframes sprite-fidget {
   0%,
   100% {
     transform: translateX(0);
   }
   20% {
-    transform: translateX(-3px);
+    transform: translateX(-2.5%);
   }
   60% {
-    transform: translateX(3px);
+    transform: translateX(2.5%);
+  }
+}
+@keyframes sprite-hop {
+  0%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  40% {
+    transform: translateY(-9%) scale(0.98, 1.03);
+  }
+  70% {
+    transform: translateY(0) scale(1.03, 0.96);
+  }
+}
+@keyframes sprite-sulk {
+  0%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  50% {
+    transform: translateY(2%) scale(1.015, 0.97);
   }
 }
 
