@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RoomError, revealDuration } from '../src/room.ts';
-import type { PublicMatchup } from '../src/shared.ts';
+import { LIMITS, type PublicMatchup } from '../src/shared.ts';
 import { advanceToPhaseEnd, answerAll, makeRoom, startToWriting, type Harness } from './helpers.ts';
 
 /** Advance through VOTING/MATCHUP_REVEAL until the round results, calling back on each reveal. */
@@ -154,24 +154,24 @@ describe('character select in the lobby', () => {
 
   it('resolves a race for the same character to exactly one owner', () => {
     const h = makeRoom();
-    h.room.pickCharacter('a', 'lemon');
-    expect(() => h.room.pickCharacter('b', 'lemon')).toThrowError(
+    h.room.pickCharacter('a', 'cat');
+    expect(() => h.room.pickCharacter('b', 'cat')).toThrowError(
       expect.objectContaining({ code: 'char_taken' }),
     );
-    expect(h.state().players.filter((p) => p.characterId === 'lemon')).toHaveLength(1);
+    expect(h.state().players.filter((p) => p.characterId === 'cat')).toHaveLength(1);
   });
 
   it('lets a player swap to a free character and frees the old one', () => {
     const h = makeRoom();
-    h.room.pickCharacter('a', 'lemon');
-    h.room.pickCharacter('a', 'ghost');
-    h.room.pickCharacter('b', 'lemon');
-    expect(h.state().players.map((p) => p.characterId)).toEqual(['ghost', 'lemon', null]);
+    h.room.pickCharacter('a', 'cat');
+    h.room.pickCharacter('a', 'blob');
+    h.room.pickCharacter('b', 'cat');
+    expect(h.state().players.map((p) => p.characterId)).toEqual(['blob', 'cat', null]);
   });
 
   it('assigns random unclaimed characters to anyone who did not pick when the game starts', () => {
     const h = makeRoom();
-    h.room.pickCharacter('a', 'ghost');
+    h.room.pickCharacter('a', 'blob');
     h.room.startGame('a');
     expect(h.room.phase).toBe('ROUND_INTRO');
     const ids = h.state().players.map((p) => p.characterId);
@@ -361,8 +361,8 @@ describe('presence', () => {
     expect(() => h.room.addPlayer('z', 'Zed')).toThrowError(
       expect.objectContaining({ code: 'bad_phase' }),
     );
-    const full = makeRoom(['1', '2', '3', '4', '5', '6', '7', '8']);
-    expect(() => full.room.addPlayer('9', 'Nine')).toThrowError(
+    const full = makeRoom(Array.from({ length: LIMITS.MAX_PLAYERS }, (_, i) => String(i + 1)));
+    expect(() => full.room.addPlayer('13', 'Thirteen')).toThrowError(
       expect.objectContaining({ code: 'room_full' }),
     );
     expect(RoomError).toBeDefined();
@@ -419,6 +419,42 @@ describe('custom prompts', () => {
     const bPrompts = h.room.yourPrompts('b').map((p) => p.text);
     expect(aPrompts).not.toContain('Prompt written by A');
     expect(bPrompts).not.toContain('Prompt written by B');
+  });
+
+  it('places every custom prompt away from its author whenever that is possible', () => {
+    // Four players, four custom prompts by three authors: a placement exists but the
+    // rotation-only search this replaced could miss it. Try many shuffles.
+    for (let seed = 1; seed <= 40; seed++) {
+      const h = makeRoom(['a', 'b', 'c', 'd'], seed);
+      h.room.updateSettings('a', { promptMode: 'custom' });
+      h.room.addPrompt('a', `A prompt ${seed}`);
+      h.room.addPrompt('b', `B prompt ${seed}`);
+      h.room.addPrompt('c', `C one ${seed}`);
+      h.room.addPrompt('c', `C two ${seed}`);
+      startToWriting(h);
+      for (const player of h.room.players) {
+        const texts = h.room.yourPrompts(player.id).map((p) => p.text);
+        expect(texts.some((text) => text.startsWith(`${player.name} `))).toBe(false);
+      }
+    }
+  });
+
+  it('still deals a pair to every custom prompt when a collision is unavoidable', () => {
+    // Three players and two prompts by the same author: the author is in two of the
+    // three pairs, so only one pair is clean. Nobody is left without a prompt.
+    const h = makeRoom(['a', 'b', 'c']);
+    h.room.updateSettings('a', { promptMode: 'custom' });
+    h.room.addPrompt('a', 'First by A');
+    h.room.addPrompt('a', 'Second by A');
+    startToWriting(h);
+    for (const player of h.room.players) {
+      expect(h.room.yourPrompts(player.id)).toHaveLength(2);
+    }
+    const dealt = new Set(
+      h.room.players.flatMap((p) => h.room.yourPrompts(p.id).map((x) => x.text)),
+    );
+    expect(dealt.has('First by A')).toBe(true);
+    expect(dealt.has('Second by A')).toBe(true);
   });
 
   it('ignores custom prompts in bank mode', () => {

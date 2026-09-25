@@ -1,29 +1,33 @@
 import { CHARACTER_IDS } from '@say-less/shared';
 import { useEffect, useState } from 'react';
+import axolotl from '../characters/svg/axolotl.svg?raw';
+import bear from '../characters/svg/bear.svg?raw';
+import bird from '../characters/svg/bird.svg?raw';
 import blob from '../characters/svg/blob.svg?raw';
-import cactus from '../characters/svg/cactus.svg?raw';
-import ghost from '../characters/svg/ghost.svg?raw';
-import grandma from '../characters/svg/grandma.svg?raw';
-import icecream from '../characters/svg/icecream.svg?raw';
-import lemon from '../characters/svg/lemon.svg?raw';
-import pigeon from '../characters/svg/pigeon.svg?raw';
-import raccoon from '../characters/svg/raccoon.svg?raw';
-import sock from '../characters/svg/sock.svg?raw';
-import toast from '../characters/svg/toast.svg?raw';
+import cat from '../characters/svg/cat.svg?raw';
+import fish from '../characters/svg/fish.svg?raw';
+import frog from '../characters/svg/frog.svg?raw';
+import hedgehog from '../characters/svg/hedgehog.svg?raw';
+import monkey from '../characters/svg/monkey.svg?raw';
+import otter from '../characters/svg/otter.svg?raw';
+import penguin from '../characters/svg/penguin.svg?raw';
+import rabbit from '../characters/svg/rabbit.svg?raw';
 
 export type CharacterState = 'idle' | 'writing' | 'waiting' | 'win' | 'lose';
 
 const SVGS: Record<string, string> = {
-  lemon,
-  raccoon,
-  icecream,
-  grandma,
-  sock,
-  cactus,
-  toast,
-  pigeon,
-  ghost,
+  cat,
+  monkey,
+  frog,
+  bird,
+  axolotl,
+  bear,
+  rabbit,
+  fish,
   blob,
+  otter,
+  penguin,
+  hedgehog,
 };
 
 /**

@@ -49,16 +49,21 @@
 [data-state='idle'] .c-body {
   animation: char-breathe 2s ease-in-out infinite;
 }
-[data-state='idle'] .char-pigeon .c-head {
+[data-state='idle'] .char-bird .c-head {
   animation: char-bob 0.6s ease-in-out infinite;
 }
 [data-state='idle'] .char-blob .c-body {
   animation: char-squash 1.6s ease-in-out infinite;
 }
-[data-state='idle'] .char-icecream .c-gag {
-  animation: char-drip 2.4s ease-in infinite;
+[data-state='idle'] .char-cat .c-gag,
+[data-state='idle'] .char-monkey .c-gag,
+[data-state='idle'] .char-otter .c-gag {
+  animation: char-sway 2.4s ease-in-out infinite;
 }
-[data-state='idle'] .char-toast .c-gag {
+[data-state='idle'] .char-axolotl .c-gag {
+  animation: char-sway 1.8s ease-in-out infinite;
+}
+[data-state='idle'] .char-fish .c-gag {
   animation: char-smoke 3s ease-in-out infinite;
 }
 
@@ -112,17 +117,12 @@
 [data-state='lose'] .c-arm-r {
   animation: char-deflate 0.6s ease-out forwards;
 }
-[data-state='lose'] .char-grandma .c-gag {
-  animation: char-glasses 0.8s ease-in forwards;
+[data-state='lose'] .char-rabbit .c-gag,
+[data-state='lose'] .char-axolotl .c-gag {
+  animation: char-droop 0.8s ease-in forwards;
 }
-[data-state='lose'] .char-ghost {
-  animation: char-fade 0.8s ease-out forwards;
-}
-[data-state='lose'] .char-toast .c-gag {
+[data-state='lose'] .char-fish .c-gag {
   animation: char-smoke 0.8s ease-in-out infinite;
-}
-[data-state='lose'] .char-icecream .c-gag {
-  animation: char-drip 0.9s ease-in infinite;
 }
 [data-state='lose'] .char-blob .c-body {
   animation: char-puddle 0.7s ease-out forwards;
@@ -158,18 +158,13 @@
     transform: scale(1.08, 0.9);
   }
 }
-@keyframes char-drip {
-  0% {
-    transform: translateY(0);
-    opacity: 1;
-  }
-  80% {
-    transform: translateY(40px);
-    opacity: 1;
-  }
+@keyframes char-sway {
+  0%,
   100% {
-    transform: translateY(46px);
-    opacity: 0;
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
   }
 }
 @keyframes char-smoke {
@@ -266,19 +261,55 @@
     transform: scale(1.06, 0.82);
   }
 }
-@keyframes char-glasses {
+@keyframes char-droop {
   to {
-    transform: translateY(34px) rotate(-6deg);
-  }
-}
-@keyframes char-fade {
-  to {
-    opacity: 0.6;
+    transform: translateY(30px) scaleY(0.8);
   }
 }
 @keyframes char-puddle {
   to {
     transform: scale(1.25, 0.6);
+  }
+}
+
+/* Raster sprites (see ASSETS.md) have no named groups: the whole image moves. */
+.char-sprite img {
+  transform-origin: 50% 100%;
+}
+[data-state='idle'] .char-sprite img {
+  animation: char-breathe 2s ease-in-out infinite;
+}
+[data-state='writing'] .char-sprite img {
+  animation: char-scribble-body 0.6s ease-in-out infinite;
+}
+[data-state='waiting'] .char-sprite img {
+  animation: char-fidget 1.6s ease-in-out infinite;
+}
+[data-state='win'] .char-sprite img {
+  animation: char-bounce 0.7s ease-in-out infinite;
+}
+[data-state='lose'] .char-sprite img {
+  animation: char-deflate 0.6s ease-out forwards;
+}
+@keyframes char-scribble-body {
+  0%,
+  100% {
+    transform: rotate(-1.5deg) scaleY(1);
+  }
+  50% {
+    transform: rotate(1.5deg) scaleY(1.02);
+  }
+}
+@keyframes char-fidget {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-3px);
+  }
+  60% {
+    transform: translateX(3px);
   }
 }
 

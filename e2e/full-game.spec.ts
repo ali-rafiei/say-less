@@ -109,22 +109,22 @@ test('three phones play a full game, survive a refresh, and reach the podium', a
   // Playwright waits for enabled buttons; the loser's button gets disabled mid-race, so force both.
   await Promise.all([
     ann.page
-      .locator('.ccell', { hasText: 'Smug Lemon' })
+      .locator('.ccell', { hasText: 'Cat' })
       .click({ force: true, noWaitAfter: true, timeout: 5_000 })
       .catch(() => {}),
     bob.page
-      .locator('.ccell', { hasText: 'Smug Lemon' })
+      .locator('.ccell', { hasText: 'Cat' })
       .click({ force: true, noWaitAfter: true, timeout: 5_000 })
       .catch(() => {}),
   ]);
   await ann.page.waitForTimeout(500);
-  const lemonOwners = await Promise.all(
-    players.map((p) => p.page.locator('.ccell--mine', { hasText: 'Smug Lemon' }).count()),
+  const catOwners = await Promise.all(
+    players.map((p) => p.page.locator('.ccell--mine', { hasText: 'Cat' }).count()),
   );
-  expect(lemonOwners.reduce((a, b) => a + b, 0)).toBe(1);
-  const loser = lemonOwners[0] === 1 ? bob : ann;
-  await loser.page.locator('.ccell:not([disabled])', { hasText: 'Raccoon' }).click();
-  await cat.page.locator('.ccell:not([disabled])', { hasText: 'Ice Cream' }).click();
+  expect(catOwners.reduce((a, b) => a + b, 0)).toBe(1);
+  const loser = catOwners[0] === 1 ? bob : ann;
+  await loser.page.locator('.ccell:not([disabled])', { hasText: 'Monkey' }).click();
+  await cat.page.locator('.ccell:not([disabled])', { hasText: 'Frog' }).click();
   await expect(cat.page.locator('.ccell--mine')).toHaveCount(1);
   await shot(ann.page, '03-lobby-characters');
   await ann.page.getByRole('button', { name: 'Start Game' }).click();

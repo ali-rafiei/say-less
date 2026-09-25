@@ -556,8 +556,9 @@ export class Room {
   }
 
   /**
-   * Ring pairing: player i vs player i+1 (mod N) gets prompt i; N matchups. Prompts are
-   * then rotated so that, where possible, nobody answers a prompt they wrote.
+   * Ring pairing: player i vs player i+1 (mod N); N matchups. Custom prompts are placed
+   * on pairs that do not include their author whenever such a placement exists; the
+   * bank fills the remaining pairs.
    */
   private generateMatchups(round: RoundIndex): Matchup[] {
     const order = this.shuffled(this.players.map((p) => p.id));
@@ -565,16 +566,7 @@ export class Room {
     const pairs = order.map(
       (playerId, i) => [playerId, order[(i + 1) % order.length]!] as [string, string],
     );
-    const authorOf = new Map(this.customPrompts.map((p) => [p.id, p.authorId]));
-    const collisions = (offset: number) =>
-      pairs.filter((pair, i) =>
-        pair.includes(authorOf.get(drawn[(i + offset) % drawn.length]!.id) ?? ''),
-      ).length;
-    let bestOffset = 0;
-    for (let offset = 1; offset < drawn.length; offset++) {
-      if (collisions(offset) < collisions(bestOffset)) bestOffset = offset;
-    }
-    const prompts = drawn.map((_, i) => drawn[(i + bestOffset) % drawn.length]!);
+    const prompts = this.placePrompts(drawn, pairs);
     // Public slot order and matchup order must not follow the ring, or a revealed
     // matchup would name a neighbour in the next one.
     const matchups: Matchup[] = order.map((_, i) => {
@@ -591,6 +583,52 @@ export class Room {
       };
     });
     return this.shuffled(matchups);
+  }
+
+  /**
+   * One prompt per pair. Each custom prompt may not sit on either pair its author is in,
+   * so this is a small matching problem: depth-first over the custom prompts with the
+   * set of taken pairs as the memo key (at most 12 prompts x 4096 masks). When no
+   * collision-free placement exists (one author wrote most of the prompts), custom
+   * prompts still take a pair each, preferring pairs without their author.
+   */
+  private placePrompts(drawn: Prompt[], pairs: [string, string][]): Prompt[] {
+    const authorOf = new Map(this.customPrompts.map((p) => [p.id, p.authorId]));
+    const custom = drawn.filter((p) => authorOf.has(p.id));
+    const bank = drawn.filter((p) => !authorOf.has(p.id));
+    const clashes = (prompt: Prompt, slot: number) =>
+      pairs[slot]!.includes(authorOf.get(prompt.id) ?? '');
+
+    const deadEnds = new Set<string>();
+    const search = (index: number, taken: number, slots: number[]): number[] | null => {
+      if (index === custom.length) return slots;
+      const key = `${index}:${taken}`;
+      if (deadEnds.has(key)) return null;
+      for (let slot = 0; slot < pairs.length; slot++) {
+        if (taken & (1 << slot) || clashes(custom[index]!, slot)) continue;
+        const found = search(index + 1, taken | (1 << slot), [...slots, slot]);
+        if (found) return found;
+      }
+      deadEnds.add(key);
+      return null;
+    };
+
+    let placement = search(0, 0, []);
+    if (!placement) {
+      placement = [];
+      let taken = 0;
+      for (const prompt of custom) {
+        const free = pairs.map((_, slot) => slot).filter((slot) => !(taken & (1 << slot)));
+        const slot = free.find((candidate) => !clashes(prompt, candidate)) ?? free[0]!;
+        taken |= 1 << slot;
+        placement.push(slot);
+      }
+    }
+
+    const bySlot: (Prompt | undefined)[] = pairs.map(() => undefined);
+    placement.forEach((slot, index) => (bySlot[slot] = custom[index]));
+    const rest = [...bank];
+    return bySlot.map((prompt) => prompt ?? rest.shift()!);
   }
 
   private startWriting(): void {

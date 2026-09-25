@@ -122,7 +122,9 @@ export function Home({ ctl }: { ctl: RoomController }) {
           </>
         )}
       </form>
-      <p className="center dim small">3 to 8 players · phones welcome · no account</p>
+      <p className="center dim small">
+        {LIMITS.MIN_PLAYERS} to {LIMITS.MAX_PLAYERS} players · phones welcome · no account
+      </p>
       <button className="btn btn--ghost btn--small" type="button" onClick={() => setShowHelp(true)}>
         How to play
       </button>
@@ -147,8 +149,11 @@ export function HowToPlay({ onClose }: { onClose: () => void }) {
         <h2 className="display">How to play</h2>
         <ol className="howto__list">
           <li>
-            <b>Gather 3 to 8 people.</b> One creates a room and shares the code; everyone joins on
-            their own phone and grabs a character.
+            <b>
+              Gather {LIMITS.MIN_PLAYERS} to {LIMITS.MAX_PLAYERS} people.
+            </b>{' '}
+            One creates a room and shares the code; everyone joins on their own phone and grabs a
+            character.
           </li>
           <li>
             <b>Answer prompts.</b> Each round you get two absurd prompts. Write the funniest answer

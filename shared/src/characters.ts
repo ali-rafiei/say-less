@@ -7,31 +7,78 @@ export interface CharacterMeta {
 }
 
 export const CHARACTERS: readonly CharacterMeta[] = [
-  { id: 'lemon', name: 'Smug Lemon', flavor: 'Perpetually unimpressed citrus', accent: '#F9D423' },
-  { id: 'raccoon', name: 'Raccoon in a Tie', flavor: 'Corporate trash panda', accent: '#8E9AAF' },
   {
-    id: 'icecream',
-    name: 'Melting Ice Cream',
-    flavor: 'Anxious, always slightly dripping',
-    accent: '#FF8FB1',
+    id: 'cat',
+    name: 'Cat',
+    flavor: 'Half-lidded and unimpressed; the tail never stops',
+    accent: '#EEA373',
   },
   {
-    id: 'grandma',
-    name: 'Judgmental Grandma',
-    flavor: 'Glasses slide down for lose state',
-    accent: '#B983FF',
+    id: 'monkey',
+    name: 'Monkey',
+    flavor: 'Cupped ears, looping tail, up to something',
+    accent: '#9B6B45',
   },
-  { id: 'sock', name: 'Sock Puppet', flavor: 'Googly eyes, no other face', accent: '#4ECDC4' },
   {
-    id: 'cactus',
-    name: 'Huggable Cactus',
-    flavor: "Wants affection, can't have it",
-    accent: '#6BCB77',
+    id: 'frog',
+    name: 'Frog',
+    flavor: 'Dome eyes and a grin too wide for its face',
+    accent: '#7FA35A',
   },
-  { id: 'toast', name: 'Burnt Toast', flavor: 'Deadpan, slightly smoking', accent: '#C68B59' },
-  { id: 'pigeon', name: 'City Pigeon', flavor: 'Head-bobs constantly in idle', accent: '#7B8CDE' },
-  { id: 'ghost', name: 'Shy Ghost', flavor: 'Fades to 60% opacity when losing', accent: '#E8ECFF' },
-  { id: 'blob', name: 'The Blob', flavor: 'Pure squash-and-stretch', accent: '#2EC4B6' },
+  {
+    id: 'bird',
+    name: 'Bird',
+    flavor: 'Zigzag vest; head-bobs constantly in idle',
+    accent: '#5F7FB4',
+  },
+  {
+    id: 'axolotl',
+    name: 'Axolotl',
+    flavor: 'Coral gills sway; droop when losing',
+    accent: '#F0B3BD',
+  },
+  {
+    id: 'bear',
+    name: 'Bear',
+    flavor: 'Biggest silhouette in the room, gentle eyebrows',
+    accent: '#8C6444',
+  },
+  {
+    id: 'rabbit',
+    name: 'Rabbit',
+    flavor: 'Long ears, one tilted; they flop when losing',
+    accent: '#F1E6D2',
+  },
+  {
+    id: 'fish',
+    name: 'Fish',
+    flavor: 'Puckered lips, mustard vest, blows bubbles',
+    accent: '#6FC0B4',
+  },
+  {
+    id: 'blob',
+    name: 'Blob',
+    flavor: 'Pure squash-and-stretch; puddles when losing',
+    accent: '#A8D1B8',
+  },
+  {
+    id: 'otter',
+    name: 'Otter',
+    flavor: 'Holds its own paws; floats off when losing',
+    accent: '#B08968',
+  },
+  {
+    id: 'penguin',
+    name: 'Penguin',
+    flavor: 'No neck, tiny flippers, formal at all times',
+    accent: '#555D83',
+  },
+  {
+    id: 'hedgehog',
+    name: 'Hedgehog',
+    flavor: 'Blunt spikes and a leaf; curls up when losing',
+    accent: '#8C7265',
+  },
 ];
 
 export const CHARACTER_IDS: readonly string[] = CHARACTERS.map((c) => c.id);

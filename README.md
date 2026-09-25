@@ -2,7 +2,7 @@
 
 > Everyone's got something to say. You've got fewer words to say it.
 
-Say Less is a fully online 2D party game for 3–8 players, inspired by Quiplash. Players
+Say Less is a fully online 2D party game for 3–12 players, inspired by Quiplash. Players
 answer absurd prompts under a word limit that shrinks every round (12 → 6 → 3 words),
 everyone votes on the funniest answer, and the shrinking budget is the joke engine. Every
 player joins from their own phone; there is no shared TV screen.
@@ -51,7 +51,7 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
    Start button and settings: game mode (Classic bank or Custom prompts), profanity
    filter, emoji final round. In Custom mode anyone in the lobby can add prompts; they
    are dealt first, nobody gets a prompt they wrote, and the bank fills any shortfall.
-2. **Pick a character in the lobby**: ten characters, first tap locks it for everyone.
+2. **Pick a character in the lobby**: twelve characters, first tap locks it for everyone.
    Anyone who hasn't picked when the leader presses Start gets a random leftover.
 3. **Round 1 "Say Some"** – 12 words, 90 s, ×1 points. Each player gets two prompts;
    each prompt is answered by exactly two players (ring pairing).
@@ -415,7 +415,14 @@ Roster and accent colors: `shared/src/characters.ts`. Placeholder art:
 (`c-shadow, c-body > c-face > c-eyes/c-mouth, c-arm-l, c-arm-r, c-mic, c-pencil,
 c-sweat, c-gag`) so CSS can pose them: idle breathe, writing scribble + pencil + sweat,
 waiting glance, win arm-up + falling mic, lose deflate with per-character gags
-(grandma's glasses slide, ghost fades to 60 %, toast smokes, blob puddles).
+(rabbit ears and axolotl gills droop, blob puddles, fish blows bubbles, bird head-bobs).
+
+The roster is the Reel Town cast (cat, monkey, frog, bird, axolotl, bear, rabbit, fish,
+blob) plus otter, penguin and hedgehog, so the same animals appear in both games. Twelve
+characters because the room holds twelve players and every player needs a unique one.
+The placeholder SVGs are generated, not hand-drawn, and exist only until the painted
+sprites land; raster sprites are animated as a whole (`.char-sprite img` in
+`characters.css`) since they have no named groups.
 
 Generated raster art replaces these without code changes. Follow `ASSETS.md`
 (filenames, sizes, prompts, **magenta #FF00FF background**), drop files under
@@ -446,9 +453,9 @@ Cybera Rapid Access Cloud (OpenStack, region Edmonton). Project quota: 8 instanc
 IPv6, plus an automatic DNS name `<hex>.yeg.rac.sh` (AAAA record only) stored as the
 server property `dns` and readable from the instance metadata service.
 
-| Instance         | Role                                        | Address                                                    |
-| ---------------- | ------------------------------------------- | ---------------------------------------------------------- |
-| `say-less-prod`  | this game, m1.micro (1 vCPU / 1 GB / 5 GB)  | `38dcd.yeg.rac.sh`, `2605:fd00:4:1001:f816:3eff:fe84:1b3a` |
+| Instance        | Role                                       | Address                                                    |
+| --------------- | ------------------------------------------ | ---------------------------------------------------------- |
+| `say-less-prod` | this game, m1.micro (1 vCPU / 1 GB / 5 GB) | `38dcd.yeg.rac.sh`, `2605:fd00:4:1001:f816:3eff:fe84:1b3a` |
 
 **Why m1.micro.** Every room lives in the server's memory and a full eight-player room is
 a few kilobytes, so serving a game costs almost nothing: under load the `app` container
@@ -538,6 +545,10 @@ flat-vector art direction, one unique character per player.
 
 ## Decisions log
 
+- **2026-09-24** Party size 3–12 (was 3–8) at the user's request, and the roster swapped to
+  the Reel Town animals plus three more so the art can be shared between the two games.
+  Twelve players means twelve matchups per round (about six minutes of voting and reveal
+  per round); the timers were left as they are.
 - **2026-09-23** Rebuild the server on an m1.micro (1 vCPU / 1 GB / 5 GB) and delete the
   m1.medium, reusing the name `say-less-prod`. Measured runtime cost is ~60 MB across both containers,
   so the larger flavor was buying nothing and holding half the project's RAM quota. The

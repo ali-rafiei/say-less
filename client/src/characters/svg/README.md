@@ -1,7 +1,10 @@
 # Character SVGs
 
-Placeholder art for the ten playable characters. Each file is `<id>.svg` and the
-game's CSS animates parts by class, so replacement art must keep this contract.
+Placeholder art for the twelve playable characters (the Reel Town cast plus otter,
+penguin and hedgehog; roster in `shared/src/characters.ts`). Each file is `<id>.svg` and
+the game's CSS animates parts by class, so replacement art must keep this contract.
+Final art is raster (see `ASSETS.md`); when a sprite exists for a state the SVG is not
+rendered and `.char-sprite img` is animated as a whole instead.
 
 ## Root
 
@@ -32,6 +35,6 @@ Direct children of the root, in this order, each present even if empty:
 | `c-prop c-mic` | handheld microphone at the right hand, around (360, 250); hidden by default |
 | `c-prop c-pencil` | pencil stub at the right hand, around (360, 300); hidden by default |
 | `c-prop c-sweat` | one blue sweat drop near the upper right of the head; hidden by default |
-| `c-gag` | character-specific detail the lose state animates (grandma's glasses, toast's smoke, ice cream's drip, ...); empty for ghost and pigeon |
+| `c-gag` | character-specific detail the CSS animates: cat, monkey and otter tails and axolotl gills sway in idle; rabbit ears and axolotl gills droop on lose; fish bubbles rise; empty for bird, bear and penguin |
 
 Each class above appears exactly once per file.

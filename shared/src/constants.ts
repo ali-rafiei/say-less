@@ -30,7 +30,7 @@ export const TIMERS = {
 
 export const LIMITS = {
   MIN_PLAYERS: 3,
-  MAX_PLAYERS: 8,
+  MAX_PLAYERS: 12,
   NAME_MAX: 12,
   MAX_CHARS: 120,
   MAX_EMOJI: 5,
