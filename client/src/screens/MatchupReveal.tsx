@@ -93,7 +93,6 @@ export function MatchupReveal({ ctl, room, me }: Props) {
                 />
                 <span className="rcard__name display" style={{ background: meta?.accent }}>
                   {player?.name ?? '?'}
-                  {player?.id === me ? ' (you)' : ''}
                 </span>
                 <div className="stamps">
                   {stampsFor(matchup, answer.playerId)

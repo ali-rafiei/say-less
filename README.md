@@ -48,7 +48,7 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
 
 1. One player creates a room and gets a 4-letter code (no O or I). Others join with the
    code or the invite link (`/?code=ABCD`). The creator is the **leader** and owns the
-   Start button and settings: game mode (Classic bank or Custom prompts), profanity
+   Start button and settings: game mode (Classic bank or Custom, where players write the prompts), profanity
    filter, emoji final round. In Custom mode anyone in the lobby can add prompts; they
    are dealt first, nobody gets a prompt they wrote, and the bank fills any shortfall.
 2. **Pick a character in the lobby**: twelve characters, first tap locks it for everyone.

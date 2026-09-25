@@ -57,7 +57,6 @@ export function RoundResults({ ctl, room, me }: Props) {
                 style={{ background: characterMeta(p.characterId)?.accent }}
               >
                 {p.name}
-                {p.id === me ? ' (you)' : ''}
               </span>
               <span
                 className={`board__delta ${delta > 0 ? 'board__delta--up' : delta < 0 ? 'board__delta--down' : ''}`}

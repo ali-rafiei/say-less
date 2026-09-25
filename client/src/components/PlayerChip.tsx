@@ -5,22 +5,13 @@ import { Character, type CharacterState } from './Character.tsx';
 interface Props {
   player: PublicPlayer;
   isLeader?: boolean;
-  isMe?: boolean;
   state?: CharacterState;
   size?: number;
   badge?: string | null;
   muted?: boolean;
 }
 
-export function PlayerChip({
-  player,
-  isLeader,
-  isMe,
-  state = 'idle',
-  size = 64,
-  badge,
-  muted,
-}: Props) {
+export function PlayerChip({ player, isLeader, state = 'idle', size = 64, badge, muted }: Props) {
   const meta = characterMeta(player.characterId);
   return (
     <div
@@ -39,10 +30,7 @@ export function PlayerChip({
         )}
         {badge && <span className="pchip__badge">{badge}</span>}
       </div>
-      <span className="pchip__name">
-        {player.name}
-        {isMe ? ' (you)' : ''}
-      </span>
+      <span className="pchip__name">{player.name}</span>
       {!player.connected && <span className="pchip__offline">offline</span>}
     </div>
   );

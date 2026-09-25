@@ -181,7 +181,6 @@ export function Writing({ ctl, room, me }: Props) {
                 <PlayerChip
                   key={p.id}
                   player={p}
-                  isMe={p.id === me}
                   state={done ? 'waiting' : 'writing'}
                   size={56}
                   badge={done ? 'done' : null}

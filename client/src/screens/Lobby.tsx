@@ -75,13 +75,7 @@ export function Lobby({ ctl, room, me }: Props) {
         </div>
         <div className="pgrid">
           {room.players.map((p) => (
-            <PlayerChip
-              key={p.id}
-              player={p}
-              isLeader={p.id === room.leaderId}
-              isMe={p.id === me}
-              size={56}
-            />
+            <PlayerChip key={p.id} player={p} isLeader={p.id === room.leaderId} size={56} />
           ))}
           {Array.from({ length: Math.max(LIMITS.MIN_PLAYERS - room.players.length, 0) }, (_, i) => (
             <div key={`empty-${i}`} className="pchip pchip--empty">
@@ -145,7 +139,7 @@ export function Lobby({ ctl, room, me }: Props) {
                   ctl.updateSettings({ promptMode: mode });
                 }}
               >
-                {mode === 'bank' ? 'Classic' : 'Custom prompts'}
+                {mode === 'bank' ? 'Classic' : 'Custom'}
               </button>
             ))}
           </div>

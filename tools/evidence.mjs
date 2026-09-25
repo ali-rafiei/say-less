@@ -120,7 +120,7 @@ async function playOneGame(key, profile) {
   await waitUntil(async () => (await ann.page.locator('.ccell__owner').count()) === 4);
   await shot(ann, 'lobby-characters-picked');
   await shot(bob, 'lobby-not-leader');
-  await ann.page.getByRole('radio', { name: 'Custom prompts' }).click();
+  await ann.page.getByRole('radio', { name: 'Custom', exact: true }).click();
   await bob.page.getByLabel('New prompt').fill('The worst thing to find in your sock drawer.');
   await bob.page.getByRole('button', { name: 'Add', exact: true }).click();
   await ann.page.locator('.plist__text').first().waitFor();

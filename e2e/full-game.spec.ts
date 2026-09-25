@@ -97,7 +97,7 @@ test('three phones play a full game, survive a refresh, and reach the podium', a
   await expect(ann.page.getByRole('button', { name: 'Emoji final round' })).toHaveText('Off');
 
   // Custom prompt mode: Bob adds a prompt; it must be dealt to someone other than Bob.
-  await ann.page.getByRole('radio', { name: 'Custom prompts' }).click();
+  await ann.page.getByRole('radio', { name: 'Custom', exact: true }).click();
   await bob.page.getByLabel('New prompt').fill('Bob custom prompt about pigeons');
   await bob.page.getByRole('button', { name: 'Add', exact: true }).click();
   await expect(ann.page.locator('.plist__text')).toHaveText(['Bob custom prompt about pigeons']);

@@ -107,10 +107,30 @@
   display: block;
   width: 100%;
 }
+/* The score sits centred on the light band painted across each stand. The band's height
+   differs per stand, so each stand says where its band's centre is, measured from the top
+   of the painted art. The type is sized from the stand's width to fit the slimmest band. */
+.block .block__stand {
+  container-type: inline-size;
+}
 .block__score {
   position: absolute;
-  bottom: 7%;
-  font-size: clamp(12px, 3.5vw, 20px);
+  top: var(--band-centre, 79%);
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  text-align: center;
+  font-size: clamp(11px, 3.2vw, 18px);
+  font-size: 10.5cqw;
   line-height: 1;
   color: var(--ink);
+}
+.block--1 .block__stand {
+  --band-centre: 79.5%;
+}
+.block--2 .block__stand {
+  --band-centre: 78.7%;
+}
+.block--3 .block__stand {
+  --band-centre: 78%;
 }
