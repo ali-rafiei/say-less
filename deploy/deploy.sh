@@ -24,6 +24,10 @@ cd /opt/say-less
 git fetch --depth 1 origin main
 git reset --hard origin/main
 if [ -n "$DNS_NAME" ]; then echo "SITE_ADDRESS=$DNS_NAME" | sudo tee deploy/.env >/dev/null; fi
+# Ubuntu's daily apt timer refills ~400 MB of lists and downloaded .debs; the build
+# needs that space more than apt does, and the timer regenerates them.
+sudo apt-get clean
+sudo rm -rf /var/lib/apt/lists/*
 cd deploy
 sudo docker compose up -d --build --remove-orphans
 # The Caddyfile is a bind-mounted file; git replaces the inode, so recreate Caddy to pick it up.
