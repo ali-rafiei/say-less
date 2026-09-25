@@ -1,6 +1,6 @@
-import { maskProfanity } from '@say-less/shared';
 import { useEffect, useState } from 'react';
 import { sfx } from '../audio/sfx.ts';
+import { maskProfanity } from './profanity.ts';
 
 interface Props {
   text: string;

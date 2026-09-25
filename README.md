@@ -105,6 +105,7 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
 | Tests    | Vitest (unit + state machine with fake timers), Playwright (3-phone e2e)    |                                                                                                          |
 | Fonts    | `@fontsource-variable/fredoka` (display), `@fontsource/nunito` (body)       | Self-hosted, OFL licensed; no runtime dependency on Google Fonts                                         |
 | Sounds   | WebAudio synthesis in `client/src/audio/`                                   | Ships no audio assets; per-phase procedural music plus typewriter, mic drop, roast, win/lose effects     |
+| Filter   | `obscenity` (MIT)                                                           | Display-only profanity masking, catches leetspeak spellings such as "sh1t"                               |
 | Deploy   | Docker multi-stage image + Caddy (auto Let's Encrypt) on an Ubuntu 24.04 VM | See [Hosting](#hosting-on-cybera)                                                                        |
 
 ---
@@ -120,8 +121,7 @@ say-less/
 │   ├── words.ts           Word counting, emoji grapheme counting, validateAnswer()
 │   ├── scoring.ts         scoreMatchup(), scoreFinal(), computePlacements(), roundTo5()
 │   ├── superlatives.ts    Podium superlatives
-│   ├── characters.ts      Roster metadata (id, name, flavor, accent color)
-│   └── profanity.ts       Display-only masking word list
+│   └── characters.ts      Roster metadata (id, name, flavor, accent color)
 ├── shared/test/           Unit tests for the rules incl. the spec's worked examples
 ├── server/src/
 │   ├── index.ts           HTTP + WS entrypoint, static serving, /healthz, graceful shutdown
@@ -137,7 +137,7 @@ say-less/
 │   ├── src/main.tsx       Mounts App; installs the no-copy/no-contextmenu/no-drag guards
 │   ├── src/App.tsx        Phase → screen router, phase → palette, error toast
 │   ├── src/net/           socket.ts (reconnecting WS, intent pacing), useRoom.ts (state hook), session.ts (localStorage)
-│   ├── src/components/    Character, TimerRing, LimitChips, WordInput, AnswerText, PlayerChip, Header
+│   ├── src/components/    Character, TimerRing, LimitChips, WordInput, AnswerText, PlayerChip, Header, profanity (obscenity masking)
 │   ├── src/screens/       Home, Lobby, CharSelect, RoundIntro, Writing, Voting, MatchupReveal, RoundResults, FinalVoting, Podium
 │   ├── src/styles/        global.css (tokens, palettes, no-select), characters.css (5 states), screens.css
 │   ├── src/characters/svg Ten placeholder SVGs following the group contract in its README.md
