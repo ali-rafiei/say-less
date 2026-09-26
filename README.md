@@ -688,7 +688,7 @@ nothing in this list is a regression.
 **Next up**
 
 - **Core art is complete.** All 60 poses, 23 UI images, app icons and share card are wired.
-  Generation prompts and the optional background tiles and confetti are in `ASSETS.md`.
+  Generation prompts, the phase backgrounds and the optional confetti are in `ASSETS.md`.
 - **Manual phone test.** The e2e suite drives Chromium and desktop WebKit at phone sizes,
   up to twelve players; a real session on real phones over the public URL has not
   happened yet. That is the only way to catch iOS Safari's keyboard, audio unlock, silent
