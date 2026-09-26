@@ -30,30 +30,30 @@ What the game uses today:
 20 generations in total (12 character sheets, 4 UI sheets, 1 logo, 3 final files), plus two
 optional sets.
 
-| Done | Save ChatGPT's image as              | What                             | Grid, cells | The tool writes                              | Wired |
-| ---- | ------------------------------------ | -------------------------------- | ----------- | -------------------------------------------- | ----- |
-| [x]  | `art/raw/characters/cat.png`         | Cat, 5 poses                     | 3x2, 5      | `client/public/sprites/cat/<pose>.webp`      | yes   |
-| [x]  | `art/raw/characters/monkey.png`      | Monkey, 5 poses                  | 3x2, 5      | `client/public/sprites/monkey/<pose>.webp`   | yes   |
-| [x]  | `art/raw/characters/duck.png`        | Duck, 5 poses                    | 3x2, 5      | `client/public/sprites/duck/<pose>.webp`     | yes   |
-| [x]  | `art/raw/characters/bird.png`        | Bird, 5 poses                    | 3x2, 5      | `client/public/sprites/bird/<pose>.webp`     | yes   |
-| [x]  | `art/raw/characters/axolotl.png`     | Axolotl, 5 poses                 | 3x2, 5      | `client/public/sprites/axolotl/<pose>.webp`  | yes   |
-| [x]  | `art/raw/characters/bear.png`        | Bear, 5 poses                    | 3x2, 5      | `client/public/sprites/bear/<pose>.webp`     | yes   |
-| [x]  | `art/raw/characters/rabbit.png`      | Rabbit, 5 poses                  | 3x2, 5      | `client/public/sprites/rabbit/<pose>.webp`   | yes   |
-| [x]  | `art/raw/characters/fish.png`        | Fish, 5 poses                    | 3x2, 5      | `client/public/sprites/fish/<pose>.webp`     | yes   |
-| [x]  | `art/raw/characters/blob.png`        | Blob, 5 poses                    | 3x2, 5      | `client/public/sprites/blob/<pose>.webp`     | yes   |
-| [x]  | `art/raw/characters/otter.png`       | Otter, 5 poses                   | 3x2, 5      | `client/public/sprites/otter/<pose>.webp`    | yes   |
-| [x]  | `art/raw/characters/penguin.png`     | Penguin, 5 poses                 | 3x2, 5      | `client/public/sprites/penguin/<pose>.webp`  | yes   |
-| [x]  | `art/raw/characters/hedgehog.png`    | Hedgehog, 5 poses                | 3x2, 5      | `client/public/sprites/hedgehog/<pose>.webp` | yes   |
-| [x]  | `art/raw/sheets/stamps.png`          | Bonus stamps with text           | 3x2, 5      | `client/public/ui/<stamp>.webp`              | yes   |
-| [x]  | `art/raw/sheets/icons.png`           | Icons (flame, crown, sound, ...) | 4x2, 8      | `client/public/ui/<icon>.webp`               | yes   |
-| [x]  | `art/raw/sheets/podium.png`          | Podium stands 1, 2, 3            | 3x1, 3      | `client/public/ui/stand-<n>.webp`            | yes   |
-| [x]  | `art/raw/sheets/howto.png`           | How-to-play illustrations        | 3x2, 6      | `client/public/ui/howto-<step>.webp`         | yes   |
-| [x]  | `art/raw/ui/logo.png`                | SAY LESS wordmark                | single      | `client/public/ui/logo.webp`                 | yes   |
-| [x]  | `client/public/icon-512.png`         | App icon, 512 x 512              | final file  | (not processed by the tool)                  | yes   |
-| [x]  | `client/public/apple-touch-icon.png` | iOS home-screen icon, 180 x 180  | final file  | (not processed by the tool)                  | yes   |
-| [x]  | `client/public/og-image.png`         | Link-preview card, 1200 x 630    | final file  | (not processed by the tool)                  | yes   |
-| [ ]  | `client/public/ui/bg-<palette>.png`  | Optional: 6 background tiles     | final files | (not processed by the tool)                  | no    |
-| [ ]  | `art/raw/later/confetti.png`         | Optional: confetti pieces        | 4x2, 8      | (not processed until it is wired)            | no    |
+| Done | Save ChatGPT's image as                    | What                             | Grid, cells | The tool writes                              | Wired |
+| ---- | ------------------------------------------ | -------------------------------- | ----------- | -------------------------------------------- | ----- |
+| [x]  | `art/raw/characters/cat.png`               | Cat, 5 poses                     | 3x2, 5      | `client/public/sprites/cat/<pose>.webp`      | yes   |
+| [x]  | `art/raw/characters/monkey.png`            | Monkey, 5 poses                  | 3x2, 5      | `client/public/sprites/monkey/<pose>.webp`   | yes   |
+| [x]  | `art/raw/characters/duck.png`              | Duck, 5 poses                    | 3x2, 5      | `client/public/sprites/duck/<pose>.webp`     | yes   |
+| [x]  | `art/raw/characters/bird.png`              | Bird, 5 poses                    | 3x2, 5      | `client/public/sprites/bird/<pose>.webp`     | yes   |
+| [x]  | `art/raw/characters/axolotl.png`           | Axolotl, 5 poses                 | 3x2, 5      | `client/public/sprites/axolotl/<pose>.webp`  | yes   |
+| [x]  | `art/raw/characters/bear.png`              | Bear, 5 poses                    | 3x2, 5      | `client/public/sprites/bear/<pose>.webp`     | yes   |
+| [x]  | `art/raw/characters/rabbit.png`            | Rabbit, 5 poses                  | 3x2, 5      | `client/public/sprites/rabbit/<pose>.webp`   | yes   |
+| [x]  | `art/raw/characters/fish.png`              | Fish, 5 poses                    | 3x2, 5      | `client/public/sprites/fish/<pose>.webp`     | yes   |
+| [x]  | `art/raw/characters/blob.png`              | Blob, 5 poses                    | 3x2, 5      | `client/public/sprites/blob/<pose>.webp`     | yes   |
+| [x]  | `art/raw/characters/otter.png`             | Otter, 5 poses                   | 3x2, 5      | `client/public/sprites/otter/<pose>.webp`    | yes   |
+| [x]  | `art/raw/characters/penguin.png`           | Penguin, 5 poses                 | 3x2, 5      | `client/public/sprites/penguin/<pose>.webp`  | yes   |
+| [x]  | `art/raw/characters/hedgehog.png`          | Hedgehog, 5 poses                | 3x2, 5      | `client/public/sprites/hedgehog/<pose>.webp` | yes   |
+| [x]  | `art/raw/sheets/stamps.png`                | Bonus stamps with text           | 3x2, 5      | `client/public/ui/<stamp>.webp`              | yes   |
+| [x]  | `art/raw/sheets/icons.png`                 | Icons (flame, crown, sound, ...) | 4x2, 8      | `client/public/ui/<icon>.webp`               | yes   |
+| [x]  | `art/raw/sheets/podium.png`                | Podium stands 1, 2, 3            | 3x1, 3      | `client/public/ui/stand-<n>.webp`            | yes   |
+| [x]  | `art/raw/sheets/howto.png`                 | How-to-play illustrations        | 3x2, 6      | `client/public/ui/howto-<step>.webp`         | yes   |
+| [x]  | `art/raw/ui/logo.png`                      | SAY LESS wordmark                | single      | `client/public/ui/logo.webp`                 | yes   |
+| [x]  | `client/public/icon-512.png`               | App icon, 512 x 512              | final file  | (not processed by the tool)                  | yes   |
+| [x]  | `client/public/apple-touch-icon.png`       | iOS home-screen icon, 180 x 180  | final file  | (not processed by the tool)                  | yes   |
+| [x]  | `client/public/og-image.png`               | Link-preview card, 1200 x 630    | final file  | (not processed by the tool)                  | yes   |
+| [x]  | `art/raw/backgrounds/<nn>-<palette>-*.png` | Phase backgrounds, 1024 x 1536   | single, 6   | `client/public/backgrounds/<palette>.webp`   | yes   |
+| [ ]  | `art/raw/later/confetti.png`               | Optional: confetti pieces        | 4x2, 8      | (not processed until it is wired)            | no    |
 
 For the three final files, save ChatGPT's original under `art/raw/final/` and resize it into
 place with the command given in section 3.6.
@@ -1007,35 +1007,15 @@ and the Rabbit, standing together as a compact group, one of them dropping a bla
 microphone beside a raised paw or wing. Spell the text exactly as given. No other text.
 ```
 
-### 3.7 Optional, not wired: background tiles and confetti
+### 3.7 Phase backgrounds, and optional confetti
 
-Nothing reads these yet. Make them only if you want them ready for later.
+**Phase backgrounds** are done: six abstract paintings, one per palette (`home`, `lobby`,
+`writing`, `voting`, `results`, `podium`), portrait 1024 x 1536 and full-bleed, so no
+magenta. To replace one, save it as `art/raw/backgrounds/<nn>-<palette>-<anything>.png` and
+run the tool; it converts without keying. Keep the top quarter and the centre plain: the
+header, the prompt and the cards sit there.
 
-**Background tiles**, one per phase palette. Full-bleed, so no magenta. Save each original
-as `art/raw/later/bg-<palette>.png`, then resize to `client/public/ui/bg-<palette>.png` with
-the same command as above and a size of `(512, 512)`. Send the prompt once per row of the
-table, filling in the three colours.
-
-| Palette   | Used during                | Base      | Lighter   | Motif colour |
-| --------- | -------------------------- | --------- | --------- | ------------ |
-| `home`    | home screen                | `#1A1A2E` | `#2D2B55` | `#FFD23F`    |
-| `lobby`   | lobby                      | `#2D1B69` | `#3F2A8C` | `#C6FF3D`    |
-| `writing` | round intro, writing       | `#5B2A86` | `#6F3AA0` | `#FF8C42`    |
-| `voting`  | voting, final voting       | `#0B7A75` | `#0F948E` | `#FF5DA2`    |
-| `results` | matchup reveal, scoreboard | `#FFD23F` | `#FFDF70` | `#1B2A63`    |
-| `podium`  | podium                     | `#1B2A63` | `#25377F` | `#FFD23F`    |
-
-```
-Single image: a seamless tileable background pattern for the game Say Less. This is a
-finished image: ignore the magenta background rule for this image only; do not add
-magenta.
-
-Square 1024x1024, tiles seamlessly on all four edges. Base colour <BASE>, with a scattered
-pattern of small simple faceted shapes in <LIGHTER> and a few in <MOTIF>: word tiles,
-speech bubbles, microphones, pencils, sparkles, all well spaced. Very low contrast: the
-pattern must stay quiet so white and dark text on top of it reads easily. Painted low-poly
-look, matte, no outlines, no text, no characters.
-```
+**Confetti** is optional and not wired: nothing reads it yet.
 
 **Confetti sheet** for the mic-drop overlay and the podium. Save as
 `art/raw/later/confetti.png`. The tool does not cut this one yet (it gets a `SHEETS` entry

@@ -137,7 +137,7 @@ say-less/
 │   ├── src/main.tsx       Mounts App; installs the no-copy/no-contextmenu/no-drag guards
 │   ├── src/App.tsx        Phase → screen router, phase → palette, error toast
 │   ├── src/net/           socket.ts (reconnecting WS, intent pacing), useRoom.ts (state hook), session.ts (localStorage)
-│   ├── src/components/    Character, TimerRing, LimitChips, WordInput, AnswerText, PlayerChip, Header, profanity (obscenity masking)
+│   ├── src/components/    Backdrop, Character, TimerRing, LimitChips, WordInput, AnswerText, PlayerChip, Header, profanity (obscenity masking)
 │   ├── src/screens/       Home, Lobby, CharSelect, RoundIntro, Writing, Voting, MatchupReveal, RoundResults, FinalVoting, Podium
 │   ├── src/styles/        global.css (tokens, palettes, no-select), characters.css (5 states), screens.css
 │   ├── src/characters/svg Ten placeholder SVGs following the group contract in its README.md
@@ -147,7 +147,7 @@ say-less/
 ├── e2e/full-game.spec.ts  Playwright: three phone browsers play a whole game
 ├── deploy/                Dockerfile, docker-compose.yml, Caddyfile, cloud-init.yaml, provision.sh, deploy.sh
 ├── cloud/                 OpenStack CLI wrapper + credential bootstrap (secrets gitignored under cloud/secrets/)
-├── tools/dechroma.py      Magenta → transparent sprite converter (uv run)
+├── tools/dechroma.py      Magenta → transparent sprite converter, plus phase backgrounds (uv run)
 ├── ASSETS.md              Exact art requests for generated sprites/UI
 └── .github/workflows/ci.yml  format, lint, typecheck, unit, build, e2e, docker smoke
 ```
@@ -501,7 +501,11 @@ missing from `client/public/sprites/manifest.json`. Raster sprites are animated 
 (`.char-sprite img` in `characters.css`) since they have no named groups. UI images render
 through `client/src/components/UIArt.tsx`, which crops each one to its painted bounds from
 `client/public/ui/manifest.json` and prefixes `import.meta.env.BASE_URL` so the same build
-works at the domain root (Cybera) and under `/say-less/` (GitHub Pages).
+works at the domain root (Cybera) and under `/say-less/` (GitHub Pages). Each phase palette
+also has a painted background in `client/public/backgrounds/`, drawn by
+`client/src/components/Backdrop.tsx` as a fixed layer so it stays put while long screens
+scroll; it fades in on each phase change, and all six are fetched shortly after the first
+screen so a change never waits on a download.
 
 To change art, follow `ASSETS.md` (filenames, sizes, prompts, **magenta #FF00FF
 background**), drop files under `art/raw/`, then:
@@ -512,7 +516,8 @@ uv run tools/dechroma.py
 
 This keys out the magenta, despills edges, cuts sheets into cells, trims, squares, resizes
 to 512 and writes WebP (quality 88, about a fifth of the PNG size: 2.2 MB for all 83
-images instead of 12 MB) plus both manifests. Commit the outputs under `client/public/`; the whole
+images instead of 12 MB) plus both manifests. Backgrounds under `art/raw/backgrounds/` are
+converted to WebP without keying (about 150 KB for all six). Commit the outputs under `client/public/`; the whole
 `art/` folder is gitignored.
 
 **Art provenance.** Generated on 2026-09-24 with ChatGPT's built-in image tool from the

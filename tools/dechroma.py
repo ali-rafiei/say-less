@@ -16,6 +16,8 @@ Input layout (see ASSETS.md):
     art/raw/characters/<characterId>/<state>.png   single pose; replaces that sheet cell at the cell's scale
     art/raw/sheets/<sheet>.png                     UI sheet, cells as in SHEETS -> client/public/ui/<name>.webp
     art/raw/ui/<name>.png                          single UI image; wins over a sheet cell of the same name
+    art/raw/backgrounds/<nn>-<palette>-*.png       full-bleed phase background, no keying
+                                                   -> client/public/backgrounds/<palette>.webp
 
 Sheets are cut by projection: key out the magenta, find bands of rows holding any
 opaque pixel, then runs of columns inside each band. Runs closer than 4% of the sheet
@@ -49,6 +51,9 @@ RAW_SHEETS = ROOT / "art" / "raw" / "sheets"
 RAW_UI = ROOT / "art" / "raw" / "ui"
 OUT_SPRITES = ROOT / "client" / "public" / "sprites"
 OUT_UI = ROOT / "client" / "public" / "ui"
+RAW_BACKGROUNDS = ROOT / "art" / "raw" / "backgrounds"
+OUT_BACKGROUNDS = ROOT / "client" / "public" / "backgrounds"
+PALETTES = ["home", "lobby", "writing", "voting", "results", "podium"]
 CHARACTER_IDS = [
     "cat",
     "monkey",
@@ -137,6 +142,7 @@ def main() -> int:
     manifest: dict[str, list[str]] = {}
     processed = convert_characters(args.size, args.dry_run, manifest)
     processed += convert_ui(args.size, args.dry_run)
+    processed += convert_backgrounds(args.dry_run)
 
     if not args.dry_run:
         OUT_SPRITES.mkdir(parents=True, exist_ok=True)
@@ -207,6 +213,26 @@ def convert_ui(size: int, dry_run: bool) -> int:
     for single in singles:
         _convert_single(single, OUT_UI / f"{single.stem}{OUTPUT_SUFFIX}", size, dry_run)
         processed += 1
+    return processed
+
+
+def convert_backgrounds(dry_run: bool) -> int:
+    if not RAW_BACKGROUNDS.exists():
+        return 0
+    processed = 0
+    for source in sorted(RAW_BACKGROUNDS.glob("*.png")):
+        palette = next((name for name in PALETTES if name in source.stem.split("-")), None)
+        if palette is None:
+            print(f"skip {source.name}: its name holds none of {', '.join(PALETTES)}", file=sys.stderr)
+            continue
+        target = OUT_BACKGROUNDS / f"{palette}{OUTPUT_SUFFIX}"
+        print(f"{source.relative_to(ROOT)} -> {target.relative_to(ROOT)}")
+        processed += 1
+        if dry_run:
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with Image.open(source) as raw:
+            raw.convert("RGB").save(target, "WEBP", quality=WEBP_QUALITY, method=6)
     return processed
 
 

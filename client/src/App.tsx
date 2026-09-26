@@ -1,6 +1,7 @@
 import type { RoomPhase } from '@say-less/shared';
 import { useEffect } from 'react';
 import { sfx } from './audio/sfx.ts';
+import { Backdrop, type Palette } from './components/Backdrop.tsx';
 import { useRoom } from './net/useRoom.ts';
 import { FinalVoting } from './screens/FinalVoting.tsx';
 import { Home } from './screens/Home.tsx';
@@ -12,7 +13,7 @@ import { RoundResults } from './screens/RoundResults.tsx';
 import { Voting } from './screens/Voting.tsx';
 import { Writing } from './screens/Writing.tsx';
 
-const PALETTES: Record<RoomPhase, string> = {
+const PALETTES: Record<RoomPhase, Palette> = {
   LOBBY: 'lobby',
   ROUND_INTRO: 'writing',
   WRITING: 'writing',
@@ -49,7 +50,7 @@ export function App() {
     window.scrollTo(0, 0);
   }, [phase, room?.currentMatchupIndex]);
 
-  const palette = room ? PALETTES[room.phase] : 'home';
+  const palette: Palette = room ? PALETTES[room.phase] : 'home';
   useEffect(() => {
     document.documentElement.dataset.palette = palette;
     const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
@@ -91,6 +92,7 @@ export function App() {
 
   return (
     <div className="app" data-palette={palette}>
+      <Backdrop palette={palette} />
       {status !== 'open' && !displaced && (
         <div className="conn" role="status">
           {status === 'connecting' ? (everConnected ? 'Reconnecting…' : 'Connecting…') : 'Offline'}
