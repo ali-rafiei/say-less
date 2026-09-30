@@ -179,7 +179,7 @@ describe('answers and timers', () => {
     const h = makeRoom();
     startToWriting(h);
     h.room.disconnect('c');
-    vi.advanceTimersByTime(90_000);
+    vi.advanceTimersByTime(120_000);
     // A matchup whose only voter is the disconnected player reveals immediately.
     const texts = new Map<string, string[]>();
     drainRound(h, (m) => {

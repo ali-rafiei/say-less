@@ -53,18 +53,18 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
    are dealt first, nobody gets a prompt they wrote, and the bank fills any shortfall.
 2. **Pick a character in the lobby**: twelve characters, first tap locks it for everyone.
    Anyone who hasn't picked when the leader presses Start gets a random leftover.
-3. **Round 1 "Say Some"** – 12 words, 90 s, ×1 points. Each player gets two prompts;
+3. **Round 1 "Say Some"** – 12 words, 120 s, ×1 points. Each player gets two prompts;
    each prompt is answered by exactly two players (ring pairing).
 4. **Voting** per matchup (20 s): the two answers are shown anonymously; the players who
    did not write them vote. Then a 6 s **reveal**: characters slide in, vote bars fill,
    bonus stamps slam in.
-5. **Round 2 "Say Less"** – 6 words, 60 s, ×1.5. The first 10 s of the writing phase is
+5. **Round 2 "Say Less"** – 6 words, 120 s, ×1.5. The first 10 s of the writing phase is
    the **roast window**: each player holds one roast token for the whole game and may
    spend it on one opponent, cutting that opponent's next answer to 2 words. If the
    roasted player wins the matchup anyway, they steal the roaster's points from it. Roasts
    are off by default; the leader switches them on in the lobby (`settings.roasts`).
    Without them round 2 has no window.
-6. **Final round "Say Nothing… Almost"** – 3 words, 45 s, ×2. One shared
+6. **Final round "Say Nothing… Almost"** – 3 words, 60 s, ×2. One shared
    prompt, everyone answers, everyone ranks their top two (not themselves).
 7. **Final reveal**: after "The votes are in…", the final answers are spotlighted one at a
    time from fewest points to most. Each shows the answer first, then its author, tally
@@ -262,11 +262,11 @@ Source of truth: `shared/src/constants.ts` and `shared/src/scoring.ts`.
 
 ### Rounds
 
-| Round     | Name                | Limit    | Writing timer                                         | Multiplier |
-| --------- | ------------------- | -------- | ----------------------------------------------------- | ---------- |
-| 1         | Say Some            | 12 words | 90 s                                                  | ×1         |
-| 2         | Say Less            | 6 words  | 60 s (first 10 s = roast window, prompts dealt after) | ×1.5       |
-| 3 (final) | Say Nothing… Almost | 3 words  | 45 s                                                  | ×2         |
+| Round     | Name                | Limit    | Writing timer                                          | Multiplier |
+| --------- | ------------------- | -------- | ------------------------------------------------------ | ---------- |
+| 1         | Say Some            | 12 words | 120 s                                                  | ×1         |
+| 2         | Say Less            | 6 words  | 120 s (first 10 s = roast window, prompts dealt after) | ×1.5       |
+| 3 (final) | Say Nothing… Almost | 3 words  | 60 s                                                   | ×2         |
 
 `settings.wordLimits = false` (lobby toggle, default on) lifts every limit: prompts are
 dealt with `effectiveLimit: null`, the round intro reads "No word limit", the counter
@@ -345,13 +345,13 @@ LOBBY ─start(leader, ≥3; unpicked get random characters)─▶ ROUND_INTRO (
   ▲                                                             │
   │                        ┌────────────────────────────────────┘
   │                        ▼
-  │   rounds 1–2:   WRITING (90/60s) ─all in / timer─▶ VOTING (20s) ─▶ MATCHUP_REVEAL (6s) ─┐
+  │   rounds 1–2:   WRITING (120s) ─all in / timer─▶ VOTING (20s) ─▶ MATCHUP_REVEAL (6s) ─┐
   │                                                        ▲                                │
   │                                                        └── next matchup ────────────────┤
   │                                                                                         ▼
   │                                                                          ROUND_RESULTS (8s)
   │                                                                                         │
-  │   round 3:      ROUND_INTRO (4s) ─▶ FINAL_WRITING (45s) ─▶ FINAL_VOTING (25s)           │
+  │   round 3:      ROUND_INTRO (4s) ─▶ FINAL_WRITING (60s) ─▶ FINAL_VOTING (25s)           │
   │                 ─▶ FINAL_REVEAL (finalRevealSchedule: 2s + 2s/4.5s per answer + 4s) ─▶ PODIUM
   │                                                                              │          │
   └────────────────────────── rematch(leader) ───────────────────────────────────┘◀─────────┘

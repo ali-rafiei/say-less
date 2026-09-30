@@ -9,9 +9,9 @@ export interface RoundSpec {
 }
 
 export const ROUNDS: readonly RoundSpec[] = [
-  { index: 0, name: 'Say Some', limit: 12, writingMs: 90_000, multiplier: 1 },
-  { index: 1, name: 'Say Less', limit: 6, writingMs: 60_000, multiplier: 1.5 },
-  { index: 2, name: 'Say Nothing… Almost', limit: 3, writingMs: 45_000, multiplier: 2 },
+  { index: 0, name: 'Say Some', limit: 12, writingMs: 120_000, multiplier: 1 },
+  { index: 1, name: 'Say Less', limit: 6, writingMs: 120_000, multiplier: 1.5 },
+  { index: 2, name: 'Say Nothing… Almost', limit: 3, writingMs: 60_000, multiplier: 2 },
 ];
 
 export const FINAL_ROUND: RoundIndex = 2;

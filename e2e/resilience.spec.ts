@@ -470,8 +470,8 @@ test('phones with clocks 90 s off still count down from the server deadline', as
     const label = p.page.locator('.header .ring__label');
     await expect(label).toHaveText(/\d+/);
     const seconds = Number(await label.innerText());
-    expect(seconds, `${p.name}'s countdown`).toBeGreaterThan(80);
-    expect(seconds, `${p.name}'s countdown`).toBeLessThanOrEqual(90);
+    expect(seconds, `${p.name}'s countdown`).toBeGreaterThan(110);
+    expect(seconds, `${p.name}'s countdown`).toBeLessThanOrEqual(120);
   }
 });
 
