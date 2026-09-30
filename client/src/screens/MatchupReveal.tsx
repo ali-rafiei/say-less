@@ -38,7 +38,8 @@ function stampsFor(matchup: PublicMatchup, playerId: string | null): (keyof type
 export function MatchupReveal({ ctl, room, me }: Props) {
   const matchup = room.matchups[room.currentMatchupIndex];
   const result = matchup?.result;
-  const micDropper = result?.awards.find((a) => a.kind === 'micDrop')?.playerId ?? null;
+  const crushingWin = result?.awards.find((a) => a.kind === 'micDrop' || a.kind === 'silenced');
+  const micDropper = crushingWin?.playerId ?? null;
   const micDropCharacter = room.players.find((p) => p.id === micDropper)?.characterId ?? null;
 
   const myIndex = matchup?.answers.findIndex((a) => a.playerId === me) ?? -1;
@@ -151,7 +152,7 @@ export function MatchupReveal({ ctl, room, me }: Props) {
           <Character characterId={micDropCharacter} state="win" size={220} />
           <UIArt name="mic" className="micdrop-mic" />
           <span className="micdrop-stamp">
-            <UIArt name="micdrop" />
+            <UIArt name={crushingWin?.kind === 'silenced' ? 'silenced' : 'micdrop'} />
           </span>
         </div>
       )}

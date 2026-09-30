@@ -412,7 +412,7 @@ describe('roast tokens', () => {
     if (!h) throw new Error('No seed produced an a-vs-b roasted matchup');
 
     answerAll(h, (id, limit) => `${id} ${'x '.repeat(limit - 1)}`.trim());
-    // 3 voters: one for a, two for b. x1.5 => a 150, b 300; b steals a's 150.
+    // 3 voters: one for a, two for b. x1.5 => a 150, b 300 + 300 Mic Drop; b steals a's 150.
     while (h.room.phase === 'VOTING') {
       const state = h.state();
       const m = state.matchups[state.currentMatchupIndex]!;
@@ -426,7 +426,7 @@ describe('roast tokens', () => {
         h.room.castVote(voters[2]!.id, roastedIndex, bIndex);
         const revealed = h.state().matchups[roastedIndex]!;
         expect(revealed.roast).toEqual({ spenderId: 'a', targetId: 'b' });
-        expect(revealed.result!.delta).toEqual({ a: 0, b: 450 });
+        expect(revealed.result!.delta).toEqual({ a: 0, b: 750 });
         expect(revealed.result!.awards).toContainEqual({
           playerId: 'b',
           kind: 'steal',

@@ -206,7 +206,7 @@ npm run format:check   # prettier
 
 What the tests pin down:
 
-- `shared/test/scoring.test.ts` – Mic Drop at exactly 75 % of the votes and not below,
+- `shared/test/scoring.test.ts` – Mic Drop for any win over half the votes (not a tie),
   not on a single vote, not for an auto-submitted "…"; roast backfire steal, Silenced
   min-2-votes rule, tie split, abstain → 0, Great Minds, final top-2 scoring, shared
   placements.
@@ -283,17 +283,17 @@ disconnected players get "[left the chat]".
 
 ### Scoring (all points × round multiplier, rounded to nearest 5)
 
-| Event                 | Points           | Condition                                                                                                                           |
-| --------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Vote received (R1–R2) | 100 per vote     |                                                                                                                                     |
-| Silenced!             | +250             | Winner took 100 % of votes cast, at least 2 votes                                                                                   |
-| Mic Drop              | +200             | Winner took at least 75 % of votes cast, at least 2 votes, not auto-submitted (a sweep earns both this and Silenced!)               |
-| Roast backfire        | steal            | Roasted player wins **and** the roaster is the opponent in that matchup → the roaster's points from that matchup move to the winner |
-| Great Minds           | flat 100 each    | Both answers normalize to the same text (case, punctuation, spacing ignored); no votes counted, no other bonuses                    |
-| Tie                   | vote points only | Nobody wins, no bonuses                                                                                                             |
-| All abstain           | 0 / 0            |                                                                                                                                     |
-| Final 1st-choice vote | 200              |                                                                                                                                     |
-| Final 2nd-choice vote | 100              |                                                                                                                                     |
+| Event                 | Points           | Condition                                                                                                                                                       |
+| --------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vote received (R1–R2) | 100 per vote     |                                                                                                                                                                 |
+| Silenced!             | +250             | Winner took 100 % of votes cast, at least 2 votes                                                                                                               |
+| Mic Drop              | +200             | Winner took more than 50 % of votes cast (any outright win), at least 2 votes, not auto-submitted, not a sweep (a sweep is Silenced! instead; they never stack) |
+| Roast backfire        | steal            | Roasted player wins **and** the roaster is the opponent in that matchup → the roaster's points from that matchup move to the winner                             |
+| Great Minds           | flat 100 each    | Both answers normalize to the same text (case, punctuation, spacing ignored); no votes counted, no other bonuses                                                |
+| Tie                   | vote points only | Nobody wins, no bonuses                                                                                                                                         |
+| All abstain           | 0 / 0            |                                                                                                                                                                 |
+| Final 1st-choice vote | 200              |                                                                                                                                                                 |
+| Final 2nd-choice vote | 100              |                                                                                                                                                                 |
 
 Podium ties share a place (1, 1, 3). Superlatives: Most Mic Drops, Wordiest Loser (words
 per point among non-winners), Roast Victim, The Silencer, Fastest Submitter.
@@ -636,18 +636,18 @@ until the new record resolves and its certificate is issued.
 
 Recorded so nobody re-derives them.
 
-| Spec                                          | Implemented                                                                                                                       | Why                                                                                                                                      |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `ROUND_RESULTS → FINAL_WRITING` directly      | `ROUND_RESULTS → ROUND_INTRO → FINAL_WRITING`                                                                                     | The shattering 6 → 3 tiles is the signature motif; skipping it for the final felt wrong. 4 s cost.                                       |
-| Final voting anonymity unspecified            | Authors visible on the final card wall                                                                                            | `cast_final_votes` is keyed by player id per the spec's protocol; matchup voting stays anonymous.                                        |
-| Mic Drop: "≤ half the limit and won"          | won with ≥ 75 % of the votes (≥ 2 votes), not auto-submitted                                                                      | Owner's call: a bonus for a crushing win reads better than one for brevity, and it still works with word limits off.                     |
-| `stats: {micDrops, silenced, wordsUsedTotal}` | plus `roasted, submissions, submitMsTotal`                                                                                        | Needed for the Roast Victim and Fastest Submitter superlatives.                                                                          |
-| Error codes list                              | plus `rate_limited, invalid, not_leader, bad_name, not_enough_players, too_long, empty, self_target, no_token, already_submitted` | Distinct client messages.                                                                                                                |
-| Profanity masking "in displayed answers only" | done on the client from the shared list                                                                                           | Keeps one broadcast per mutation instead of per-player payloads; the author is identified by comparing against their own submitted text. |
-| Roast window "R2+"                            | round 2 only                                                                                                                      | The spec's protocol table says `spend_roast` is valid in `WRITING` only, and the final has no matchups for the backfire rule.            |
-| Disconnected mid-write → "[left the chat]"    | applied at phase end, not at disconnect                                                                                           | Lets a quick reconnect still answer.                                                                                                     |
-| Sounds: "typewriter, mic drop, roast sting"   | synthesized with WebAudio                                                                                                         | No asset licensing; swap for samples later if wanted.                                                                                    |
-| Characters: hand-built SVG                    | placeholder SVGs drawn by the agent; raster override pipeline                                                                     | User is generating final art in ChatGPT; see `ASSETS.md`.                                                                                |
+| Spec                                          | Implemented                                                                                                                       | Why                                                                                                                                                 |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ROUND_RESULTS → FINAL_WRITING` directly      | `ROUND_RESULTS → ROUND_INTRO → FINAL_WRITING`                                                                                     | The shattering 6 → 3 tiles is the signature motif; skipping it for the final felt wrong. 4 s cost.                                                  |
+| Final voting anonymity unspecified            | Authors visible on the final card wall                                                                                            | `cast_final_votes` is keyed by player id per the spec's protocol; matchup voting stays anonymous.                                                   |
+| Mic Drop: "≤ half the limit and won"          | won with > 50 % of the votes (≥ 2 votes), not a sweep, not auto-submitted                                                         | Owner's call: it rewards winning rather than brevity, so it still works with word limits off. A sweep is Silenced! instead, so the two never stack. |
+| `stats: {micDrops, silenced, wordsUsedTotal}` | plus `roasted, submissions, submitMsTotal`                                                                                        | Needed for the Roast Victim and Fastest Submitter superlatives.                                                                                     |
+| Error codes list                              | plus `rate_limited, invalid, not_leader, bad_name, not_enough_players, too_long, empty, self_target, no_token, already_submitted` | Distinct client messages.                                                                                                                           |
+| Profanity masking "in displayed answers only" | done on the client from the shared list                                                                                           | Keeps one broadcast per mutation instead of per-player payloads; the author is identified by comparing against their own submitted text.            |
+| Roast window "R2+"                            | round 2 only                                                                                                                      | The spec's protocol table says `spend_roast` is valid in `WRITING` only, and the final has no matchups for the backfire rule.                       |
+| Disconnected mid-write → "[left the chat]"    | applied at phase end, not at disconnect                                                                                           | Lets a quick reconnect still answer.                                                                                                                |
+| Sounds: "typewriter, mic drop, roast sting"   | synthesized with WebAudio                                                                                                         | No asset licensing; swap for samples later if wanted.                                                                                               |
+| Characters: hand-built SVG                    | placeholder SVGs drawn by the agent; raster override pipeline                                                                     | User is generating final art in ChatGPT; see `ASSETS.md`.                                                                                           |
 
 Nothing in the spec's _locked decisions_ was changed: fully online, player voting only,
 flat-vector art direction, one unique character per player.

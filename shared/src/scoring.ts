@@ -67,17 +67,17 @@ export function scoreMatchup(input: MatchupScoringInput): MatchupResult {
   if (winnerIndex !== null) {
     const winner = answers[winnerIndex];
     const loser = answers[winnerIndex === 0 ? 1 : 0];
+    // Tiers, not stacked: a sweep is Silenced!, any other win over half the votes a Mic Drop.
     if (voteCounts[winnerIndex] === totalVotes && totalVotes >= POINTS.SILENCED_MIN_VOTES) {
       addAward(awards, delta, {
         playerId: winner.playerId,
         kind: 'silenced',
         points: scaled(POINTS.SILENCED, multiplier),
       });
-    }
-    if (
+    } else if (
       !winner.autoSubmitted &&
       totalVotes >= POINTS.MIC_DROP_MIN_VOTES &&
-      voteCounts[winnerIndex] >= POINTS.MIC_DROP_VOTE_SHARE * totalVotes
+      voteCounts[winnerIndex] > POINTS.MIC_DROP_VOTE_SHARE * totalVotes
     ) {
       addAward(awards, delta, {
         playerId: winner.playerId,

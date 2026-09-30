@@ -48,8 +48,8 @@ export const POINTS = {
   SILENCED: 250,
   SILENCED_MIN_VOTES: 2,
   MIC_DROP: 200,
-  /** the winner's share of the votes that earns a Mic Drop */
-  MIC_DROP_VOTE_SHARE: 0.75,
+  /** a Mic Drop needs strictly more than this share of the votes */
+  MIC_DROP_VOTE_SHARE: 0.5,
   MIC_DROP_MIN_VOTES: 2,
   GREAT_MINDS: 100,
   FINAL_FIRST: 200,

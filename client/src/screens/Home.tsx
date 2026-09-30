@@ -180,8 +180,8 @@ export function HowToPlay({ onClose }: { onClose: () => void }) {
           <li className="howto__step">
             <UIArt name="howto-micdrop" className="howto__art" />
             <span>
-              <b>Mic Drop.</b> Win with 75% of the votes or more for a bonus. Sweep every vote for a{' '}
-              <b>Silenced!</b> bonus too.
+              <b>Mic Drop.</b> Win with more than half the votes for a bonus. Sweep every vote for
+              the bigger <b>Silenced!</b> bonus instead.
             </span>
           </li>
           <li className="howto__step">

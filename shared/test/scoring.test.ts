@@ -29,7 +29,8 @@ describe('scoreMatchup', () => {
       roast: null,
       multiplier: 1,
     });
-    expect(result.delta).toEqual({ a: 200, b: 100 });
+    // a: 200 for votes + 200 Mic Drop
+    expect(result.delta).toEqual({ a: 400, b: 100 });
     expect(result.winnerIndex).toBe(0);
   });
 
@@ -59,9 +60,9 @@ describe('scoreMatchup', () => {
       roast: { spenderId: 'roaster', targetId: 'target' },
       multiplier: 1.5,
     });
-    // Assert: target 450 votes + 300 stolen; 60% of the votes is no Mic Drop
+    // Assert: target 450 votes + 300 Mic Drop (60% of the votes) + 300 stolen
     expect(result.delta.roaster).toBe(0);
-    expect(result.delta.target).toBe(750);
+    expect(result.delta.target).toBe(1050);
     expect(result.awards.find((a) => a.kind === 'steal')).toMatchObject({
       playerId: 'target',
       points: 300,
@@ -79,8 +80,8 @@ describe('scoreMatchup', () => {
     // Assert: the stamp is there, no points move, nobody is marked robbed
     expect(result.awards).toContainEqual({ playerId: 'target', kind: 'steal', points: 0 });
     expect(result.awards.some((a) => a.kind === 'stolen')).toBe(false);
-    // 300 votes + 375 Silenced + 300 Mic Drop
-    expect(result.delta).toEqual({ roaster: 0, target: 975 });
+    // 300 votes + 375 Silenced
+    expect(result.delta).toEqual({ roaster: 0, target: 675 });
   });
 
   it('does not steal when the roaster is not in the matchup', () => {
@@ -91,7 +92,8 @@ describe('scoreMatchup', () => {
       multiplier: 1,
     });
     expect(result.awards.some((a) => a.kind === 'steal')).toBe(false);
-    expect(result.delta).toEqual({ x: 100, target: 200 });
+    // target: 200 for votes + 200 Mic Drop
+    expect(result.delta).toEqual({ x: 100, target: 400 });
   });
 
   it('awards Silenced for a 100% sweep with at least 2 votes', () => {
@@ -139,7 +141,7 @@ describe('scoreMatchup', () => {
     expect(result.awards).toEqual([]);
   });
 
-  it('gives a Mic Drop at exactly 75% of the votes', () => {
+  it('gives a Mic Drop for a 3-1 win', () => {
     // Given a 3-1 win
     const result = scoreMatchup({
       answers: [answer({ playerId: 'a' }), answer({ playerId: 'b' })],
@@ -155,15 +157,40 @@ describe('scoreMatchup', () => {
     expect(result.delta.a).toBe(500);
   });
 
-  it('gives no Mic Drop below 75% of the votes', () => {
-    // Given a 5-2 win (71%)
+  it('gives only Silenced for a sweep, never Mic Drop on top', () => {
+    // Given a 3-0 sweep
     const result = scoreMatchup({
       answers: [answer({ playerId: 'a' }), answer({ playerId: 'b' })],
-      votes: votesFor([5, 2]),
+      votes: votesFor([3, 0]),
       roast: null,
       multiplier: 1,
     });
-    // Then there is no Mic Drop
+    // Then the winner gets 300 for votes and 250 for Silenced, nothing more
+    expect(result.awards.some((a) => a.kind === 'micDrop')).toBe(false);
+    expect(result.delta.a).toBe(550);
+  });
+
+  it('gives a Mic Drop for the narrowest win over half the votes', () => {
+    // Given a 4-3 win (57%)
+    const result = scoreMatchup({
+      answers: [answer({ playerId: 'a' }), answer({ playerId: 'b' })],
+      votes: votesFor([4, 3]),
+      roast: null,
+      multiplier: 1,
+    });
+    // Then it is a Mic Drop
+    expect(result.awards.some((a) => a.kind === 'micDrop' && a.playerId === 'a')).toBe(true);
+  });
+
+  it('gives no Mic Drop at exactly half the votes', () => {
+    // Given a 2-2 tie
+    const result = scoreMatchup({
+      answers: [answer({ playerId: 'a' }), answer({ playerId: 'b' })],
+      votes: votesFor([2, 2]),
+      roast: null,
+      multiplier: 1,
+    });
+    // Then nobody gets a Mic Drop
     expect(result.awards.some((a) => a.kind === 'micDrop')).toBe(false);
   });
 
