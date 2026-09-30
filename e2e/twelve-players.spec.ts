@@ -196,8 +196,17 @@ test('twelve phones play a full game and reach the podium', async ({ browser }, 
   await guest.page.locator('.overlay--roast').click();
   await everyone((page) => page.locator('.winput__field'));
   lap(`r2 roast window (fixed, measured ${Date.now() - roastOpened} ms from first sight)`);
-  await expect(guest.page.locator('.winput__count')).toHaveText(/\/ 2 words/);
-  await expect(players[8]!.page.locator('.winput__count')).toHaveText(/\/ 2 words/);
+  // Two roasts on neighbours can share a matchup, and the rule then moves one to its
+  // target's other prompt, so the 2-word card may be either of a target's two.
+  for (const target of [1, 8]) {
+    const page = players[target]!.page;
+    const count = page.locator('.winput__count');
+    if (!/\/ 2 words/.test(await count.innerText())) {
+      await page.locator('.winput__field').fill(answerFor(target, 2, 0, 6));
+      await page.locator('.winput button[type=submit]').click();
+    }
+    await expect(count).toHaveText(/\/ 2 words/);
+  }
   await both('10-r2-writing');
   await Promise.all(
     players.map((p, i) => answerAllPrompts(p, (card, limit) => answerFor(i, 2, card, limit))),
@@ -326,10 +335,10 @@ test('twelve phones play a full game and reach the podium', async ({ browser }, 
     lap(`r${round} voting: ${MATCHUPS} matchups, reveal is a fixed timer`);
 
     await everyone((page) => page.getByText('Scoreboard'));
-    await leader.page.waitForTimeout(1_500);
+    // Read first: the scoreboard is on an 8 s timer and screenshots of twelve rows are slow.
+    const board = await readRoundBoard(leader.page);
     await both(`07-r${round}-scoreboard`);
     await both(`07-r${round}-scoreboard-full`, { fullPage: true });
-    const board = await readRoundBoard(leader.page);
     expect([...board.keys()].sort()).toEqual([...NAMES].sort());
     for (const [name, row] of board) {
       expect(row.delta, `${name} round ${round} delta`).toBe(deltas.get(name));
