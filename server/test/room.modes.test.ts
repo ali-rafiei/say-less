@@ -12,7 +12,7 @@ import {
 
 const SCRIBBLE = encodeDrawing({ strokes: [{ color: 0, width: 1, points: [10, 10, 60, 80] }] });
 
-function toCreating(h: Harness, mode: 'doodle' | 'burn'): void {
+function toCreating(h: Harness, mode: 'doodle' | 'context'): void {
   h.room.updateSettings('a', { mode });
   h.room.startGame('a');
   vi.advanceTimersByTime(4_000);
@@ -119,14 +119,14 @@ describe('Doodle mode', () => {
   });
 });
 
-describe('Burn Book mode', () => {
+describe('Out of Context mode', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
   it('turns each honest answer into a prompt its subject never answers', () => {
-    // Given every player has confessed
+    // Given every player has answered their question
     const h = makeRoom();
-    toCreating(h, 'burn');
+    toCreating(h, 'context');
     expect(h.room.yourPrompts('a')[0]!.kind).toBe('confess');
     createAll(h);
     // Then each prompt shows someone else's question and answer
@@ -135,14 +135,18 @@ describe('Burn Book mode', () => {
         expect(prompt.seed).toMatchObject({ kind: 'confession' });
         expect(prompt.seed?.kind === 'confession' && prompt.seed.subjectId).not.toBe(player.id);
         expect(prompt.seed?.kind === 'confession' && prompt.seed.answer).toMatch(/loves naps$/);
+        const subject = h.room.players.find(
+          (p) => prompt.seed?.kind === 'confession' && p.id === prompt.seed.subjectId,
+        )!;
+        expect(prompt.text).toBe(`Give ${subject.name}'s answer a new question.`);
       }
     }
   });
 
   it('keeps the honest answer short', () => {
-    // Given a player's confess task
+    // Given a player's question about themselves
     const h = makeRoom();
-    toCreating(h, 'burn');
+    toCreating(h, 'context');
     const task = h.room.yourPrompts('a')[0]!;
     // Then nine words are refused
     expect(() =>
@@ -150,10 +154,10 @@ describe('Burn Book mode', () => {
     ).toThrowError(expect.objectContaining({ code: 'over_limit' }));
   });
 
-  it('replays the most-voted confession as the final', () => {
-    // Given a Burn Book game played through both rounds with every vote cast
+  it('replays the most-voted honest answer as the final', () => {
+    // Given an Out of Context game played through both rounds with every vote cast
     const h = makeRoom();
-    toCreating(h, 'burn');
+    toCreating(h, 'context');
     for (let round = 0; round < 2; round++) {
       if (round === 1) {
         vi.advanceTimersByTime(4_000);
@@ -162,14 +166,14 @@ describe('Burn Book mode', () => {
       createAll(h);
       for (const player of h.room.players) {
         for (const p of h.room.yourPrompts(player.id)) {
-          h.room.submitAnswer(player.id, p.promptId, `${player.id} burn`);
+          h.room.submitAnswer(player.id, p.promptId, `Why is ${player.id} like this?`);
         }
       }
       while (h.room.phase !== 'ROUND_RESULTS') advanceToPhaseEnd(h);
       advanceToPhaseEnd(h);
     }
     vi.advanceTimersByTime(4_000);
-    // Then the final is a confession from earlier, answered by everyone
+    // Then the final is an honest answer from earlier, re-questioned by everyone
     expect(h.room.phase).toBe('FINAL_WRITING');
     expect(h.state().final!.seed).toMatchObject({ kind: 'confession' });
     expect(h.room.yourPrompts('a')[0]!.seed).toMatchObject({ kind: 'confession' });

@@ -9,7 +9,7 @@ interface Props {
   me: string;
 }
 
-/** What a Doodle or Burn Book prompt is built on: someone's drawing or honest answer. */
+/** What a Doodle or Out of Context prompt is built on: someone's drawing or honest answer. */
 export function SeedView({ seed, room, drawings, me }: Props) {
   if (seed.kind === 'drawing') {
     const artist = room.players.find((p) => p.id === seed.artistId);
@@ -29,7 +29,9 @@ export function SeedView({ seed, room, drawings, me }: Props) {
   return (
     <div className="seed seed--confession">
       <span className="seed__who display">{subject?.name ?? 'Someone'} was asked</span>
-      <span className="seed__question">{seed.question}</span>
+      {/* The real question is crossed out: the game is writing a better one. */}
+      <s className="seed__question">{seed.question}</s>
+      <span className="seed__who display">and answered</span>
       <AnswerText
         text={seed.answer}
         compact

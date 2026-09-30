@@ -162,6 +162,7 @@ export function Writing({ ctl, room, me }: Props) {
               key={current.promptId}
               draftKey={`${room.code}.${current.promptId}`}
               limit={current.effectiveLimit}
+              {...(current.seed?.kind === 'confession' ? { placeholder: 'A new question…' } : {})}
               resetToken={ctl.error?.at ?? null}
               autoFocus
               onSubmit={(text) => ctl.submitAnswer(current.promptId, text)}

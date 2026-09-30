@@ -111,7 +111,7 @@ const doodles = readJson<{ prompts: { id: string; text: string }[] }>(
   resolve(CONTENT_DIR, 'doodles.json'),
 ).prompts;
 const burns = readJson<{ questions: { id: string; text: string }[] }>(
-  resolve(CONTENT_DIR, 'burns.json'),
+  resolve(CONTENT_DIR, 'questions.json'),
 ).questions;
 
 describe('pack files', () => {
@@ -349,15 +349,15 @@ describe('doodle prompts', () => {
   });
 });
 
-describe('burn questions', () => {
+describe('Out of Context questions', () => {
   it(`holds at least ${MIN_BURNS} questions`, () => {
-    // Given the shipped burn questions
+    // Given the shipped Out of Context questions
     // Then there are enough for a full game without repeats
     expect(burns.length).toBeGreaterThanOrEqual(MIN_BURNS);
   });
 
   it('gives every question a unique bNNN id', () => {
-    // Given every burn id
+    // Given every question id
     const ids = burns.map((b) => b.id);
 
     // Then each matches the format and none repeats

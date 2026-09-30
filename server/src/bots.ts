@@ -46,6 +46,17 @@ const BOT_CONFESSIONS = [
   'I cry at car adverts',
 ];
 
+/** Out of Context: short new questions that still fit a 2-word roast. */
+const BOT_QUESTIONS = [
+  'Worst wedding vow?',
+  'Who hurt you?',
+  'Your tax strategy?',
+  "Grandma's last words?",
+  'Secret to happiness?',
+  'Dating profile headline?',
+  'Why, though?',
+];
+
 /** [min, max] think time before each kind of move, in ms */
 const DELAYS = {
   answer: [3_000, 12_000],
@@ -114,9 +125,11 @@ export class BotCrew {
           this.room.submitAnswer(botId, prompt.promptId, this.pick(BOT_CONFESSIONS)),
         );
       } else {
-        this.plan(key, DELAYS.answer, () =>
-          this.room.submitAnswer(botId, prompt.promptId, this.answer(prompt.effectiveLimit)),
-        );
+        const text =
+          prompt.seed?.kind === 'confession'
+            ? this.question(prompt.effectiveLimit)
+            : this.answer(prompt.effectiveLimit);
+        this.plan(key, DELAYS.answer, () => this.room.submitAnswer(botId, prompt.promptId, text));
       }
     }
   }
@@ -163,6 +176,11 @@ export class BotCrew {
       min + this.random() * (max - min),
     );
     this.timers.add(timer);
+  }
+
+  private question(limit: number | null): string {
+    const question = words(this.pick(BOT_QUESTIONS));
+    return question.slice(0, limit ?? question.length).join(' ');
   }
 
   private answer(limit: number | null): string {

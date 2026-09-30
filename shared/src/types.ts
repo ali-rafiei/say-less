@@ -1,7 +1,7 @@
 export type RoomPhase =
   | 'LOBBY'
   | 'ROUND_INTRO'
-  /** Doodle and Burn Book only: everyone draws, or answers about themselves, before writing */
+  /** Doodle and Out of Context only: everyone draws, or answers about themselves, before writing */
   | 'CREATING'
   | 'WRITING'
   | 'VOTING'
@@ -17,9 +17,10 @@ export type RoundIndex = 0 | 1 | 2;
 /**
  * classic: prompts from the chosen packs. custom: players write the prompts in the lobby.
  * doodle: everyone draws, then captions each other's drawings.
- * burn: everyone answers a question about themselves, then others make them look bad.
+ * context: everyone answers a question about themselves, then others write a new question
+ *   for that answer that takes it out of context.
  */
-export type GameMode = 'classic' | 'custom' | 'doodle' | 'burn';
+export type GameMode = 'classic' | 'custom' | 'doodle' | 'context';
 
 export interface RoomSettings {
   profanityFilter: boolean;
@@ -88,7 +89,7 @@ export interface MatchupResult {
   delta: Record<string, number>;
 }
 
-/** What a Doodle or Burn Book prompt is built on. */
+/** What a Doodle or Out of Context prompt is built on. */
 export type PublicSeed =
   | {
       kind: 'drawing';
@@ -173,7 +174,7 @@ export interface PublicRoomState {
 }
 
 export interface YourPrompt {
-  /** answer: write under the limit. draw / confess: the CREATING task for Doodle / Burn Book. */
+  /** answer: write under the limit. draw / confess: the CREATING task for Doodle / Out of Context. */
   kind: 'answer' | 'draw' | 'confess';
   promptId: string;
   text: string;

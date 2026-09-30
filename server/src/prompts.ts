@@ -11,10 +11,10 @@ interface PackFile {
   prompts: Prompt[];
 }
 
-/** Doodle suggestions and Burn Book questions: dealt one per player per round. */
+/** Doodle suggestions and Out of Context questions: dealt one per player per round. */
 export interface SeedBanks {
   doodles: string[];
-  burns: string[];
+  questions: string[];
 }
 
 export class PromptDeck {
@@ -95,6 +95,8 @@ export function loadSeedBanks(contentDir: string): SeedBanks {
     JSON.parse(readFileSync(join(contentDir, file), 'utf8')) as T;
   return {
     doodles: read<{ prompts: { text: string }[] }>('doodles.json').prompts.map((p) => p.text),
-    burns: read<{ questions: { text: string }[] }>('burns.json').questions.map((q) => q.text),
+    questions: read<{ questions: { text: string }[] }>('questions.json').questions.map(
+      (q) => q.text,
+    ),
   };
 }

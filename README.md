@@ -56,11 +56,13 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
    - **Doodle**: each round opens with 75 s of drawing a secret suggestion with a finger.
      The drawings become the round's prompts: two other players caption each one, the
      artist stays anonymous until the reveal ("drawn by Cat").
-   - **Burn Book**: each round opens with 45 s of answering a question about yourself in
-     up to 8 words ("What is your go-to karaoke song?"). Each answer becomes a prompt that
-     two other players answer to make its subject look bad.
+   - **Out of Context**: each round opens with 45 s of honestly answering a question about
+     yourself in up to 8 words ("What is your go-to party trick?" "juggling badly"). Two
+     other players then see the question crossed out and the answer, and write a new
+     question for that answer that makes it funny ("Why was Ann banned from the zoo?").
+     Everyone votes on the better new question.
 
-   In Doodle and Burn Book the final replays the round prompt that drew the most votes
+   In Doodle and Out of Context the final replays the round prompt that drew the most votes
    (the crowd favourite), answered by everyone. A player who made nothing in time leaves a
    slot that a pack prompt fills.
 
@@ -324,9 +326,9 @@ per point among non-winners), Roast Victim, The Silencer, Fastest Submitter.
 Custom mode: all unused custom prompts are matched to pairs that do not include their
 author (maximum bipartite matching), leftover pairs take any other unused custom prompt,
 then the packs fill the rest, so nobody answers their own prompt whenever that is
-possible. Doodle drawings and Burn Book confessions are dealt the same way (the artist or
+possible. Doodle drawings and Out of Context answers are dealt the same way (the artist or
 subject is the author). The final takes a leftover custom prompt (everyone answers it,
-its author included), else in Doodle and Burn Book the most-voted seed of the game, else
+its author included), else in Doodle and Out of Context the most-voted seed of the game, else
 the packs.
 
 **Prompts that name a player.** A prompt may contain `{player}` (every prompt in the Group
@@ -365,7 +367,7 @@ LOBBY ─start(leader, ≥3; unpicked get random characters)─▶ ROUND_INTRO (
   ▲                                                             │
   │                        ┌────────────────────────────────────┘
   │                        ▼
-  │   Doodle / Burn Book: ROUND_INTRO ─▶ CREATING (75s draw / 45s confess) ─▶ WRITING …
+  │   Doodle / Out of Context: ROUND_INTRO ─▶ CREATING (75s draw / 45s confess) ─▶ WRITING …
   │   rounds 1–2:   WRITING (120s) ─all in / timer─▶ VOTING (20s) ─▶ MATCHUP_REVEAL (6s) ─┐
   │                                                        ▲                                │
   │                                                        └── next matchup ────────────────┤
@@ -397,7 +399,7 @@ Client → server: `create_room {name}`, `join_room {code, name, sessionToken?}`
 `update_settings {profanityFilter?, wordLimits?, roasts?, promptMode?}` (leader, LOBBY),
 `add_prompt {text}` / `remove_prompt {promptId}` (LOBBY; authors or the leader remove), `start_game {}`
 (leader, LOBBY, ≥3), `pick_character {characterId}` (LOBBY), `spend_roast
-{targetId}` (WRITING, round 2, first 10 s), `submit_answer {promptId, text}` (also a Burn Book confession in CREATING),
+{targetId}` (WRITING, round 2, first 10 s), `submit_answer {promptId, text}` (also the Out of Context honest answer in CREATING),
 `submit_drawing {promptId, drawing}` (CREATING, Doodle)
 (WRITING/FINAL_WRITING), `cast_vote {matchupIndex, answerIndex}` (VOTING),
 `cast_final_votes {first, second}` (FINAL_VOTING), `rematch {}` (leader, PODIUM),
@@ -584,7 +586,7 @@ Group Chat (`friends`, every prompt names a player), Food Fight, 9 to 5, Extreme
 Movie Night, Family Friendly, and After Dark (18+, off by default). About 55 prompts each;
 `server/test/packs.bank.test.ts` holds them to the classic bank's rules plus the catalog,
 cross-pack uniqueness and the `{player}` rule. `content/doodles.json` (97 drawing
-suggestions) and `content/burns.json` (99 questions about yourself) feed the two modes.
+suggestions) and `content/questions.json` (99 questions about yourself, for Out of Context) feed the two modes.
 
 **Classic.** `content/prompts.json`: 407 prompts (a second editorial pass on 2026-09-29
 rewrote 31 flat ones, retired 3 and added 37), `{ id, text, rounds }` where `rounds ⊆ [0,1,2]`.

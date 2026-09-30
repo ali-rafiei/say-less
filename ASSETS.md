@@ -1010,7 +1010,7 @@ microphone beside a raised paw or wing. Spell the text exactly as given. No othe
 ### 3.7 Game-mode sheet (wanted; the lobby uses text cards until it exists)
 
 Save as `art/raw/sheets/modes.png` (2 columns x 2 rows; order: `mode-classic`,
-`mode-custom`, `mode-doodle`, `mode-burn`). One small illustration per game-mode card in
+`mode-custom`, `mode-doodle`, `mode-context`). One small illustration per game-mode card in
 the lobby and per mode line in "How to play". Attach the Reel Town character sheet again.
 
 ```
@@ -1031,8 +1031,8 @@ no scenery, no frames.
 2. custom: the Bear writing on a stack of blank cream cards with a yellow pencil.
 3. doodle: the Rabbit drawing a wobbly smiley face with its finger on a big cream phone
    screen, a few coloured scribbles around it.
-4. burn book: the Penguin holding a small navy notebook with an orange flame on its cover,
-   smirking, while the Duck behind it looks embarrassed.
+4. out of context: the Penguin holding up a cream card with a big question mark, a crossed
+   out line of scribble above it, while the Duck beside it looks puzzled.
 
 No text anywhere.
 ```

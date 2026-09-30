@@ -47,7 +47,7 @@ export const LIMITS = {
   ROAST_FROM_ROUND: 1 as RoundIndex,
   PROMPT_MAX_CHARS: 120,
   MAX_CUSTOM_PROMPTS: 60,
-  /** Burn Book's honest answer about yourself */
+  /** Out of Context: the honest answer about yourself that others write new questions for */
   CONFESSION_WORDS: 8,
   /** the drawing message is the one frame allowed past the usual 4 KiB */
   MAX_DRAWING_MESSAGE: 32_768,

@@ -202,7 +202,8 @@ export function HowToPlay({ onClose }: { onClose: () => void }) {
             <UIArt name="howto-answer" className="howto__art" />
             <span>
               <b>Other modes.</b> <b>Doodle</b>: draw a secret idea, then caption each other's art.{' '}
-              <b>Burn Book</b>: answer a question about yourself, then make someone else look bad.
+              <b>Out of Context</b>: answer a question about yourself honestly, then write a new
+              question for someone else's answer that makes it hilarious.
             </span>
           </li>
         </ol>

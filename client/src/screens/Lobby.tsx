@@ -11,7 +11,7 @@ const MODES: { id: GameMode; name: string; blurb: string }[] = [
   { id: 'classic', name: 'Classic', blurb: 'Answer prompts from the packs' },
   { id: 'custom', name: 'Custom', blurb: 'Everyone writes the prompts' },
   { id: 'doodle', name: 'Doodle', blurb: 'Draw, then caption the art' },
-  { id: 'burn', name: 'Burn Book', blurb: 'Tell the truth, get roasted' },
+  { id: 'context', name: 'Out of Context', blurb: 'Answer honestly, others swap the question' },
 ];
 
 interface Props {

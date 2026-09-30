@@ -22,7 +22,7 @@ interface Props {
 
 const EMPTY: Drawing = { strokes: [] };
 
-/** Doodle: draw your secret suggestion. Burn Book: answer a question about yourself, honestly. */
+/** Doodle: draw your secret suggestion. Out of Context: answer a question about yourself, honestly. */
 export function Create({ ctl, room, me }: Props) {
   const task = ctl.prompts.find((p) => p.kind === 'draw' || p.kind === 'confess');
   const done = task ? task.submittedText !== null : room.submittedIds.includes(me);
@@ -54,7 +54,7 @@ export function Create({ ctl, room, me }: Props) {
               onSubmit={(text) => ctl.submitAnswer(task.promptId, text)}
             />
             <p className="dim small">
-              Everyone else will see your answer and try to make you look bad.
+              Everyone else gets your answer and writes a funnier question for it.
             </p>
           </section>
         )
@@ -80,7 +80,7 @@ export function Create({ ctl, room, me }: Props) {
           <p className="dim small">
             {room.settings.mode === 'doodle'
               ? 'Still drawing: the ones with pencils.'
-              : 'Still confessing: the ones with pencils.'}
+              : 'Still answering: the ones with pencils.'}
           </p>
           <Character characterId={myPlayer?.characterId ?? null} state="idle" size={84} />
         </section>

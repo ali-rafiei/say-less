@@ -101,7 +101,9 @@ async function actOnce(page: Page, answer: string): Promise<void> {
   }
   const field = page.locator('.winput__field:not([disabled])');
   if (await field.isVisible()) {
-    await field.fill(answer);
+    // On the CREATING screen the honest answer about yourself; elsewhere the round's answer.
+    const creating = (await page.locator('main.create').count()) > 0;
+    await field.fill(creating ? 'juggling badly' : answer);
     await page.locator('.winput button[type=submit]').click();
     return;
   }
@@ -120,7 +122,7 @@ async function actOnce(page: Page, answer: string): Promise<void> {
 
 async function playMode(
   browser: Browser,
-  mode: 'Doodle' | 'Burn Book',
+  mode: 'Doodle' | 'Out of Context',
   dir: string,
   answers: Record<string, string>,
 ): Promise<Player[]> {
@@ -189,13 +191,14 @@ test('Doodle: draw, caption each other, replay the favourite drawing in the fina
   await expect(players[0]!.page.locator('.podium')).toBeVisible();
 });
 
-test('Burn Book: confess, get burned, the most-voted confession returns for the final', async ({
+test('Out of Context: answer honestly, others swap the question, the favourite returns', async ({
   browser,
 }) => {
   test.setTimeout(9 * 60_000);
-  await playMode(browser, 'Burn Book', 'burn', {
-    Ann: 'pineapple on pizza',
-    Bob: 'Still thinks that is a personality',
-    Cat: 'Explains a lot, honestly',
+  const [ann] = await playMode(browser, 'Out of Context', 'context', {
+    Ann: 'Worst thing to do at a funeral?',
+    Bob: 'Why was this person banned from the zoo?',
+    Cat: 'Your secret to a happy marriage?',
   });
+  await expect(ann!.page.locator('.podium')).toBeVisible();
 });

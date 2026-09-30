@@ -61,10 +61,10 @@ describe('bot rooms', () => {
     expect(botAnswers.every((a) => !a.autoSubmitted)).toBe(true);
   });
 
-  it.each(['doodle', 'burn'] as const)(
+  it.each(['doodle', 'context'] as const)(
     'plays a whole %s game with the bots creating too',
     (mode) => {
-      // Given a bot room in a seeded mode, with the dev drawing or confessing when asked
+      // Given a bot room in a seeded mode, with the dev drawing or answering when asked
       const { room } = botRoom();
       room.updateSettings('dev', { mode });
       room.startGame('dev');

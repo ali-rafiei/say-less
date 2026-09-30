@@ -81,7 +81,7 @@ interface Answer {
   effectiveLimit: number | null;
 }
 
-/** A Doodle drawing or a Burn Book confession that a round's prompt is built on. */
+/** A Doodle drawing or an Out of Context honest answer that a round's prompt is built on. */
 interface Seed {
   kind: 'drawing' | 'confession';
   authorId: string;
@@ -125,12 +125,12 @@ interface FinalRound {
 
 const FALLBACK_SEEDS: SeedBanks = {
   doodles: ['A cat with a secret', 'Your dream vacation', 'A very tired robot'],
-  burns: ['What did you have for breakfast?', 'What is your favorite snack?'],
+  questions: ['What did you have for breakfast?', 'What is your favorite snack?'],
 };
 
 const SEED_PROMPT_TEXT: Record<Seed['kind'], string> = {
   drawing: 'Caption this masterpiece.',
-  confession: 'Make them look bad.',
+  confession: "Give {name}'s answer a new question.",
 };
 
 export interface RoomDeps {
@@ -653,14 +653,14 @@ export class Room {
       };
       this.matchups = [];
     } else {
-      // Seeded modes deal once the round's drawings or confessions are in.
+      // Seeded modes deal once the round's drawings or honest answers are in.
       this.matchups = this.seeded ? [] : this.generateMatchups(index, this.unusedCustomPrompts());
     }
     this.enterPhase('ROUND_INTRO', TIMERS.ROUND_INTRO);
   }
 
   private get seeded(): boolean {
-    return this.settings.mode === 'doodle' || this.settings.mode === 'burn';
+    return this.settings.mode === 'doodle' || this.settings.mode === 'context';
   }
 
   /** Custom leftovers, then the replayed crowd favourite in seeded modes, then the packs. */
@@ -686,11 +686,11 @@ export class Room {
       .map((p) => ({ id: p.id, text: p.text, rounds: [0, 1, 2], authorId: p.authorId }));
   }
 
-  /** Doodle / Burn Book: everyone gets a secret suggestion or a question about themselves. */
+  /** Doodle / Out of Context: everyone gets a secret suggestion or a question about themselves. */
   private startCreating(): void {
     const banks = this.deps.seedBanks ?? FALLBACK_SEEDS;
     const kind = this.settings.mode === 'doodle' ? 'draw' : 'confess';
-    const pool = this.shuffled(kind === 'draw' ? banks.doodles : banks.burns);
+    const pool = this.shuffled(kind === 'draw' ? banks.doodles : banks.questions);
     this.dealtPlayers().forEach((player, i) => {
       this.seedSeq += 1;
       this.tasks.set(player.id, {
@@ -727,7 +727,7 @@ export class Room {
       const text =
         seed.kind === 'drawing'
           ? SEED_PROMPT_TEXT.drawing
-          : SEED_PROMPT_TEXT.confession.replace('them', subject);
+          : SEED_PROMPT_TEXT.confession.replace('{name}', subject);
       return { id, text, rounds: [this.roundIndex], authorId: seed.authorId, seed };
     });
     this.matchups = this.generateMatchups(this.roundIndex, authored);
@@ -1446,13 +1446,13 @@ export class Room {
   }
 }
 
-const GAME_MODES: readonly GameMode[] = ['classic', 'custom', 'doodle', 'burn'];
+const GAME_MODES: readonly GameMode[] = ['classic', 'custom', 'doodle', 'context'];
 
 function isGameMode(value: unknown): value is GameMode {
   return GAME_MODES.includes(value as GameMode);
 }
 
-/** Artists stay anonymous until the reveal; a Burn Book subject is the point of the prompt. */
+/** Artists stay anonymous until the reveal; an Out of Context subject is the point of the prompt. */
 function publicSeed(prompt: DealtPrompt, revealed: boolean): PublicSeed | null {
   const seed = prompt.seed;
   if (!seed) return null;
