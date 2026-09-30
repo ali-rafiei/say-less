@@ -26,6 +26,13 @@ export const TIMERS = {
   MATCHUP_REVEAL_MAX: 10_000,
   ROUND_RESULTS: 8_000,
   FINAL_VOTING: 25_000,
+  /** "The votes are in…" before the first final answer is revealed */
+  FINAL_REVEAL_LEAD: 2_000,
+  /** answers outside the final top three go by quickly */
+  FINAL_REVEAL_FAST: 2_000,
+  FINAL_REVEAL_SLOW: 4_500,
+  /** time on the winning answer before the podium */
+  FINAL_REVEAL_HOLD: 4_000,
 } as const;
 
 export const LIMITS = {
@@ -69,6 +76,20 @@ export const EMPTY_LOBBY_TTL_MS = 60_000;
 export const ROOM_CREATION_WINDOW_MS = 10 * 60_000;
 export const MAX_ROOMS = 300;
 export const RATE_LIMIT_MS = 250;
+
+/**
+ * When each final answer is revealed, in ms after FINAL_REVEAL starts, lowest score first.
+ * The top three get the slow reveal; the rest go quickly.
+ */
+export function finalRevealSchedule(count: number): { starts: number[]; totalMs: number } {
+  const starts: number[] = [];
+  let at: number = TIMERS.FINAL_REVEAL_LEAD;
+  for (let i = 0; i < count; i++) {
+    starts.push(at);
+    at += count - i <= 3 ? TIMERS.FINAL_REVEAL_SLOW : TIMERS.FINAL_REVEAL_FAST;
+  }
+  return { starts, totalMs: at + TIMERS.FINAL_REVEAL_HOLD };
+}
 
 export function roundSpec(index: RoundIndex): RoundSpec {
   const spec = ROUNDS[index];

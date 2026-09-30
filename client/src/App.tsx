@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { sfx } from './audio/sfx.ts';
 import { Backdrop, type Palette } from './components/Backdrop.tsx';
 import { useRoom } from './net/useRoom.ts';
+import { FinalReveal } from './screens/FinalReveal.tsx';
 import { FinalVoting } from './screens/FinalVoting.tsx';
 import { Home } from './screens/Home.tsx';
 import { Lobby } from './screens/Lobby.tsx';
@@ -20,6 +21,7 @@ const PALETTES: Record<RoomPhase, Palette> = {
   FINAL_WRITING: 'writing',
   VOTING: 'voting',
   FINAL_VOTING: 'voting',
+  FINAL_REVEAL: 'results',
   MATCHUP_REVEAL: 'results',
   ROUND_RESULTS: 'results',
   PODIUM: 'podium',
@@ -83,6 +85,9 @@ export function App() {
         break;
       case 'FINAL_VOTING':
         screen = <FinalVoting ctl={ctl} room={room} me={me} />;
+        break;
+      case 'FINAL_REVEAL':
+        screen = <FinalReveal ctl={ctl} room={room} me={me} />;
         break;
       case 'PODIUM':
         screen = <Podium ctl={ctl} room={room} me={me} />;

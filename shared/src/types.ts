@@ -7,6 +7,7 @@ export type RoomPhase =
   | 'ROUND_RESULTS'
   | 'FINAL_WRITING'
   | 'FINAL_VOTING'
+  | 'FINAL_REVEAL'
   | 'PODIUM';
 
 export type RoundIndex = 0 | 1 | 2;

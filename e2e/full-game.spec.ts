@@ -95,6 +95,9 @@ test('three phones play a full game, survive a refresh, and reach the podium', a
   }
   await expect(ann.page.locator('.pchip__name')).toHaveCount(3);
   await expect(ann.page.getByRole('button', { name: 'Word limits' })).toHaveText('On');
+  await expect(ann.page.getByRole('button', { name: 'Roasts' })).toHaveText('Off');
+  await ann.page.getByRole('button', { name: 'Roasts' }).click();
+  await expect(ann.page.getByRole('button', { name: 'Roasts' })).toHaveText('On');
 
   // Custom prompt mode: Bob adds a prompt; it must be dealt to someone other than Bob.
   await ann.page.getByRole('radio', { name: 'Custom', exact: true }).click();
@@ -194,6 +197,16 @@ test('three phones play a full game, survive a refresh, and reach the podium', a
     await cards.nth(1).click();
     await p.page.getByRole('button', { name: 'Lock in' }).click();
   }
+
+  // --- Final reveal: one answer at a time, lowest first, the winner last
+  await ann.page.getByText('The votes are in…').waitFor();
+  await ann.page.locator('.fspot').waitFor();
+  await ann.page.waitForTimeout(1_600);
+  await shot(ann.page, '11b-final-reveal-first');
+  await ann.page.locator('.fspot--winner').waitFor({ timeout: 20_000 });
+  await ann.page.waitForTimeout(1_600);
+  await shot(ann.page, '11c-final-reveal-winner');
+  await expect(ann.page.locator('.fsofar .fanswer')).toHaveCount(2);
 
   // --- Podium
   await ann.page.getByRole('heading', { name: 'Podium' }).waitFor();

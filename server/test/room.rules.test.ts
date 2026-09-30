@@ -297,25 +297,24 @@ describe('roast tokens', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it('are on by default, and only the leader can switch them off', () => {
+  it('are off by default, and only the leader can switch them on', () => {
     // Arrange
     const h = makeRoom();
 
     // Act / Assert
-    expect(h.state().settings.roasts).toBe(true);
-    expect(() => h.room.updateSettings('b', { roasts: false })).toThrowError(
+    expect(h.state().settings.roasts).toBe(false);
+    expect(() => h.room.updateSettings('b', { roasts: true })).toThrowError(
       expect.objectContaining({ code: 'not_leader' }),
     );
-    h.room.updateSettings('a', { roasts: 'no' as never });
-    expect(h.state().settings.roasts).toBe(true);
-    h.room.updateSettings('a', { roasts: false });
+    h.room.updateSettings('a', { roasts: 'yes' as never });
     expect(h.state().settings.roasts).toBe(false);
+    h.room.updateSettings('a', { roasts: true });
+    expect(h.state().settings.roasts).toBe(true);
   });
 
-  it('skip the round 2 roast window entirely when switched off', () => {
+  it('skip the round 2 roast window entirely when off', () => {
     // Arrange
     const h = makeRoom();
-    h.room.updateSettings('a', { roasts: false });
 
     // Act
     toRoundTwoWindow(h);
@@ -330,6 +329,7 @@ describe('roast tokens', () => {
 
   it('cannot be spent in round 1', () => {
     const h = makeRoom();
+    h.room.updateSettings(h.room.leaderId, { roasts: true });
     startToWriting(h);
     expect(() => h.room.spendRoast('a', 'b')).toThrowError(
       expect.objectContaining({ code: 'bad_phase' }),
@@ -338,6 +338,7 @@ describe('roast tokens', () => {
 
   it('limits the target to 2 words, refuses a second roast on the same target, and closes after 10s', () => {
     const h = makeRoom();
+    h.room.updateSettings(h.room.leaderId, { roasts: true });
     toRoundTwoWindow(h);
     h.room.spendRoast('a', 'b');
     expect(h.last('b', 'roasted')!.payload.byName).toBe('A');
@@ -373,6 +374,7 @@ describe('roast tokens', () => {
     for (let seed = 1; seed <= 20; seed++) {
       // Arrange
       const h = makeRoom(['a', 'b', 'c'], seed);
+      h.room.updateSettings(h.room.leaderId, { roasts: true });
       toRoundTwoWindow(h);
       // Act
       h.room.spendRoast('a', 'b');
@@ -397,6 +399,7 @@ describe('roast tokens', () => {
     let roastedIndex = -1;
     for (let seed = 1; seed < 200 && h === null; seed++) {
       const candidate = makeRoom(['a', 'b', 'c', 'd', 'e'], seed);
+      candidate.room.updateSettings(candidate.room.leaderId, { roasts: true });
       toRoundTwoWindow(candidate);
       candidate.room.spendRoast('a', 'b');
       vi.advanceTimersByTime(10_000);
@@ -624,6 +627,8 @@ describe('sitting out', () => {
     h.room.castFinalVotes('a', 'b', 'c');
     h.room.castFinalVotes('b', 'a', 'c');
     h.room.castFinalVotes('c', 'a', 'b');
+    expect(h.room.phase).toBe('FINAL_REVEAL');
+    advanceToPhaseEnd(h);
     expect(h.room.phase).toBe('PODIUM');
     expect(h.state().podium!.placements.map((p) => p.playerId)).toContain('d');
   });
@@ -795,9 +800,9 @@ describe('word limits off', () => {
   });
 
   it('still cuts a roasted player to 2 words', () => {
-    // Given limits off and round 2's roast window open
+    // Given limits off, roasts on and round 2's roast window open
     const h = makeRoom();
-    h.room.updateSettings('a', { wordLimits: false });
+    h.room.updateSettings('a', { wordLimits: false, roasts: true });
     startToWriting(h);
     answerAll(h, (id) => `${id} answer`);
     drainRound(h);

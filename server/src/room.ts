@@ -10,6 +10,7 @@ import {
   TIMERS,
   computePlacements,
   computeSuperlatives,
+  finalRevealSchedule,
   normalizeWhitespace,
   roundSpec,
   scoreFinal,
@@ -127,7 +128,7 @@ export class Room {
     profanityFilter: false,
     wordLimits: true,
     promptMode: 'bank',
-    roasts: true,
+    roasts: false,
   };
   gamesPlayed = 0;
   banner: string | null = null;
@@ -742,6 +743,7 @@ export class Room {
     }
   }
 
+  /** Tallies the final, then reveals it answer by answer; scores land at the podium. */
   private finishFinal(): void {
     const final = this.final;
     if (!final) throw new Error('finishFinal without a final round');
@@ -750,7 +752,13 @@ export class Room {
       this.players.map((p) => p.id),
       roundSpec(FINAL_ROUND).multiplier,
     );
-    for (const [playerId, tally] of Object.entries(final.result)) {
+    this.enterPhase('FINAL_REVEAL', finalRevealSchedule(final.answers.size).totalMs);
+  }
+
+  private enterPodium(): void {
+    const result = this.final?.result;
+    if (!result) throw new Error('enterPodium before the final was tallied');
+    for (const [playerId, tally] of Object.entries(result)) {
       const player = this.players.find((p) => p.id === playerId);
       if (player) player.score += tally.points;
     }
@@ -789,6 +797,9 @@ export class Room {
         return;
       case 'FINAL_VOTING':
         this.finishFinal();
+        return;
+      case 'FINAL_REVEAL':
+        this.enterPodium();
         return;
       default:
         return;
@@ -1091,8 +1102,8 @@ export class Room {
   private publicFinal(): PublicRoomState['final'] {
     const final = this.final;
     if (!final) return null;
-    const votingOpen = this.phase === 'FINAL_VOTING' || this.phase === 'PODIUM';
-    const revealed = this.phase === 'PODIUM';
+    const revealed = this.phase === 'FINAL_REVEAL' || this.phase === 'PODIUM';
+    const votingOpen = this.phase === 'FINAL_VOTING' || revealed;
     // Final votes are cast by player id, so authorship is public once the wall opens.
     const answers: PublicAnswer[] = votingOpen
       ? this.shuffledStable([...final.answers.values()]).map((answer) => ({

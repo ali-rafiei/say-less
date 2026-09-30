@@ -219,6 +219,7 @@ test('a reload or a double-tap in every phase keeps the seat, the screen and the
   await expect(ann.page.locator('.pchip:not(.pchip--empty)')).toHaveCount(4);
 
   // ROUND_INTRO: a double-tapped Start sends one start; a reload during the intro lands on a prompt.
+  await ann.page.getByRole('button', { name: 'Roasts' }).click();
   await ann.page.getByRole('button', { name: 'Start Game' }).dblclick();
   await expect(cat.page.getByText('Say Some')).toBeVisible();
   await cat.page.reload();
@@ -314,9 +315,10 @@ test('a reload or a double-tap in every phase keeps the seat, the screen and the
     await p.page.getByRole('button', { name: 'Lock in' }).click();
   }
 
-  // PODIUM, then a double-tapped rematch. A leader who reloads hands leadership on (server rule).
+  // PODIUM (after the final reveal), then a double-tapped rematch. A leader who reloads hands
+  // leadership on (server rule).
   for (const p of phones) {
-    await expect(p.page.getByRole('heading', { name: 'Podium' })).toBeVisible();
+    await expect(p.page.getByRole('heading', { name: 'Podium' })).toBeVisible({ timeout: 40_000 });
   }
   const rematch = (p: Phone) => p.page.getByRole('button', { name: 'Rematch' });
   const counts = await Promise.all(phones.map((p) => rematch(p).count()));

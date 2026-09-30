@@ -152,6 +152,7 @@ test('twelve phones play a full game and reach the podium', async ({ browser }, 
   await leader.page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await evidence.shot(leader.page, '01-lobby-12-bottom-leader');
   lap('character picks');
+  await leader.page.getByRole('button', { name: 'Roasts' }).click();
   await leader.page.getByRole('button', { name: 'Start Game' }).click();
 
   // --- Round 1: dealt immediately, everyone writes
@@ -238,9 +239,19 @@ test('twelve phones play a full game and reach the podium', async ({ browser }, 
   await evidence.shot(leader.page, '16-final-picked-leader');
   await leader.page.getByRole('button', { name: 'Lock in' }).click();
 
+  // --- Final reveal: twelve answers, the bottom nine quickly, the top three slowly
+  await everyone((page) => page.locator('.fspot'));
+  lap('final voting (short-circuited)');
+  await leader.page.waitForTimeout(1_600);
+  await both('16b-final-reveal-first');
+  await leader.page.locator('.fspot--winner').waitFor({ timeout: 45_000 });
+  await leader.page.waitForTimeout(1_600);
+  await both('16c-final-reveal-winner');
+  await both('16c-final-reveal-winner-full', { fullPage: true });
+  lap('final reveal (fixed schedule)');
+
   // --- Podium: twelve rows, totals add up
   await everyone((page) => page.getByRole('heading', { name: 'Podium' }));
-  lap('final voting (short-circuited)');
   await leader.page.waitForTimeout(1_000);
   await both('17-podium');
   await both('17-podium-full', { fullPage: true });

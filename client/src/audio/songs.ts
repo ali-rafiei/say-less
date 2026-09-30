@@ -998,6 +998,8 @@ const BY_PHASE: Record<RoomPhase, Song | null> = {
   FINAL_WRITING: SONGS.writing,
   VOTING: SONGS.voting,
   FINAL_VOTING: SONGS.voting,
+  /** silence, like a matchup reveal, so each answer's sting lands */
+  FINAL_REVEAL: null,
   MATCHUP_REVEAL: null,
   ROUND_RESULTS: SONGS.results,
   PODIUM: SONGS.podium,

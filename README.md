@@ -61,12 +61,19 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
 5. **Round 2 "Say Less"** – 6 words, 60 s, ×1.5. The first 10 s of the writing phase is
    the **roast window**: each player holds one roast token for the whole game and may
    spend it on one opponent, cutting that opponent's next answer to 2 words. If the
-   roasted player wins the matchup anyway, they steal the roaster's points from it. The
-   leader can switch roasts off in the lobby (`settings.roasts`), which skips the window.
+   roasted player wins the matchup anyway, they steal the roaster's points from it. Roasts
+   are off by default; the leader switches them on in the lobby (`settings.roasts`).
+   Without them round 2 has no window.
 6. **Final round "Say Nothing… Almost"** – 3 words, 45 s, ×2. One shared
    prompt, everyone answers, everyone ranks their top two (not themselves).
-7. **Podium**: top three on blocks, winner mic-drops on loop, superlatives ticker,
-   Rematch (leader) or Leave. A rematch keeps the room and excludes prompts already used.
+7. **Final reveal**: after "The votes are in…", the final answers are spotlighted one at a
+   time from fewest points to most. Each shows the answer first, then its author, tally
+   and points a beat later. Answers outside the top three go by in 2 s, the top three get
+   4.5 s each, and the best answer lands last with a crown. Revealed answers stack up
+   below the spotlight. Final points are added to scores only at the podium, so the
+   reveal gives nothing away early.
+8. **Podium**: the top three blocks rise third, second, then first; winner mic-drops on
+   loop, superlatives ticker, Rematch (leader) or Leave. A rematch keeps the room and excludes prompts already used.
 
 ---
 
@@ -139,7 +146,7 @@ say-less/
 │   ├── src/App.tsx        Phase → screen router, phase → palette, error toast
 │   ├── src/net/           socket.ts (reconnecting WS, intent pacing), useRoom.ts (state hook), session.ts (localStorage)
 │   ├── src/components/    Backdrop, Character, TimerRing, LimitChips, WordInput, AnswerText, PlayerChip, Header, profanity (obscenity masking)
-│   ├── src/screens/       Home, Lobby, CharSelect, RoundIntro, Writing, Voting, MatchupReveal, RoundResults, FinalVoting, Podium
+│   ├── src/screens/       Home, Lobby, CharSelect, RoundIntro, Writing, Voting, MatchupReveal, RoundResults, FinalVoting, FinalReveal, Podium
 │   ├── src/styles/        global.css (tokens, palettes, no-select), characters.css (5 states), screens.css
 │   ├── src/characters/svg Ten placeholder SVGs following the group contract in its README.md
 │   ├── src/audio/         Synthesized music (sequencer, songs) and sound effects
@@ -213,7 +220,8 @@ What the tests pin down:
 - `shared/test/words.test.ts` – hyphen/apostrophe counting, punctuation-only tokens,
   120-char cap, roasted limit of 2, no limit when word limits are off.
 - `server/test/room.game.test.ts` – a scripted 3-player game LOBBY → PODIUM whose final
-  scores (1300 / 850 / 400) are hand-computed in the file header; matchup generation
+  scores (1300 / 850 / 400) are hand-computed in the file header, with the final reveal
+  timed by `finalRevealSchedule` and totals held back until the podium; matchup generation
   invariants for 5 players.
 - `server/test/room.rules.test.ts` – redaction per phase, over-limit rejection,
   auto-submit texts, Great Minds, character race, timer-expiry assignment, roast window
@@ -325,7 +333,7 @@ unused prompt, then to reuse.
   (stamped BACKFIRE!), even if the roaster scored 0; `stolen` (ROBBED) only appears when
   points actually move. Without the 0-point stamp a backfire could never show in 3 or 4
   player games, where the roaster always loses 1-0 or 2-0.
-- `settings.roasts = false` (lobby toggle, default on) skips the window entirely.
+- `settings.roasts` (lobby toggle, default off): off skips the window entirely.
 - Unused tokens are worthless at the podium.
 
 ---
@@ -343,7 +351,8 @@ LOBBY ─start(leader, ≥3; unpicked get random characters)─▶ ROUND_INTRO (
   │                                                                                         ▼
   │                                                                          ROUND_RESULTS (8s)
   │                                                                                         │
-  │   round 3:      ROUND_INTRO (4s) ─▶ FINAL_WRITING (45s) ─▶ FINAL_VOTING (25s) ─▶ PODIUM │
+  │   round 3:      ROUND_INTRO (4s) ─▶ FINAL_WRITING (45s) ─▶ FINAL_VOTING (25s)           │
+  │                 ─▶ FINAL_REVEAL (finalRevealSchedule: 2s + 2s/4.5s per answer + 4s) ─▶ PODIUM
   │                                                                              │          │
   └────────────────────────── rematch(leader) ───────────────────────────────────┘◀─────────┘
 ```
@@ -402,7 +411,7 @@ Implemented in `Room.publicMatchup` / `Room.publicFinal` and covered by
 | Individual votes                                  | MATCHUP_REVEAL                                                                    |
 | Who has voted (`votedIds`) during VOTING          | never: each viewer sees only their own id, since the non-voters are the authors   |
 | Final answers                                     | FINAL_VOTING (author visible because final votes are cast by player id, per spec) |
-| Final individual votes                            | PODIUM                                                                            |
+| Final individual votes and tallies                | FINAL_REVEAL (the reveal needs them; totals still wait for PODIUM)                |
 | Another player's prompts                          | never sent                                                                        |
 
 Clients cannot read the payload to learn who wrote what before the reveal. The client

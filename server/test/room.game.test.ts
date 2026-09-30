@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { finalRevealSchedule } from '../src/shared.ts';
 import { advanceToPhaseEnd, answerAll, makeRoom, startToWriting, type Harness } from './helpers.ts';
 
 /**
@@ -42,6 +43,7 @@ describe('a full 3-player game', () => {
 
   it('runs LOBBY -> PODIUM with scores matching the hand computation', () => {
     const h = makeRoom(['a', 'b', 'c']);
+    h.room.updateSettings('a', { roasts: true });
     startToWriting(h);
 
     // Round 1
@@ -94,6 +96,14 @@ describe('a full 3-player game', () => {
     h.room.castFinalVotes('a', 'b', 'c');
     h.room.castFinalVotes('b', 'a', 'c');
     h.room.castFinalVotes('c', 'a', 'b');
+
+    // The final is revealed answer by answer before the podium; totals wait for the podium.
+    expect(h.room.phase).toBe('FINAL_REVEAL');
+    expect(h.room.phaseEndsAt! - Date.now()).toBe(finalRevealSchedule(3).totalMs);
+    expect(h.state().final!.result!.a!.points).toBe(800);
+    expect(h.state().final!.votes).not.toBeNull();
+    expect(h.state().players.find((p) => p.id === 'a')!.score).toBe(500);
+    advanceToPhaseEnd(h);
 
     expect(h.room.phase).toBe('PODIUM');
     const state = h.state();
