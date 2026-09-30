@@ -1,0 +1,140 @@
+{
+  "id": "work",
+  "name": "9 to 5",
+  "prompts": [
+    {
+      "id": "work-001",
+      "text": "The worst thing to say during a job interview.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "work-002", "text": "A rejected company slogan.", "rounds": [0, 1, 2] },
+    { "id": "work-003", "text": "The real meaning of let's circle back.", "rounds": [0, 1, 2] },
+    { "id": "work-004", "text": "Something you should never reply-all to.", "rounds": [0, 1, 2] },
+    {
+      "id": "work-005",
+      "text": "A terrible name for a corporate team-building retreat.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "work-006",
+      "text": "What your boss says right before a Friday afternoon meeting.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "work-007",
+      "text": "The worst thing to find in the office microwave.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "work-008", "text": "A very honest out-of-office message.", "rounds": [0, 1, 2] },
+    { "id": "work-009", "text": "What the printer is really thinking.", "rounds": [0, 1, 2] },
+    {
+      "id": "work-010",
+      "text": "The worst thing a coworker could steal from the fridge.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "work-011", "text": "A job title that raises suspicion.", "rounds": [0, 1, 2] },
+    { "id": "work-012", "text": "What the office plant has seen.", "rounds": [0, 1, 2] },
+    {
+      "id": "work-013",
+      "text": "The sound of someone eating loudly at the next desk.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "work-014", "text": "The real reason you are quitting.", "rounds": [0, 1, 2] },
+    {
+      "id": "work-015",
+      "text": "A sign that your meeting should have been an email.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "work-016", "text": "The worst thing to hear on your first day.", "rounds": [0, 1, 2] },
+    { "id": "work-017", "text": "A bad motto for a customer service team.", "rounds": [0, 1, 2] },
+    { "id": "work-018", "text": "What the new hire should never ask.", "rounds": [0, 1, 2] },
+    {
+      "id": "work-019",
+      "text": "Something you should never say in a performance review.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "work-020", "text": "The worst piece of advice from a boss.", "rounds": [0, 1, 2] },
+    { "id": "work-021", "text": "What the conference room is really for.", "rounds": [0, 1, 2] },
+    {
+      "id": "work-022",
+      "text": "The title of a motivational poster from hell.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "work-023", "text": "A reason to cancel the company party.", "rounds": [0, 1, 2] },
+    { "id": "work-024", "text": "The worst possible work-from-home outfit.", "rounds": [0, 1, 2] },
+    { "id": "work-025", "text": "What the intern is secretly planning.", "rounds": [0, 1, 2] },
+    { "id": "work-026", "text": "The thing on your desk you cannot explain.", "rounds": [0, 1, 2] },
+    { "id": "work-027", "text": "A terrible thing to put on a resume.", "rounds": [0, 1, 2] },
+    { "id": "work-028", "text": "What the boss says instead of thank you.", "rounds": [0, 1, 2] },
+    {
+      "id": "work-029",
+      "text": "The worst thing a coworker has ever microwaved.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "work-030",
+      "text": "A very inappropriate icebreaker for a meeting.",
+      "rounds": [0, 1]
+    },
+    { "id": "work-031", "text": "The real agenda of the all-hands meeting.", "rounds": [0, 1] },
+    {
+      "id": "work-032",
+      "text": "What your email signature says when it is being honest.",
+      "rounds": [0, 1]
+    },
+    { "id": "work-033", "text": "A terrible idea from the suggestion box.", "rounds": [0, 1] },
+    { "id": "work-034", "text": "The worst excuse for being late to work.", "rounds": [0, 1] },
+    { "id": "work-035", "text": "A job that should exist but does not.", "rounds": [0, 1] },
+    { "id": "work-036", "text": "What the janitor knows about everyone.", "rounds": [0, 1] },
+    { "id": "work-037", "text": "The boss's most dangerous catchphrase.", "rounds": [0, 1] },
+    { "id": "work-038", "text": "What happens at the office after midnight.", "rounds": [0, 1] },
+    {
+      "id": "work-039",
+      "text": "A very bad thing to hear after we need to talk.",
+      "rounds": [0, 1]
+    },
+    { "id": "work-040", "text": "What a mascot for your office would be like.", "rounds": [0, 1] },
+    { "id": "work-041", "text": "The secret to surviving a pointless meeting.", "rounds": [0, 1] },
+    {
+      "id": "work-042",
+      "text": "A corporate buzzword that should be banned immediately.",
+      "rounds": [0, 1]
+    },
+    { "id": "work-043", "text": "A scary line in the company handbook.", "rounds": [0, 1] },
+    { "id": "work-044", "text": "What your chair does when you leave the room.", "rounds": [0, 1] },
+    {
+      "id": "work-045",
+      "text": "The worst thing to do with a company credit card.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "work-046",
+      "text": "A coworker's superpower that is technically useless.",
+      "rounds": [0, 1]
+    },
+    { "id": "work-047", "text": "The worst desk snack.", "rounds": [0, 1, 2] },
+    { "id": "work-048", "text": "A terrible name for a startup.", "rounds": [0, 1, 2] },
+    { "id": "work-049", "text": "What the stapler wants.", "rounds": [0, 1, 2] },
+    {
+      "id": "work-050",
+      "text": "The least helpful thing in a training video.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "work-051", "text": "A job for a werewolf.", "rounds": [0, 1, 2] },
+    { "id": "work-052", "text": "Something that makes a Monday worse.", "rounds": [0, 1, 2] },
+    { "id": "work-053", "text": "What a coffee machine says when it breaks.", "rounds": [0, 1, 2] },
+    { "id": "work-054", "text": "A retirement party gift that says it all.", "rounds": [0, 1] },
+    {
+      "id": "work-055",
+      "text": "What a robot would hate most about your office.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "work-056",
+      "text": "The job title of someone who does nothing all day.",
+      "rounds": [0, 1]
+    },
+    { "id": "work-057", "text": "The worst excuse to leave early on a Friday.", "rounds": [0, 1] },
+    { "id": "work-058", "text": "Your boss's secret hobby.", "rounds": [0, 1, 2] }
+  ]
+}

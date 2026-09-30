@@ -1,0 +1,165 @@
+{
+  "id": "movies",
+  "name": "Movie Night",
+  "prompts": [
+    {
+      "id": "movies-001",
+      "text": "The worst last words of a horror movie character.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "movies-002", "text": "A rejected title for a romantic comedy.", "rounds": [0, 1, 2] },
+    {
+      "id": "movies-003",
+      "text": "What the villain says right before losing.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "movies-004", "text": "The worst possible plot twist.", "rounds": [0, 1, 2] },
+    {
+      "id": "movies-005",
+      "text": "A terrible name for a superhero sidekick.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "movies-006",
+      "text": "The tagline of a very bad disaster movie.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "movies-007",
+      "text": "What the hero should never say before a fight.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "movies-008", "text": "A cliche every action movie needs.", "rounds": [0, 1, 2] },
+    { "id": "movies-009", "text": "The title of a sequel nobody asked for.", "rounds": [0, 1, 2] },
+    {
+      "id": "movies-010",
+      "text": "What the detective finds in the last scene.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "movies-011",
+      "text": "The worst thing to whisper during a scary scene.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "movies-012",
+      "text": "A very bad reason to start a war in space.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "movies-013", "text": "What the monster really wants.", "rounds": [0, 1, 2] },
+    { "id": "movies-014", "text": "A movie genre that should not exist.", "rounds": [0, 1, 2] },
+    {
+      "id": "movies-015",
+      "text": "The real reason the couple broke up in act two.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "movies-016", "text": "What the talking animal is hiding.", "rounds": [0, 1, 2] },
+    { "id": "movies-017", "text": "The worst thing to yell at the screen.", "rounds": [0, 1, 2] },
+    {
+      "id": "movies-018",
+      "text": "A weapon the hero would never actually use.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "movies-019",
+      "text": "The most useless thing in a spy's gadget kit.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "movies-020",
+      "text": "The last thing a zombie says before biting.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "movies-021",
+      "text": "What the wise old mentor forgot to mention.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "movies-022", "text": "A bad name for a wizard.", "rounds": [0, 1, 2] },
+    {
+      "id": "movies-023",
+      "text": "The title of a documentary about your morning.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "movies-024", "text": "The worst thing to overhear at a cinema.", "rounds": [0, 1, 2] },
+    {
+      "id": "movies-025",
+      "text": "The worst line to say at a wedding scene.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "movies-026", "text": "What the alien says upon landing.", "rounds": [0, 1, 2] },
+    { "id": "movies-027", "text": "A cheesy line for a movie poster.", "rounds": [0, 1, 2] },
+    {
+      "id": "movies-028",
+      "text": "The most predictable thing in a thriller.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "movies-029", "text": "A very confusing trailer voiceover line.", "rounds": [0, 1] },
+    { "id": "movies-030", "text": "What the villain's evil lair is missing.", "rounds": [0, 1] },
+    { "id": "movies-031", "text": "A cooking show hosted by a vampire.", "rounds": [0, 1] },
+    { "id": "movies-032", "text": "The worst outfit for a heist movie.", "rounds": [0, 1] },
+    {
+      "id": "movies-033",
+      "text": "The main character's fatal flaw in a very small film.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "movies-034",
+      "text": "A pitch for a movie that would flop immediately.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "movies-035",
+      "text": "The most dramatic way to end a boring meeting.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "movies-036",
+      "text": "What the extras in the background are gossiping about.",
+      "rounds": [0, 1]
+    },
+    { "id": "movies-037", "text": "The worst choice for a movie theme song.", "rounds": [0, 1] },
+    { "id": "movies-038", "text": "The plot of a film about a broken toaster.", "rounds": [0, 1] },
+    { "id": "movies-039", "text": "What the ghost does on a slow night.", "rounds": [0, 1] },
+    {
+      "id": "movies-040",
+      "text": "A famous movie speech, but it is about laundry.",
+      "rounds": [0, 1]
+    },
+    { "id": "movies-041", "text": "The award nobody wants at the ceremony.", "rounds": [0, 1] },
+    {
+      "id": "movies-042",
+      "text": "The behind-the-scenes disaster of a big movie.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "movies-043",
+      "text": "A horror movie set in a very ordinary place.",
+      "rounds": [0, 1]
+    },
+    { "id": "movies-044", "text": "What happens in the deleted scene.", "rounds": [0, 1] },
+    {
+      "id": "movies-045",
+      "text": "A sports movie about the world's worst team.",
+      "rounds": [0, 1]
+    },
+    { "id": "movies-046", "text": "A cheesy opening line for a western.", "rounds": [0, 1] },
+    {
+      "id": "movies-047",
+      "text": "The twist ending of a movie about a lost sock.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "movies-048",
+      "text": "A sitcom catchphrase nobody would laugh at.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "movies-049", "text": "What the robot does after taking over.", "rounds": [0, 1, 2] },
+    { "id": "movies-050", "text": "The worst kind of cliffhanger.", "rounds": [0, 1, 2] },
+    { "id": "movies-051", "text": "The hero's least helpful power.", "rounds": [0, 1, 2] },
+    { "id": "movies-052", "text": "A terrible title for a war epic.", "rounds": [0, 1, 2] },
+    { "id": "movies-053", "text": "The name of a very unlucky pirate ship.", "rounds": [0, 1, 2] },
+    { "id": "movies-054", "text": "What the final boss does on weekends.", "rounds": [0, 1, 2] },
+    { "id": "movies-055", "text": "A breakup line from a soap opera.", "rounds": [0, 1, 2] }
+  ]
+}

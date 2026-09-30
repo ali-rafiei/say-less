@@ -1,0 +1,242 @@
+{
+  "id": "friends",
+  "name": "Group Chat",
+  "prompts": [
+    {
+      "id": "friends-001",
+      "text": "The real reason {player} is always late.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "friends-002",
+      "text": "What {player} would name their reality show.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "friends-003", "text": "{player}'s most suspicious browser tab.", "rounds": [0, 1, 2] },
+    {
+      "id": "friends-004",
+      "text": "The last thing {player} searched for at 3 a.m.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "friends-005", "text": "{player}'s villain origin story.", "rounds": [0, 1, 2] },
+    { "id": "friends-006", "text": "A terrible nickname for {player}.", "rounds": [0, 1, 2] },
+    {
+      "id": "friends-007",
+      "text": "What {player} says right before a bad decision.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "friends-008", "text": "The title of {player}'s autobiography.", "rounds": [0, 1, 2] },
+    {
+      "id": "friends-009",
+      "text": "{player}'s secret talent nobody asked for.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "friends-010",
+      "text": "What {player} is actually thinking in every group photo.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "friends-011", "text": "The warning label on {player}.", "rounds": [0, 1, 2] },
+    { "id": "friends-012", "text": "{player}'s dating profile opening line.", "rounds": [0, 1, 2] },
+    {
+      "id": "friends-013",
+      "text": "What {player} would do with a free private island.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "friends-014", "text": "The most {player} thing ever said.", "rounds": [0, 1, 2] },
+    {
+      "id": "friends-015",
+      "text": "{player}'s signature dish, according to the smoke alarm.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "friends-016",
+      "text": "What {player} whispers to their houseplants.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "friends-017",
+      "text": "{player}'s ringtone, and why it is so loud.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "friends-018",
+      "text": "A conspiracy theory {player} fully believes.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "friends-019",
+      "text": "{player}'s go-to excuse for leaving a party early.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "friends-020", "text": "The one hill {player} will die on.", "rounds": [0, 1, 2] },
+    {
+      "id": "friends-021",
+      "text": "What {player} would bring to a desert island, foolishly.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "friends-022",
+      "text": "The catchphrase on {player}'s superhero cape.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "friends-023", "text": "What {player} yells at the TV.", "rounds": [0, 1, 2] },
+    { "id": "friends-024", "text": "{player}'s worst business idea.", "rounds": [0, 1, 2] },
+    { "id": "friends-025", "text": "The name of {player}'s future boat.", "rounds": [0, 1, 2] },
+    {
+      "id": "friends-026",
+      "text": "What {player} would be famous for in the year 3000.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "friends-027",
+      "text": "{player}'s karaoke song, and how it goes wrong.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "friends-028",
+      "text": "The weirdest thing in {player}'s fridge.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "friends-029", "text": "What {player} says to a stranger's dog.", "rounds": [0, 1] },
+    {
+      "id": "friends-030",
+      "text": "The most chaotic thing {player} could do at a wedding.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "friends-031",
+      "text": "{player}'s secret shame at the grocery store.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "friends-032",
+      "text": "What {player} does when they think nobody is looking.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "friends-033",
+      "text": "How {player} would survive a zombie apocalypse, briefly.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "friends-034",
+      "text": "The text {player} types and deletes six times.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "friends-035",
+      "text": "If {player} ran the country, the first law would be this.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "friends-036",
+      "text": "What {player} would put on their tombstone as a joke.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "friends-037",
+      "text": "The awkward thing {player} does in every elevator.",
+      "rounds": [0, 1]
+    },
+    { "id": "friends-038", "text": "{player}'s most irrational fear.", "rounds": [0, 1] },
+    {
+      "id": "friends-039",
+      "text": "What {player} would sell a kidney for, but only a little.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "friends-040",
+      "text": "The item {player} always forgets and blames someone else for.",
+      "rounds": [0, 1]
+    },
+    { "id": "friends-041", "text": "{player}'s guilty pleasure, revealed.", "rounds": [0, 1, 2] },
+    {
+      "id": "friends-042",
+      "text": "A rejected fortune cookie message for {player}.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "friends-043",
+      "text": "What {player} would say at their own roast.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "friends-044",
+      "text": "{player}'s walk-up song at a sumo match.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "friends-045",
+      "text": "The fine print on being friends with {player}.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "friends-046",
+      "text": "What {player} would invent and immediately regret.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "friends-047",
+      "text": "{player}'s dream job, if honesty were legal.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "friends-048",
+      "text": "The moment {player} knew they were the main character.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "friends-049",
+      "text": "Why {player} got banned from the group trip planning.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "friends-050",
+      "text": "What {player} said to get out of doing the dishes.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "friends-051",
+      "text": "The mystery {player} has been trying to solve for years.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "friends-052",
+      "text": "{player}'s tips for surviving a long road trip, all of them wrong.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "friends-053",
+      "text": "What {player} would teach at a very confusing school.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "friends-054",
+      "text": "The soundtrack to {player} walking into a room.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "friends-055", "text": "{player}'s most overconfident moment.", "rounds": [0, 1, 2] },
+    {
+      "id": "friends-056",
+      "text": "A sport {player} would be oddly good at.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "friends-057",
+      "text": "What {player} would do as a villain's sidekick.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "friends-058",
+      "text": "{player}'s personal brand in three words.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "friends-059",
+      "text": "The thing {player} pretends to understand.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "friends-060", "text": "What {player}'s phone autocorrects to.", "rounds": [0, 1, 2] }
+  ]
+}

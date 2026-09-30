@@ -1,0 +1,179 @@
+{
+  "id": "online",
+  "name": "Extremely Online",
+  "prompts": [
+    {
+      "id": "online-001",
+      "text": "The worst thing to send to the wrong group chat.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "online-002",
+      "text": "A terrible username for a job application.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "online-003", "text": "What your search history says about you.", "rounds": [0, 1, 2] },
+    {
+      "id": "online-004",
+      "text": "The last thing you want to see on your screen at 1 a.m.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "online-005", "text": "A rejected name for a social media app.", "rounds": [0, 1, 2] },
+    {
+      "id": "online-006",
+      "text": "The worst thing to post while your boss is watching.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "online-007", "text": "What the wifi password should be.", "rounds": [0, 1, 2] },
+    { "id": "online-008", "text": "A very bad thing to say in a video call.", "rounds": [0, 1, 2] },
+    { "id": "online-009", "text": "The caption for the worst selfie ever.", "rounds": [0, 1, 2] },
+    { "id": "online-010", "text": "What the autocorrect did this time.", "rounds": [0, 1, 2] },
+    {
+      "id": "online-011",
+      "text": "The title of an unwatched video with three views.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "online-012",
+      "text": "Something you should never say to a smart speaker.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "online-013",
+      "text": "The worst thing to overhear on a speakerphone.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "online-014",
+      "text": "The truth behind a very long apology post.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "online-015", "text": "An app that should never exist.", "rounds": [0, 1, 2] },
+    {
+      "id": "online-016",
+      "text": "What your battery percentage says about your life.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "online-017", "text": "The worst notification to get at church.", "rounds": [0, 1, 2] },
+    { "id": "online-018", "text": "A reply that ends any conversation.", "rounds": [0, 1, 2] },
+    {
+      "id": "online-019",
+      "text": "The last message before someone leaves the group chat.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "online-020",
+      "text": "What the comment section is really saying.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "online-021", "text": "A bad password hint.", "rounds": [0, 1, 2] },
+    { "id": "online-022", "text": "The title of a very cursed tutorial.", "rounds": [0, 1, 2] },
+    { "id": "online-023", "text": "The worst thing to leave on read.", "rounds": [0, 1, 2] },
+    {
+      "id": "online-024",
+      "text": "Something that goes viral for all the wrong reasons.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "online-025",
+      "text": "A terrible thing to be the top result for.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "online-026", "text": "What the loading wheel is thinking.", "rounds": [0, 1, 2] },
+    {
+      "id": "online-027",
+      "text": "What your phone whispers when it is at one percent.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "online-028",
+      "text": "The group chat name after everyone stops talking.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "online-029",
+      "text": "A very honest bio for a social media profile.",
+      "rounds": [0, 1]
+    },
+    { "id": "online-030", "text": "The worst possible voice message to leave.", "rounds": [0, 1] },
+    { "id": "online-031", "text": "A post that has aged very badly.", "rounds": [0, 1] },
+    {
+      "id": "online-032",
+      "text": "What the algorithm thinks you want to watch at midnight.",
+      "rounds": [0, 1]
+    },
+    { "id": "online-033", "text": "A very bad idea for a viral challenge.", "rounds": [0, 1] },
+    { "id": "online-034", "text": "The real reason you are ignoring that text.", "rounds": [0, 1] },
+    { "id": "online-035", "text": "What a robot would say in a dating profile.", "rounds": [0, 1] },
+    { "id": "online-036", "text": "A reason to block someone instantly.", "rounds": [0, 1] },
+    {
+      "id": "online-037",
+      "text": "The worst thing to autocomplete in a search bar.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "online-038",
+      "text": "An email subject line that guarantees no one opens it.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "online-039",
+      "text": "A terrible name for a group chat with your relatives.",
+      "rounds": [0, 1]
+    },
+    { "id": "online-040", "text": "The most awkward thing to say on a hot mic.", "rounds": [0, 1] },
+    {
+      "id": "online-041",
+      "text": "What a pop-up ad would say if it were honest.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "online-042",
+      "text": "What your screen time report should say in shame.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "online-043",
+      "text": "The most cursed thing to find in a photo gallery.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "online-044",
+      "text": "A very suspicious terms and conditions clause.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "online-045",
+      "text": "A recap of a group chat argument, in one sentence.",
+      "rounds": [0, 1]
+    },
+    { "id": "online-046", "text": "The worst emoji replacement for words.", "rounds": [0, 1, 2] },
+    {
+      "id": "online-047",
+      "text": "A dating app opener that should be illegal.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "online-048", "text": "A very bad livestream idea.", "rounds": [0, 1, 2] },
+    {
+      "id": "online-049",
+      "text": "The name of a scam that is almost believable.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "online-050",
+      "text": "Something you should never overshare online.",
+      "rounds": [0, 1, 2]
+    },
+    { "id": "online-051", "text": "A hashtag you would regret.", "rounds": [0, 1, 2] },
+    { "id": "online-052", "text": "The title of your least popular podcast.", "rounds": [0, 1, 2] },
+    { "id": "online-053", "text": "What the cloud is really full of.", "rounds": [0, 1] },
+    { "id": "online-054", "text": "A ridiculous reason a website is down.", "rounds": [0, 1] },
+    {
+      "id": "online-055",
+      "text": "The last thing a sleeping computer dreams of.",
+      "rounds": [0, 1]
+    },
+    { "id": "online-056", "text": "What a smart fridge would judge you for.", "rounds": [0, 1, 2] },
+    { "id": "online-057", "text": "The dumbest thing to argue about online.", "rounds": [0, 1, 2] }
+  ]
+}
