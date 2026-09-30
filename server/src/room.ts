@@ -15,7 +15,6 @@ import {
   scoreFinal,
   scoreMatchup,
   validateAnswer,
-  type AnswerMode,
   type CustomPrompt,
   type ErrorCode,
   type MatchupResult,
@@ -48,6 +47,8 @@ interface Player {
   name: string;
   characterId: string | null;
   connected: boolean;
+  /** seated by the server; never leads the room */
+  bot: boolean;
   connectedSince: number;
   joinedAt: number;
   score: number;
@@ -68,7 +69,7 @@ interface Answer {
   text: string;
   wordCount: number;
   autoSubmitted: boolean;
-  effectiveLimit: number;
+  effectiveLimit: number | null;
 }
 
 interface Matchup {
@@ -84,8 +85,7 @@ interface Matchup {
 interface FinalRound {
   prompt: Prompt;
   playerIds: string[];
-  mode: AnswerMode;
-  limit: number;
+  limit: number | null;
   answers: Map<string, Answer>;
   votes: Record<string, [string, string]>;
   result: Record<string, { first: number; second: number; points: number }> | null;
@@ -125,7 +125,7 @@ export class Room {
   leaderId = '';
   settings: RoomSettings = {
     profanityFilter: false,
-    emojiFinal: 'off',
+    wordLimits: true,
     promptMode: 'bank',
     roasts: true,
   };
@@ -162,6 +162,11 @@ export class Room {
     return this.players.filter((p) => p.connected).length;
   }
 
+  /** Bots never disconnect, so this is what decides whether a room is empty. */
+  get connectedHumans(): number {
+    return this.players.filter((p) => p.connected && !p.bot).length;
+  }
+
   get isClosed(): boolean {
     return this.closed;
   }
@@ -182,7 +187,7 @@ export class Room {
 
   // ------------------------------------------------------------- join / leave
 
-  addPlayer(playerId: string, rawName: string): void {
+  addPlayer(playerId: string, rawName: string, bot = false): void {
     if (this.phase !== 'LOBBY')
       throw new RoomError('bad_phase', 'That game is already in progress');
     if (this.players.length >= LIMITS.MAX_PLAYERS) throw new RoomError('room_full', 'Room is full');
@@ -195,6 +200,7 @@ export class Room {
       name,
       characterId: null,
       connected: true,
+      bot,
       connectedSince: now,
       joinedAt: now,
       score: 0,
@@ -207,7 +213,7 @@ export class Room {
       graceEndsAt: 0,
       graceTimer: null,
     });
-    if (!this.leaderId) this.leaderId = playerId;
+    if (!this.leaderId && !bot) this.leaderId = playerId;
     this.broadcast();
   }
 
@@ -228,7 +234,7 @@ export class Room {
     player.graceEndsAt = 0;
     if (!wasConnected) player.connectedSince = Date.now();
     const leader = this.players.find((p) => p.id === this.leaderId);
-    if (!leader || !leader.connected) {
+    if (!leader || !leader.connected || leader.bot) {
       this.leaderId = playerId;
       this.banner = `${player.name} is now the leader`;
     }
@@ -258,7 +264,7 @@ export class Room {
     }
     this.afterPresenceChange();
     this.broadcast();
-    if (this.connectedCount === 0) this.deps.onEmpty?.(this);
+    if (this.connectedHumans === 0) this.deps.onEmpty?.(this);
   }
 
   leave(playerId: string): void {
@@ -269,7 +275,7 @@ export class Room {
     } else {
       this.disconnect(playerId, false);
     }
-    if (this.connectedCount === 0) this.deps.onEmpty?.(this);
+    if (this.connectedHumans === 0) this.deps.onEmpty?.(this);
   }
 
   private expireSlot(playerId: string): void {
@@ -305,12 +311,13 @@ export class Room {
   }
 
   private passLeadership(): void {
-    const candidates = this.players
-      .filter((p) => p.connected && p.id !== this.leaderId)
+    const others = this.players.filter((p) => !p.bot && p.id !== this.leaderId);
+    const candidates = others
+      .filter((p) => p.connected)
       .sort((a, b) => a.connectedSince - b.connectedSince);
-    const next = candidates[0] ?? this.players.find((p) => p.id !== this.leaderId) ?? null;
+    const next = candidates[0] ?? others[0] ?? null;
     if (!next) {
-      this.leaderId = this.players[0]?.id ?? '';
+      this.leaderId = this.players.find((p) => !p.bot)?.id ?? '';
       return;
     }
     this.leaderId = next.id;
@@ -340,9 +347,7 @@ export class Room {
     this.requireLeader(playerId);
     if (typeof patch.profanityFilter === 'boolean')
       this.settings.profanityFilter = patch.profanityFilter;
-    if (patch.emojiFinal === 'off' || patch.emojiFinal === 'always') {
-      this.settings.emojiFinal = patch.emojiFinal;
-    }
+    if (typeof patch.wordLimits === 'boolean') this.settings.wordLimits = patch.wordLimits;
     if (typeof patch.roasts === 'boolean') this.settings.roasts = patch.roasts;
     if (patch.promptMode === 'bank' || patch.promptMode === 'custom') {
       this.settings.promptMode = patch.promptMode;
@@ -459,11 +464,11 @@ export class Room {
       const slot = matchup.playerIds[0] === playerId ? 0 : 1;
       if (matchup.answers[slot])
         throw new RoomError('already_submitted', 'You already answered that one');
-      const limit =
-        matchup.roast?.targetId === playerId
-          ? LIMITS.ROASTED_LIMIT
-          : roundSpec(this.roundIndex).limit;
-      matchup.answers[slot] = this.buildAnswer(player, rawText, limit, 'words');
+      matchup.answers[slot] = this.buildAnswer(
+        player,
+        rawText,
+        this.answerLimit(matchup, playerId),
+      );
       this.recordSubmission(player, matchup.answers[slot]);
       if (this.allWritingDone()) this.endWriting();
       else {
@@ -477,7 +482,7 @@ export class Room {
         throw new RoomError('invalid', 'That prompt is not yours');
       if (this.final.answers.has(playerId))
         throw new RoomError('already_submitted', 'You already answered');
-      const answer = this.buildAnswer(player, rawText, this.final.limit, this.final.mode);
+      const answer = this.buildAnswer(player, rawText, this.final.limit);
       this.final.answers.set(playerId, answer);
       this.recordSubmission(player, answer);
       if (this.allWritingDone()) this.endWriting();
@@ -550,12 +555,10 @@ export class Room {
     if (index === FINAL_ROUND) {
       // Everyone answers the final, so a custom prompt would always reach its author.
       const prompt = this.deps.deck.draw(FINAL_ROUND, 1, this.usedPromptIds)[0]!;
-      const mode = this.pickFinalMode();
       this.final = {
         prompt,
         playerIds: this.dealtPlayers().map((p) => p.id),
-        mode,
-        limit: mode === 'emoji' ? LIMITS.MAX_EMOJI : roundSpec(FINAL_ROUND).limit,
+        limit: this.roundLimit(),
         answers: new Map(),
         votes: {},
         result: null,
@@ -565,15 +568,6 @@ export class Room {
       this.matchups = this.generateMatchups(index);
     }
     this.enterPhase('ROUND_INTRO', TIMERS.ROUND_INTRO);
-  }
-
-  private pickFinalMode(): AnswerMode {
-    switch (this.settings.emojiFinal) {
-      case 'always':
-        return 'emoji';
-      default:
-        return 'words';
-    }
   }
 
   /** Ring pairing: player i vs player i+1 (mod N); N matchups. */
@@ -688,11 +682,10 @@ export class Room {
     for (const matchup of this.matchups) {
       matchup.playerIds.forEach((playerId, slot) => {
         if (!matchup.answers[slot]) {
-          const limit =
-            matchup.roast?.targetId === playerId
-              ? LIMITS.ROASTED_LIMIT
-              : roundSpec(this.roundIndex).limit;
-          matchup.answers[slot] = this.fallbackAnswer(this.requirePlayer(playerId), limit);
+          matchup.answers[slot] = this.fallbackAnswer(
+            this.requirePlayer(playerId),
+            this.answerLimit(matchup, playerId),
+          );
         }
       });
     }
@@ -853,14 +846,22 @@ export class Room {
     }
   }
 
-  private buildAnswer(player: Player, rawText: string, limit: number, mode: AnswerMode): Answer {
-    const validation = validateAnswer(rawText, limit, mode);
+  /** The round's word limit, or null when the leader switched limits off. */
+  private roundLimit(): number | null {
+    return this.settings.wordLimits ? roundSpec(this.roundIndex).limit : null;
+  }
+
+  private answerLimit(matchup: Matchup, playerId: string): number | null {
+    return matchup.roast?.targetId === playerId ? LIMITS.ROASTED_LIMIT : this.roundLimit();
+  }
+
+  private buildAnswer(player: Player, rawText: string, limit: number | null): Answer {
+    const validation = validateAnswer(rawText, limit);
     if (!validation.ok) {
       const messages: Record<string, string> = {
-        over_limit: `That's over the ${limit}-${mode === 'emoji' ? 'emoji' : 'word'} limit`,
+        over_limit: `That's over the ${limit}-word limit`,
         too_long: `Keep it under ${LIMITS.MAX_CHARS} characters`,
         empty: 'Say something. Anything.',
-        invalid_chars: 'Emoji only in this round',
       };
       const code = validation.error ?? 'invalid';
       throw new RoomError(code, messages[code] ?? 'Invalid answer');
@@ -874,7 +875,7 @@ export class Room {
     };
   }
 
-  private fallbackAnswer(player: Player, limit: number): Answer {
+  private fallbackAnswer(player: Player, limit: number | null): Answer {
     return {
       playerId: player.id,
       text: player.connected ? AUTO_SUBMIT_TEXT : LEFT_TEXT,
@@ -1016,11 +1017,7 @@ export class Room {
         prompts.push({
           promptId: m.prompt.id,
           text: m.prompt.text,
-          effectiveLimit:
-            m.roast?.targetId === playerId
-              ? LIMITS.ROASTED_LIMIT
-              : roundSpec(this.roundIndex).limit,
-          mode: 'words',
+          effectiveLimit: this.answerLimit(m, playerId),
           matchupIndex,
           submittedText: m.answers[slot as 0 | 1]?.text ?? null,
         });
@@ -1033,7 +1030,6 @@ export class Room {
           promptId: this.final.prompt.id,
           text: this.final.prompt.text,
           effectiveLimit: this.final.limit,
-          mode: this.final.mode,
           matchupIndex: null,
           submittedText: this.final.answers.get(playerId)?.text ?? null,
         },
@@ -1109,7 +1105,6 @@ export class Room {
       : [];
     return {
       prompt: { id: final.prompt.id, text: final.prompt.text },
-      mode: final.mode,
       limit: final.limit,
       answers,
       votes: revealed ? { ...final.votes } : null,

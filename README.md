@@ -49,7 +49,7 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
 1. One player creates a room and gets a 4-letter code (no O or I). Others join with the
    code or the invite link (`/?code=ABCD`). The creator is the **leader** and owns the
    Start button and settings: game mode (Classic bank or Custom, where players write the prompts), profanity
-   filter, emoji final round. In Custom mode anyone in the lobby can add prompts; they
+   filter, word limits. In Custom mode anyone in the lobby can add prompts; they
    are dealt first, nobody gets a prompt they wrote, and the bank fills any shortfall.
 2. **Pick a character in the lobby**: twelve characters, first tap locks it for everyone.
    Anyone who hasn't picked when the leader presses Start gets a random leftover.
@@ -63,7 +63,7 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
    spend it on one opponent, cutting that opponent's next answer to 2 words. If the
    roasted player wins the matchup anyway, they steal the roaster's points from it. The
    leader can switch roasts off in the lobby (`settings.roasts`), which skips the window.
-6. **Final round "Say Nothing… Almost"** – 3 words (or 5 emoji), 45 s, ×2. One shared
+6. **Final round "Say Nothing… Almost"** – 3 words, 45 s, ×2. One shared
    prompt, everyone answers, everyone ranks their top two (not themselves).
 7. **Podium**: top three on blocks, winner mic-drops on loop, superlatives ticker,
    Rematch (leader) or Leave. A rematch keeps the room and excludes prompts already used.
@@ -89,7 +89,7 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
   `phaseEndsAt` and the client draws a shrinking ring from it (with a clock offset
   computed from `serverNow` in each broadcast).
 - **Shared rules module** (`shared/`) is imported by both server and client so word
-  counting, emoji grapheme counting, validation and scoring are literally the same
+  counting, validation and scoring are literally the same
   code on both sides. The client uses it for live UX; the server for the final word.
 - **No persistence.** Rooms die with the process. Session tokens are HMAC signatures of
   the player id with a per-process secret; a server restart ends all games (acceptable
@@ -118,7 +118,7 @@ say-less/
 │   ├── constants.ts       Round table (limits, timers, multipliers), point values, holds/TTLs
 │   ├── types.ts           Public state shapes the server broadcasts and the client renders
 │   ├── protocol.ts        Client→server and server→client message unions, error codes
-│   ├── words.ts           Word counting, emoji grapheme counting, validateAnswer()
+│   ├── words.ts           Word counting, validateAnswer()
 │   ├── scoring.ts         scoreMatchup(), scoreFinal(), computePlacements(), roundTo5()
 │   ├── superlatives.ts    Podium superlatives
 │   └── characters.ts      Roster metadata (id, name, flavor, accent color)
@@ -127,6 +127,7 @@ say-less/
 │   ├── index.ts           HTTP + WS entrypoint, static serving, /healthz, graceful shutdown
 │   ├── room.ts            THE state machine: one class per room (~1000 lines, read this first)
 │   ├── roomManager.ts     Room registry, code generation, empty-room expiry
+│   ├── bots.ts            BotCrew: server-side players for the BOTS dev room
 │   ├── ws.ts              Gateway: socket↔player mapping, parsing, rate limit, dispatch
 │   ├── session.ts         HMAC session tokens
 │   ├── prompts.ts         PromptDeck: draw without replacement, tagged per round
@@ -174,6 +175,14 @@ npm run build        # server → server/dist, client → client/dist
 npm start            # serves client/dist and /ws on :8080
 ```
 
+**Playing alone (bot room).** Join with the code `BOTS` and the server opens a fresh
+room (with its own real code) seated with four bots, Beep, Boop, Bleep and Blorp, with you
+as the leader. Bots pick characters, answer with canned phrases trimmed to the limit,
+vote at random, sometimes roast, and rank the final wall. They act through the same room
+intents as a phone, after a random think time. Real codes never contain an O, so `BOTS`
+cannot collide with one. Bots never lead, and the room expires like any other once no
+human is connected. It works on the deployed server too.
+
 Environment variables (server): `PORT` (8080), `HOST` (all interfaces when unset; the
 deployment sets 127.0.0.1), `PROMPTS_PATH`, `CLIENT_DIST`. E2E: `E2E_PORT` (8090),
 `E2E_BASE_URL`, `E2E_RESOLVE`, `E2E_DEVICES=1`, `SHOTS_DIR`.
@@ -197,22 +206,26 @@ npm run format:check   # prettier
 
 What the tests pin down:
 
-- `shared/test/scoring.test.ts` – both worked examples from the spec (900 points with Mic
-  Drop; roast backfire steal), Silenced min-2-votes rule, tie split, abstain → 0, no Mic
-  Drop for an auto-submitted "…", Great Minds, final top-2 scoring, shared placements.
+- `shared/test/scoring.test.ts` – Mic Drop at exactly 75 % of the votes and not below,
+  not on a single vote, not for an auto-submitted "…"; roast backfire steal, Silenced
+  min-2-votes rule, tie split, abstain → 0, Great Minds, final top-2 scoring, shared
+  placements.
 - `shared/test/words.test.ts` – hyphen/apostrophe counting, punctuation-only tokens,
-  120-char cap, roasted limit of 2, emoji graphemes (flags, ZWJ families, skin tones
-  count as 1; letters and digits rejected; keycaps accepted).
+  120-char cap, roasted limit of 2, no limit when word limits are off.
 - `server/test/room.game.test.ts` – a scripted 3-player game LOBBY → PODIUM whose final
-  scores (2300 / 850 / 400) are hand-computed in the file header; matchup generation
+  scores (1300 / 850 / 400) are hand-computed in the file header; matchup generation
   invariants for 5 players.
 - `server/test/room.rules.test.ts` – redaction per phase, over-limit rejection,
   auto-submit texts, Great Minds, character race, timer-expiry assignment, roast window
   rules and a deterministic backfire steal (5 players), leader hand-off, reconnect
-  re-sends prompts, lobby slot expiry, duplicate names, room full / mid-game join.
+  re-sends prompts, lobby slot expiry, duplicate names, room full / mid-game join, word
+  limits off (no limit dealt, roasts still cut to 2, final unlimited too).
+- `server/test/bots.test.ts` – a bot room seats four bots with the human as leader, plays
+  a whole game to the podium with the bots answering and voting, and expires once the
+  human leaves.
 - `e2e/full-game.spec.ts` – three iPhone-sized Chromium contexts: create/join, settings,
   character race, refresh during writing lands back on the prompt, roast overlay and
-  2-word counter, all votes, final card wall, podium with "Most Mic Drops", rematch
+  2-word counter, all votes, final card wall, podium (no Mic Drops with one voter), rematch
   returns to the same room code, and a check that the painted sprites are animating.
   Screenshots per phase land in `e2e/shots/` (gitignored).
 - `e2e/twelve-players.spec.ts` – twelve contexts play a full game; every player's round
@@ -241,11 +254,16 @@ Source of truth: `shared/src/constants.ts` and `shared/src/scoring.ts`.
 
 ### Rounds
 
-| Round     | Name                | Limit              | Writing timer                                         | Multiplier |
-| --------- | ------------------- | ------------------ | ----------------------------------------------------- | ---------- |
-| 1         | Say Some            | 12 words           | 90 s                                                  | ×1         |
-| 2         | Say Less            | 6 words            | 60 s (first 10 s = roast window, prompts dealt after) | ×1.5       |
-| 3 (final) | Say Nothing… Almost | 3 words or 5 emoji | 45 s                                                  | ×2         |
+| Round     | Name                | Limit    | Writing timer                                         | Multiplier |
+| --------- | ------------------- | -------- | ----------------------------------------------------- | ---------- |
+| 1         | Say Some            | 12 words | 90 s                                                  | ×1         |
+| 2         | Say Less            | 6 words  | 60 s (first 10 s = roast window, prompts dealt after) | ×1.5       |
+| 3 (final) | Say Nothing… Almost | 3 words  | 45 s                                                  | ×2         |
+
+`settings.wordLimits = false` (lobby toggle, default on) lifts every limit: prompts are
+dealt with `effectiveLimit: null`, the round intro reads "No word limit", the counter
+shows a plain word count, and only the 120-character cap applies. A roast still cuts its
+target to 2 words.
 
 ### Word counting (`words.ts`, identical on client and server)
 
@@ -258,10 +276,7 @@ Source of truth: `shared/src/constants.ts` and `shared/src/scoring.ts`.
 4. Hard cap 120 characters regardless of word count.
 5. Client soft-blocks: an edit that would exceed the limit and is longer than the current
    text is ignored (deletions always allowed). Server rejects with `over_limit`.
-6. Emoji mode: graphemes via `Intl.Segmenter`; a grapheme counts if it contains an
-   Extended_Pictographic or Regional_Indicator or a keycap; any letter → `invalid_chars`;
-   digits only allowed inside keycap sequences; whitespace ignored; max 5.
-7. A roasted answer has `effectiveLimit = 2` with the same rules.
+6. A roasted answer has `effectiveLimit = 2` with the same rules.
 
 Empty on timer: connected players auto-submit "…" (`autoSubmitted: true`, wordCount 0);
 disconnected players get "[left the chat]".
@@ -272,7 +287,7 @@ disconnected players get "[left the chat]".
 | --------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | Vote received (R1–R2) | 100 per vote     |                                                                                                                                     |
 | Silenced!             | +250             | Winner took 100 % of votes cast, at least 2 votes                                                                                   |
-| Mic Drop              | +200             | Winner's word count ≤ floor(effectiveLimit / 2), at least 1 word, not auto-submitted                                                |
+| Mic Drop              | +200             | Winner took at least 75 % of votes cast, at least 2 votes, not auto-submitted (a sweep earns both this and Silenced!)               |
 | Roast backfire        | steal            | Roasted player wins **and** the roaster is the opponent in that matchup → the roaster's points from that matchup move to the winner |
 | Great Minds           | flat 100 each    | Both answers normalize to the same text (case, punctuation, spacing ignored); no votes counted, no other bonuses                    |
 | Tie                   | vote points only | Nobody wins, no bonuses                                                                                                             |
@@ -313,11 +328,6 @@ unused prompt, then to reuse.
 - `settings.roasts = false` (lobby toggle, default on) skips the window entirely.
 - Unused tokens are worthless at the podium.
 
-### Emoji final
-
-`settings.emojiFinal` is `off | always` (default `off`). The round intro shows "5 emoji"
-tiles when active.
-
 ---
 
 ## State machine and timers
@@ -353,7 +363,7 @@ socket (`rate_limited`); the client paces its own sends to that gap so a double-
 delayed, not dropped. `ping` is exempt.
 
 Client → server: `create_room {name}`, `join_room {code, name, sessionToken?}`,
-`update_settings {profanityFilter?, emojiFinal?, promptMode?}` (leader, LOBBY),
+`update_settings {profanityFilter?, wordLimits?, roasts?, promptMode?}` (leader, LOBBY),
 `add_prompt {text}` / `remove_prompt {promptId}` (LOBBY; authors or the leader remove), `start_game {}`
 (leader, LOBBY, ≥3), `pick_character {characterId}` (LOBBY), `spend_roast
 {targetId}` (WRITING, round 2, first 10 s), `submit_answer {promptId, text}`
@@ -368,8 +378,8 @@ and on reconnect), `roasted {byName}` (private), `reveal {matchupIndex}`, `error
 message}`, `left {}`, `pong {serverTime}`.
 
 Error codes: `over_limit, already_roasted, char_taken, bad_phase, room_full, not_found,
-rate_limited, invalid, not_leader, bad_name, not_enough_players, too_long,
-invalid_chars, empty, self_target, no_token, already_submitted`.
+rate_limited, invalid, not_leader, bad_name, not_enough_players, too_long, empty,
+self_target, no_token, already_submitted`.
 
 `PublicRoomState` (see `shared/src/types.ts`) carries: code, phase, `phaseEndsAt`,
 `phaseStartedAt`, `serverNow`, roundIndex, players (public fields only), leaderId,
@@ -626,19 +636,18 @@ until the new record resolves and its certificate is issued.
 
 Recorded so nobody re-derives them.
 
-| Spec                                          | Implemented                                                                                                                                      | Why                                                                                                                                      |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `ROUND_RESULTS → FINAL_WRITING` directly      | `ROUND_RESULTS → ROUND_INTRO → FINAL_WRITING`                                                                                                    | The shattering 6 → 3 tiles is the signature motif; skipping it for the final felt wrong. 4 s cost.                                       |
-| `settings.emojiFinal: boolean`                | `'off' \| 'always'`, default off; no 30 % random mode                                                                                            | The spec says both "30 % probability" and "or always, via settings"; a tri-state expresses both.                                         |
-| Final voting anonymity unspecified            | Authors visible on the final card wall                                                                                                           | `cast_final_votes` is keyed by player id per the spec's protocol; matchup voting stays anonymous.                                        |
-| Mic Drop: "≤ half the limit and won"          | additionally requires ≥ 1 word and not auto-submitted                                                                                            | Otherwise a winning "…" (0 words) would earn a Mic Drop.                                                                                 |
-| `stats: {micDrops, silenced, wordsUsedTotal}` | plus `roasted, submissions, submitMsTotal`                                                                                                       | Needed for the Roast Victim and Fastest Submitter superlatives.                                                                          |
-| Error codes list                              | plus `rate_limited, invalid, not_leader, bad_name, not_enough_players, too_long, invalid_chars, empty, self_target, no_token, already_submitted` | Distinct client messages.                                                                                                                |
-| Profanity masking "in displayed answers only" | done on the client from the shared list                                                                                                          | Keeps one broadcast per mutation instead of per-player payloads; the author is identified by comparing against their own submitted text. |
-| Roast window "R2+"                            | round 2 only                                                                                                                                     | The spec's protocol table says `spend_roast` is valid in `WRITING` only, and the final has no matchups for the backfire rule.            |
-| Disconnected mid-write → "[left the chat]"    | applied at phase end, not at disconnect                                                                                                          | Lets a quick reconnect still answer.                                                                                                     |
-| Sounds: "typewriter, mic drop, roast sting"   | synthesized with WebAudio                                                                                                                        | No asset licensing; swap for samples later if wanted.                                                                                    |
-| Characters: hand-built SVG                    | placeholder SVGs drawn by the agent; raster override pipeline                                                                                    | User is generating final art in ChatGPT; see `ASSETS.md`.                                                                                |
+| Spec                                          | Implemented                                                                                                                       | Why                                                                                                                                      |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `ROUND_RESULTS → FINAL_WRITING` directly      | `ROUND_RESULTS → ROUND_INTRO → FINAL_WRITING`                                                                                     | The shattering 6 → 3 tiles is the signature motif; skipping it for the final felt wrong. 4 s cost.                                       |
+| Final voting anonymity unspecified            | Authors visible on the final card wall                                                                                            | `cast_final_votes` is keyed by player id per the spec's protocol; matchup voting stays anonymous.                                        |
+| Mic Drop: "≤ half the limit and won"          | won with ≥ 75 % of the votes (≥ 2 votes), not auto-submitted                                                                      | Owner's call: a bonus for a crushing win reads better than one for brevity, and it still works with word limits off.                     |
+| `stats: {micDrops, silenced, wordsUsedTotal}` | plus `roasted, submissions, submitMsTotal`                                                                                        | Needed for the Roast Victim and Fastest Submitter superlatives.                                                                          |
+| Error codes list                              | plus `rate_limited, invalid, not_leader, bad_name, not_enough_players, too_long, empty, self_target, no_token, already_submitted` | Distinct client messages.                                                                                                                |
+| Profanity masking "in displayed answers only" | done on the client from the shared list                                                                                           | Keeps one broadcast per mutation instead of per-player payloads; the author is identified by comparing against their own submitted text. |
+| Roast window "R2+"                            | round 2 only                                                                                                                      | The spec's protocol table says `spend_roast` is valid in `WRITING` only, and the final has no matchups for the backfire rule.            |
+| Disconnected mid-write → "[left the chat]"    | applied at phase end, not at disconnect                                                                                           | Lets a quick reconnect still answer.                                                                                                     |
+| Sounds: "typewriter, mic drop, roast sting"   | synthesized with WebAudio                                                                                                         | No asset licensing; swap for samples later if wanted.                                                                                    |
+| Characters: hand-built SVG                    | placeholder SVGs drawn by the agent; raster override pipeline                                                                     | User is generating final art in ChatGPT; see `ASSETS.md`.                                                                                |
 
 Nothing in the spec's _locked decisions_ was changed: fully online, player voting only,
 flat-vector art direction, one unique character per player.
@@ -698,9 +707,8 @@ nothing in this list is a regression.
   never heard. Tempo, voicing and mix may want tuning by ear (`client/src/audio/songs.ts`).
 - **Known small leaks, accepted for now.** A roast-token holder can probe `spend_roast` and
   learn from `already_roasted` that a player was roasted. An answer that auto-submitted
-  ("…") or "[left the chat]" hints at its author before the reveal. In emoji mode a lone
-  keycap mark counts as an emoji and regional-indicator pairs can spell letters. None of
-  these change scores.
+  ("…") or "[left the chat]" hints at its author before the reveal. None of these change
+  scores.
 - **IPv4 reachability.** See Hosting; add a Cloudflare Tunnel if friends on IPv4-only
   Wi-Fi cannot connect. The GitHub Pages front end loads over IPv4, but its WebSocket
   still goes to the IPv6-only server.

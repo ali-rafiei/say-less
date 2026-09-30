@@ -6,6 +6,7 @@ import {
   ROOM_CREATION_WINDOW_MS,
   type ServerMessage,
 } from './shared.ts';
+import { BotCrew } from './bots.ts';
 import type { PromptDeck } from './prompts.ts';
 import { Room, RoomError } from './room.ts';
 import { generateRoomCode } from './roomCode.ts';
@@ -22,6 +23,7 @@ export class RoomManager {
   private readonly expiryTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly creatorOf = new Map<string, string>();
   private readonly creations = new Map<string, number[]>();
+  private readonly crews = new Map<string, BotCrew>();
 
   constructor(private readonly deps: RoomManagerDeps) {}
 
@@ -30,7 +32,7 @@ export class RoomManager {
   }
 
   /** `client` is the creator's address key, or null for the machine itself; see clientKey(). */
-  create(client: string | null): Room {
+  create(client: string | null, withBots = false): Room {
     if (this.rooms.size >= MAX_ROOMS) {
       throw new RoomError('room_full', 'The server is full right now. Try again in a few minutes.');
     }
@@ -48,18 +50,25 @@ export class RoomManager {
     }
     let code = generateRoomCode(this.deps.random);
     while (this.rooms.has(code)) code = generateRoomCode(this.deps.random);
+    let crew: BotCrew | null = null;
     const room = new Room(code, {
       deck: this.deps.deck,
-      send: this.deps.send,
+      send: (playerId, message) =>
+        crew?.isBot(playerId) ? crew.receive(playerId, message) : this.deps.send(playerId, message),
       onEmpty: (emptied) => this.scheduleExpiry(emptied),
       ...(this.deps.random ? { random: this.deps.random } : {}),
     });
     this.rooms.set(code, room);
+    if (withBots) {
+      crew = new BotCrew(room, this.deps.random);
+      this.crews.set(code, crew);
+      crew.seat();
+    }
     if (client !== null) {
       this.creatorOf.set(code, client);
       this.creations.set(client, [...recent, Date.now()]);
     }
-    this.deps.log?.('room created', { code });
+    this.deps.log?.('room created', { code, withBots });
     return room;
   }
 
@@ -88,7 +97,7 @@ export class RoomManager {
     const timer = setTimeout(
       () => {
         this.expiryTimers.delete(room.code);
-        if (room.connectedCount === 0) this.destroy(room.code);
+        if (room.connectedHumans === 0) this.destroy(room.code);
       },
       neverStarted ? EMPTY_LOBBY_TTL_MS : EMPTY_ROOM_TTL_MS,
     );
@@ -99,6 +108,8 @@ export class RoomManager {
     const room = this.rooms.get(code);
     if (!room) return;
     room.close();
+    this.crews.get(code)?.dispose();
+    this.crews.delete(code);
     this.rooms.delete(code);
     this.creatorOf.delete(code);
     this.touch(code);

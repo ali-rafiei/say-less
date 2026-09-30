@@ -13,7 +13,6 @@ export type ErrorCode =
   | 'bad_name'
   | 'not_enough_players'
   | 'too_long'
-  | 'invalid_chars'
   | 'empty'
   | 'self_target'
   | 'no_token'

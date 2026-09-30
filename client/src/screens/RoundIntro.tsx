@@ -5,17 +5,18 @@ import type { RoomController } from '../net/useRoom.ts';
 export function RoundIntro({ room }: { ctl: RoomController; room: PublicRoomState }) {
   const round = ROUNDS[room.roundIndex]!;
   const previous = room.roundIndex > 0 ? ROUNDS[room.roundIndex - 1]!.limit : undefined;
-  const emoji = room.final?.mode === 'emoji';
-  const limit = emoji ? room.final!.limit : round.limit;
+  const limited = room.settings.wordLimits;
   return (
     <main className="screen center intro">
       <span className="dim display">Round {room.roundIndex + 1}</span>
       <h1 className="intro__name display">{round.name}</h1>
-      <div className="intro__chips">
-        <LimitChips limit={limit} shatterFrom={emoji ? undefined : previous} size="large" />
-      </div>
+      {limited && (
+        <div className="intro__chips">
+          <LimitChips limit={round.limit} shatterFrom={previous} size="large" />
+        </div>
+      )}
       <p className="intro__limit display">
-        {limit} {emoji ? 'emoji' : limit === 1 ? 'word' : 'words'}
+        {limited ? `${round.limit} ${round.limit === 1 ? 'word' : 'words'}` : 'No word limit'}
       </p>
       <p className="dim">
         ×{round.multiplier} points

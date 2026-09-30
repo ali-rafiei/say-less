@@ -5,8 +5,6 @@ import { normalizeForComparison } from './words.ts';
 export interface ScorableAnswer {
   playerId: string;
   text: string;
-  wordCount: number;
-  effectiveLimit: number;
   autoSubmitted: boolean;
 }
 
@@ -78,8 +76,8 @@ export function scoreMatchup(input: MatchupScoringInput): MatchupResult {
     }
     if (
       !winner.autoSubmitted &&
-      winner.wordCount >= 1 &&
-      winner.wordCount <= Math.floor(winner.effectiveLimit / 2)
+      totalVotes >= POINTS.MIC_DROP_MIN_VOTES &&
+      voteCounts[winnerIndex] >= POINTS.MIC_DROP_VOTE_SHARE * totalVotes
     ) {
       addAward(awards, delta, {
         playerId: winner.playerId,

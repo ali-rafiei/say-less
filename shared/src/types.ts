@@ -10,14 +10,13 @@ export type RoomPhase =
   | 'PODIUM';
 
 export type RoundIndex = 0 | 1 | 2;
-export type AnswerMode = 'words' | 'emoji';
-export type EmojiFinalSetting = 'off' | 'always';
 
 export type PromptMode = 'bank' | 'custom';
 
 export interface RoomSettings {
   profanityFilter: boolean;
-  emojiFinal: EmojiFinalSetting;
+  /** false lifts every word limit; a roast still cuts its target to 2 words */
+  wordLimits: boolean;
   /** 'custom' deals player-written prompts first and fills any shortfall from the bank */
   promptMode: PromptMode;
   /** false skips the round 2 roast window, so nobody can cut an opponent to 2 words */
@@ -57,6 +56,7 @@ export interface PublicAnswer {
   text: string | null;
   wordCount: number | null;
   autoSubmitted: boolean;
+  /** null until revealed, and when word limits are off */
   effectiveLimit: number | null;
 }
 
@@ -101,8 +101,8 @@ export interface FinalTally {
 
 export interface PublicFinal {
   prompt: { id: string; text: string };
-  mode: AnswerMode;
-  limit: number;
+  /** null when word limits are off */
+  limit: number | null;
   answers: PublicAnswer[];
   votes: Record<string, [string, string]> | null;
   result: Record<string, FinalTally> | null;
@@ -151,8 +151,8 @@ export interface PublicRoomState {
 export interface YourPrompt {
   promptId: string;
   text: string;
-  effectiveLimit: number;
-  mode: AnswerMode;
+  /** null when word limits are off */
+  effectiveLimit: number | null;
   matchupIndex: number | null;
   submittedText: string | null;
 }

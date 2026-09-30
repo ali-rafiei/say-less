@@ -1,12 +1,12 @@
-import { LIMITS, countUnits, validateAnswer, type AnswerMode } from '@say-less/shared';
+import { LIMITS, countWords, validateAnswer } from '@say-less/shared';
 import { useEffect, useState, type FormEvent } from 'react';
 import { sfx } from '../audio/sfx.ts';
 
 interface Props {
   /** Drafts are kept in sessionStorage under this key so a refresh mid-sentence loses nothing. */
   draftKey?: string;
-  limit: number;
-  mode: AnswerMode;
+  /** null when word limits are off */
+  limit: number | null;
   onSubmit: (text: string) => void;
   /** Changes whenever the server rejects something; re-enables the form after a failed submit. */
   resetToken?: number | null;
@@ -38,7 +38,6 @@ function storeDraft(key: string | undefined, value: string): void {
 export function WordInput({
   draftKey,
   limit,
-  mode,
   onSubmit,
   resetToken,
   disabled,
@@ -52,16 +51,14 @@ export function WordInput({
     setValueState(next);
     storeDraft(draftKey, next);
   };
-  const count = countUnits(value, mode);
-  const validation = validateAnswer(value, limit, mode);
-  const atLimit = count >= limit;
-  const unit = mode === 'emoji' ? 'emoji' : 'words';
+  const count = countWords(value);
+  const validation = validateAnswer(value, limit);
+  const atLimit = limit !== null && count >= limit;
 
   function handleChange(next: string) {
     if (next.length > LIMITS.MAX_CHARS) return;
-    const nextCount = countUnits(next, mode);
     // Extra words don't register: allow deletions and edits that stay within budget.
-    if (nextCount > limit && next.length > value.length) {
+    if (limit !== null && countWords(next) > limit && next.length > value.length) {
       sfx.error();
       return;
     }
@@ -80,7 +77,7 @@ export function WordInput({
   return (
     <form className="winput" onSubmit={handleSubmit}>
       <textarea
-        className={`winput__field ${atLimit ? 'winput__field--limit' : ''} ${validation.error === 'invalid_chars' ? 'winput__field--bad' : ''}`}
+        className={`winput__field ${atLimit ? 'winput__field--limit' : ''}`}
         value={value}
         onChange={(e) => handleChange(e.target.value)}
         onFocus={(e) => {
@@ -100,18 +97,14 @@ export function WordInput({
         autoCorrect="on"
         spellCheck
         enterKeyHint="send"
-        placeholder={
-          placeholder ??
-          (mode === 'emoji' ? 'Emoji only. Make it count.' : 'Say it in fewer words…')
-        }
+        placeholder={placeholder ?? 'Say it in fewer words…'}
         disabled={disabled || pending}
         aria-label="Your answer"
       />
       <div className="winput__bar">
         <span className={`winput__count display ${atLimit ? 'winput__count--limit' : ''}`}>
-          {count} / {limit} {unit}
+          {limit === null ? count : `${count} / ${limit}`} words
         </span>
-        {validation.error === 'invalid_chars' && <span className="winput__hint">emoji only</span>}
         <button
           className="btn btn--small"
           type="submit"

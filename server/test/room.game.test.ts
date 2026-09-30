@@ -4,12 +4,13 @@ import { advanceToPhaseEnd, answerAll, makeRoom, startToWriting, type Harness } 
 /**
  * Scripted 3-player game. Author-revealing answers let the single voter always
  * pick the alphabetically-first author, so every matchup is hand-computable:
- *  - A answers with 1 word (Mic Drop whenever A wins), B and C fill the limit.
+ *  - A answers with 1 word, B and C fill the limit.
+ *  - One voter per matchup, so no Mic Drop or Silenced (both need at least 2 votes).
  *  - Ring of 3 => pairs (A,B), (B,C), (C,A) each appear exactly once per round.
- *  R1 (x1):   A beats B: 100 + 200 = 300 | B beats C: 100 | A beats C: 300 => A 600, B 100, C 0
- *  R2 (x1.5): same shape scaled          => A +900, B +150      => A 1500, B 250, C 0
+ *  R1 (x1):   A beats B: 100 | B beats C: 100 | A beats C: 100 => A 200, B 100, C 0
+ *  R2 (x1.5): same shape scaled                 => A +300, B +150 => A 500, B 250, C 0
  *  Final (x2): A->[B,C], B->[A,C], C->[A,B]: A 2x400=800, B 400+200=600, C 2x200=400
- *  Totals: A 2300, B 850, C 400
+ *  Totals: A 1300, B 850, C 400
  */
 function answerText(playerId: string, limit: number): string {
   if (playerId === 'a') return 'a';
@@ -41,7 +42,6 @@ describe('a full 3-player game', () => {
 
   it('runs LOBBY -> PODIUM with scores matching the hand computation', () => {
     const h = makeRoom(['a', 'b', 'c']);
-    h.room.updateSettings('a', { emojiFinal: 'off' });
     startToWriting(h);
 
     // Round 1
@@ -55,7 +55,7 @@ describe('a full 3-player game', () => {
     playMatchupRound(h);
     expect(h.room.phase).toBe('ROUND_RESULTS');
     expect(Object.fromEntries(h.state().players.map((p) => [p.id, p.score]))).toEqual({
-      a: 600,
+      a: 200,
       b: 100,
       c: 0,
     });
@@ -73,7 +73,7 @@ describe('a full 3-player game', () => {
     answerAll(h, answerText);
     playMatchupRound(h);
     expect(Object.fromEntries(h.state().players.map((p) => [p.id, p.score]))).toEqual({
-      a: 1500,
+      a: 500,
       b: 250,
       c: 0,
     });
@@ -86,7 +86,6 @@ describe('a full 3-player game', () => {
     expect(h.room.phase).toBe('FINAL_WRITING');
     const finalPrompt = h.room.yourPrompts('a')[0]!;
     expect(finalPrompt.effectiveLimit).toBe(3);
-    expect(finalPrompt.mode).toBe('words');
     for (const player of h.room.players) {
       h.room.submitAnswer(player.id, finalPrompt.promptId, `${player.id} says hi`);
     }
@@ -99,7 +98,7 @@ describe('a full 3-player game', () => {
     expect(h.room.phase).toBe('PODIUM');
     const state = h.state();
     expect(Object.fromEntries(state.players.map((p) => [p.id, p.score]))).toEqual({
-      a: 2300,
+      a: 1300,
       b: 850,
       c: 400,
     });
@@ -108,8 +107,8 @@ describe('a full 3-player game', () => {
       ['b', 2],
       ['c', 3],
     ]);
-    expect(state.players.find((p) => p.id === 'a')!.stats.micDrops).toBe(4);
-    expect(state.podium!.superlatives.map((s) => s.title)).toContain('Most Mic Drops');
+    expect(state.players.find((p) => p.id === 'a')!.stats.micDrops).toBe(0);
+    expect(state.podium!.superlatives.map((s) => s.title)).not.toContain('Most Mic Drops');
 
     // Rematch returns to the lobby with scores reset on next start
     h.room.rematch('a');

@@ -8,6 +8,7 @@ import {
 } from './shared.ts';
 import type { IncomingMessage } from 'node:http';
 import type { WebSocket, WebSocketServer } from 'ws';
+import { BOT_ROOM_CODE } from './bots.ts';
 import { clientKey } from './clientAddress.ts';
 import { RoomError, sanitizeName } from './room.ts';
 import { normalizeRoomCode } from './roomCode.ts';
@@ -134,24 +135,15 @@ export class Gateway {
 
   private dispatch(conn: Connection, message: ClientMessage): void {
     switch (message.type) {
-      case 'create_room': {
-        if (sanitizeName(message.payload.name).length === 0) {
-          throw new RoomError('bad_name', 'Pick a name between 1 and 12 characters');
-        }
-        const room = this.deps.rooms.create(conn.clientKey);
-        const playerId = this.deps.signer.newPlayerId();
-        try {
-          room.addPlayer(playerId, message.payload.name);
-        } catch (error) {
-          this.deps.rooms.destroy(room.code);
-          throw error;
-        }
-        this.unbind(conn);
-        this.bind(conn, room.code, playerId);
+      case 'create_room':
+        this.openRoom(conn, message.payload.name, false);
         return;
-      }
       case 'join_room': {
         const code = normalizeRoomCode(message.payload.code);
+        if (code === BOT_ROOM_CODE) {
+          this.openRoom(conn, message.payload.name, true);
+          return;
+        }
         const room = this.deps.rooms.require(code);
         const token = message.payload.sessionToken;
         const returning = this.deps.signer.verify(typeof token === 'string' ? token : undefined);
@@ -188,6 +180,22 @@ export class Gateway {
         this.dispatchInRoom(room, playerId, message);
       }
     }
+  }
+
+  private openRoom(conn: Connection, name: string, withBots: boolean): void {
+    if (sanitizeName(name).length === 0) {
+      throw new RoomError('bad_name', 'Pick a name between 1 and 12 characters');
+    }
+    const room = this.deps.rooms.create(conn.clientKey, withBots);
+    const playerId = this.deps.signer.newPlayerId();
+    try {
+      room.addPlayer(playerId, name);
+    } catch (error) {
+      this.deps.rooms.destroy(room.code);
+      throw error;
+    }
+    this.unbind(conn);
+    this.bind(conn, room.code, playerId);
   }
 
   private dispatchInRoom(

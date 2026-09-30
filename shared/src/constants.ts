@@ -33,7 +33,6 @@ export const LIMITS = {
   MAX_PLAYERS: 12,
   NAME_MAX: 12,
   MAX_CHARS: 120,
-  MAX_EMOJI: 5,
   ROASTED_LIMIT: 2,
   ROAST_TOKENS_PER_GAME: 1,
   ROAST_FROM_ROUND: 1 as RoundIndex,
@@ -49,6 +48,9 @@ export const POINTS = {
   SILENCED: 250,
   SILENCED_MIN_VOTES: 2,
   MIC_DROP: 200,
+  /** the winner's share of the votes that earns a Mic Drop */
+  MIC_DROP_VOTE_SHARE: 0.75,
+  MIC_DROP_MIN_VOTES: 2,
   GREAT_MINDS: 100,
   FINAL_FIRST: 200,
   FINAL_SECOND: 100,

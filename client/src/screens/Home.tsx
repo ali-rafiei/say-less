@@ -167,6 +167,7 @@ export function HowToPlay({ onClose }: { onClose: () => void }) {
             <span>
               <b>Answer prompts.</b> Each round you get two absurd prompts. Write the funniest
               answer you can under the word limit: <b>12 words</b>, then <b>6</b>, then <b>3</b>.
+              The host can switch limits off.
             </span>
           </li>
           <li className="howto__step">
@@ -179,8 +180,8 @@ export function HowToPlay({ onClose }: { onClose: () => void }) {
           <li className="howto__step">
             <UIArt name="howto-micdrop" className="howto__art" />
             <span>
-              <b>Mic Drop.</b> Win with half the word budget or less for a bonus. Sweep every vote
-              for a <b>Silenced!</b> bonus.
+              <b>Mic Drop.</b> Win with 75% of the votes or more for a bonus. Sweep every vote for a{' '}
+              <b>Silenced!</b> bonus too.
             </span>
           </li>
           <li className="howto__step">
@@ -193,8 +194,8 @@ export function HowToPlay({ onClose }: { onClose: () => void }) {
           <li className="howto__step">
             <UIArt name="howto-final" className="howto__art" />
             <span>
-              <b>Final round.</b> One prompt, 3 words (or 5 emoji), everyone answers, everyone ranks
-              their top two. Highest total takes the podium.
+              <b>Final round.</b> One prompt, 3 words, everyone answers, everyone ranks their top
+              two. Highest total takes the podium.
             </span>
           </li>
         </ol>

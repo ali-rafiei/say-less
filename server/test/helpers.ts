@@ -85,7 +85,10 @@ export function advanceToPhaseEnd(h: Harness): void {
 }
 
 /** Everyone answers with text that reveals the author for the voter scripts. */
-export function answerAll(h: Harness, wordsFor: (playerId: string, limit: number) => string): void {
+export function answerAll(
+  h: Harness,
+  wordsFor: (playerId: string, limit: number | null) => string,
+): void {
   for (const player of h.room.players) {
     for (const prompt of h.room.yourPrompts(player.id)) {
       if (prompt.submittedText === null) {

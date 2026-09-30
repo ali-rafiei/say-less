@@ -776,3 +776,56 @@ describe('custom prompts', () => {
     expect(dealt.every((id) => id.startsWith('p'))).toBe(true);
   });
 });
+
+describe('word limits off', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('deals prompts with no limit and accepts a long answer', () => {
+    // Given a room with word limits switched off
+    const h = makeRoom();
+    h.room.updateSettings('a', { wordLimits: false });
+    startToWriting(h);
+    const prompt = h.room.yourPrompts('a')[0]!;
+    // When A answers with 20 words in the 12-word round
+    h.room.submitAnswer('a', prompt.promptId, Array.from({ length: 20 }, () => 'yes').join(' '));
+    // Then the prompt had no limit and the answer was taken
+    expect(prompt.effectiveLimit).toBeNull();
+    expect(h.room.yourPrompts('a')[0]!.submittedText).toMatch(/^yes/);
+  });
+
+  it('still cuts a roasted player to 2 words', () => {
+    // Given limits off and round 2's roast window open
+    const h = makeRoom();
+    h.room.updateSettings('a', { wordLimits: false });
+    startToWriting(h);
+    answerAll(h, (id) => `${id} answer`);
+    drainRound(h);
+    vi.advanceTimersByTime(8_000 + 4_000);
+    // When A roasts B and the window closes
+    h.room.spendRoast('a', 'b');
+    vi.advanceTimersByTime(10_000);
+    // Then B has one prompt at 2 words and one with no limit
+    const limits = h.room.yourPrompts('b').map((p) => p.effectiveLimit);
+    expect(limits).toHaveLength(2);
+    expect(limits).toContain(2);
+    expect(limits).toContain(null);
+  });
+
+  it('lifts the final round limit too', () => {
+    // Given limits off, played through to the final
+    const h = makeRoom();
+    h.room.updateSettings('a', { wordLimits: false });
+    startToWriting(h);
+    for (let round = 0; round < 2; round++) {
+      if (round === 1) vi.advanceTimersByTime(10_000);
+      answerAll(h, (id) => `${id} answer`);
+      drainRound(h);
+      vi.advanceTimersByTime(8_000 + 4_000);
+    }
+    // Then the final prompt has no limit
+    expect(h.room.phase).toBe('FINAL_WRITING');
+    expect(h.room.yourPrompts('a')[0]!.effectiveLimit).toBeNull();
+    expect(h.state().final!.limit).toBeNull();
+  });
+});

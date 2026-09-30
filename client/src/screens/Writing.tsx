@@ -46,9 +46,7 @@ export function Writing({ ctl, room, me }: Props) {
     (p) => p.id === me || room.submittedIds.includes(p.id),
   ).length;
 
-  const limit =
-    current?.effectiveLimit ?? (room.final?.mode === 'emoji' ? room.final.limit : round.limit);
-  const unit = (current?.mode ?? room.final?.mode) === 'emoji' ? 'emoji' : 'words';
+  const limit = current ? current.effectiveLimit : room.settings.wordLimits ? round.limit : null;
 
   return (
     <main className="screen writing">
@@ -56,7 +54,7 @@ export function Writing({ ctl, room, me }: Props) {
         room={room}
         clockOffset={ctl.clockOffset}
         limit={limit}
-        limitLabel={`${limit} ${unit}`}
+        limitLabel={`${limit} words`}
       />
 
       {ctl.roastedBy && !roastDismissed && (
@@ -160,7 +158,6 @@ export function Writing({ ctl, room, me }: Props) {
               key={current.promptId}
               draftKey={`${room.code}.${current.promptId}`}
               limit={current.effectiveLimit}
-              mode={current.mode}
               resetToken={ctl.error?.at ?? null}
               autoFocus
               onSubmit={(text) => ctl.submitAnswer(current.promptId, text)}

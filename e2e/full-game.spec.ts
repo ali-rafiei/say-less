@@ -55,7 +55,7 @@ async function voteThroughRound(players: Player[], label: string, matchups: numb
     for (const p of players) {
       const enabled = p.page.locator('button.vcard:not([disabled])');
       if ((await enabled.count()) > 0) {
-        // Back Ann's one-word answer whenever it is on the ballot, so her mic drop is certain.
+        // Back Ann's one-word answer whenever it is on the ballot, so she wins her matchups.
         const yes = enabled.filter({ has: p.page.locator('.answer-text', { hasText: /^Yes$/ }) });
         await ((await yes.count()) > 0 ? yes.first() : enabled.first()).click();
       }
@@ -94,7 +94,7 @@ test('three phones play a full game, survive a refresh, and reach the podium', a
     await p.page.locator('.roomcode').waitFor();
   }
   await expect(ann.page.locator('.pchip__name')).toHaveCount(3);
-  await expect(ann.page.getByRole('button', { name: 'Emoji final round' })).toHaveText('Off');
+  await expect(ann.page.getByRole('button', { name: 'Word limits' })).toHaveText('On');
 
   // Custom prompt mode: Bob adds a prompt; it must be dealt to someone other than Bob.
   await ann.page.getByRole('radio', { name: 'Custom', exact: true }).click();
@@ -203,8 +203,8 @@ test('three phones play a full game, survive a refresh, and reach the podium', a
   await expect(bob.page.getByText('Waiting for the leader')).toBeVisible();
   const scores = await ann.page.locator('.board__score').allInnerTexts();
   expect(scores.length).toBe(3);
-  // Ann answered with 1 word every time: she must have mic drops on the ticker.
-  await expect(ann.page.locator('.ticker__item').first()).toContainText('Most Mic Drops');
+  // One voter per matchup is never a Mic Drop (it needs at least 2 votes).
+  await expect(ann.page.locator('.ticker__item', { hasText: 'Most Mic Drops' })).toHaveCount(0);
 
   // --- Rematch returns everyone to the lobby with the same code
   await ann.page.getByRole('button', { name: 'Rematch' }).click();

@@ -460,9 +460,6 @@
 .winput__field--limit {
   border-color: var(--danger);
 }
-.winput__field--bad {
-  background: #ffe3ea;
-}
 .winput__bar {
   display: flex;
   align-items: center;
@@ -475,11 +472,6 @@
 }
 .winput__count--limit {
   color: var(--danger);
-}
-.winput__hint {
-  color: var(--danger);
-  font-weight: 700;
-  font-size: 14px;
 }
 .corner-char {
   position: fixed;

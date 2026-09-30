@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeEmoji, countWords, normalizeForComparison, validateAnswer } from '../src/words.ts';
+import { countWords, normalizeForComparison, validateAnswer } from '../src/words.ts';
 
 describe('countWords', () => {
   it('trims, collapses whitespace and counts tokens', () => {
@@ -24,13 +24,13 @@ describe('countWords', () => {
     const disguised = ['one\u2800two', 'three\u3164four', 'five\uFFA0six'].join(' ');
     // Act / Assert
     expect(countWords(disguised)).toBe(6);
-    expect(validateAnswer('one\u2800two\u2800three', 2, 'words').error).toBe('over_limit');
+    expect(validateAnswer('one\u2800two\u2800three', 2).error).toBe('over_limit');
   });
 
   it('does not count tokens with nothing visible in them', () => {
     expect(countWords('\u200B')).toBe(0);
     expect(countWords('\u202E \u0301\u0301 real')).toBe(1);
-    expect(validateAnswer('\u2800\u3164\u200B', 12, 'words').error).toBe('empty');
+    expect(validateAnswer('\u2800\u3164\u200B', 12).error).toBe('empty');
   });
 
   it('still counts an emoji ZWJ sequence as one word', () => {
@@ -38,56 +38,36 @@ describe('countWords', () => {
   });
 });
 
-describe('analyzeEmoji', () => {
-  it('counts flags, ZWJ families and skin tones as one grapheme each', () => {
-    // Arrange: flag + family (ZWJ sequence) + thumbs up with skin tone
-    const text = '🇨🇦👨‍👩‍👧‍👦👍🏽';
-    // Act
-    const { count, invalid } = analyzeEmoji(text);
-    // Assert
-    expect(count).toBe(3);
-    expect(invalid).toEqual([]);
-  });
-
-  it('rejects letters and digits but accepts keycap sequences', () => {
-    expect(analyzeEmoji('😀a').invalid).toEqual(['a']);
-    expect(analyzeEmoji('😀 7').invalid).toEqual(['7']);
-    expect(analyzeEmoji('1️⃣')).toEqual({ count: 1, invalid: [] });
-  });
-
-  it('ignores whitespace between emoji', () => {
-    expect(analyzeEmoji('🔥 🔥  🔥').count).toBe(3);
-  });
-});
-
 describe('validateAnswer', () => {
   it('accepts an answer at exactly the limit', () => {
-    expect(validateAnswer('one two three four five six', 6, 'words').ok).toBe(true);
+    expect(validateAnswer('one two three four five six', 6).ok).toBe(true);
   });
 
   it('rejects one word over the limit with over_limit', () => {
-    const result = validateAnswer('one two three four five six seven', 6, 'words');
+    const result = validateAnswer('one two three four five six seven', 6);
     expect(result).toMatchObject({ ok: false, error: 'over_limit', count: 7 });
   });
 
   it('rejects more than 120 characters regardless of word count', () => {
     const wall = 'a'.repeat(121);
-    expect(validateAnswer(wall, 12, 'words').error).toBe('too_long');
+    expect(validateAnswer(wall, 12).error).toBe('too_long');
   });
 
   it('rejects an empty answer', () => {
-    expect(validateAnswer('!!!', 12, 'words').error).toBe('empty');
+    expect(validateAnswer('!!!', 12).error).toBe('empty');
   });
 
-  it('enforces the 5 emoji limit and rejects letters in emoji mode', () => {
-    expect(validateAnswer('😀😀😀😀😀', 5, 'emoji').ok).toBe(true);
-    expect(validateAnswer('😀😀😀😀😀😀', 5, 'emoji').error).toBe('over_limit');
-    expect(validateAnswer('😀 lol', 5, 'emoji').error).toBe('invalid_chars');
+  it('accepts any number of words when there is no limit', () => {
+    // Given 20 words and no word limit
+    const long = Array.from({ length: 20 }, () => 'yes').join(' ');
+    // Then it is accepted, and the character cap still applies
+    expect(validateAnswer(long, null)).toMatchObject({ ok: true, count: 20 });
+    expect(validateAnswer('a'.repeat(121), null).error).toBe('too_long');
   });
 
   it('applies a roasted limit of 2 with the same rules', () => {
-    expect(validateAnswer('just two', 2, 'words').ok).toBe(true);
-    expect(validateAnswer('now three words', 2, 'words').error).toBe('over_limit');
+    expect(validateAnswer('just two', 2).ok).toBe(true);
+    expect(validateAnswer('now three words', 2).error).toBe('over_limit');
   });
 });
 

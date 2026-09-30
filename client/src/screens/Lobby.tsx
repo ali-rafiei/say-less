@@ -177,21 +177,22 @@ export function Lobby({ ctl, room, me }: Props) {
           </button>
         </div>
         <div className="row row--between">
-          <span>Emoji final round</span>
+          <span>
+            Word limits
+            <span className="dim small setting__hint">off: say as much as you like</span>
+          </span>
           <button
-            className={`toggle ${room.settings.emojiFinal === 'always' ? 'toggle--on' : ''}`}
+            className={`toggle ${room.settings.wordLimits ? 'toggle--on' : ''}`}
             type="button"
             disabled={!isLeader}
-            aria-pressed={room.settings.emojiFinal === 'always'}
-            aria-label="Emoji final round"
+            aria-pressed={room.settings.wordLimits}
+            aria-label="Word limits"
             onClick={() => {
               sfx.tap();
-              ctl.updateSettings({
-                emojiFinal: room.settings.emojiFinal === 'always' ? 'off' : 'always',
-              });
+              ctl.updateSettings({ wordLimits: !room.settings.wordLimits });
             }}
           >
-            {room.settings.emojiFinal === 'always' ? 'On' : 'Off'}
+            {room.settings.wordLimits ? 'On' : 'Off'}
           </button>
         </div>
         {!isLeader && (
