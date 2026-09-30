@@ -37,6 +37,9 @@ const RETIRED_IDS: readonly string[] = [
   'p216',
   'p236',
   'p243',
+  'p365',
+  'p383',
+  'p386',
 ];
 const BANNED_WORDS: readonly string[] = [
   'adidas',
