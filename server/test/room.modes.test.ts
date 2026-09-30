@@ -123,24 +123,34 @@ describe('Out of Context mode', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it('turns each honest answer into a prompt its subject never answers', () => {
-    // Given every player has answered their question
+  function twistAll(h: Harness): void {
+    for (const player of h.room.players) {
+      for (const p of h.room.yourPrompts(player.id)) {
+        h.room.submitAnswer(player.id, p.promptId, `${player.id} got banned`);
+      }
+    }
+  }
+
+  it("hands each player one other player's quote to twist, without the question", () => {
+    // Given every player has answered their question honestly
     const h = makeRoom();
     toCreating(h, 'context');
     expect(h.room.yourPrompts('a')[0]!.kind).toBe('confess');
     createAll(h);
-    // Then each prompt shows someone else's question and answer
-    for (const player of h.room.players) {
-      for (const prompt of h.room.yourPrompts(player.id)) {
-        expect(prompt.seed).toMatchObject({ kind: 'confession' });
-        expect(prompt.seed?.kind === 'confession' && prompt.seed.subjectId).not.toBe(player.id);
-        expect(prompt.seed?.kind === 'confession' && prompt.seed.answer).toMatch(/loves naps$/);
-        const subject = h.room.players.find(
-          (p) => prompt.seed?.kind === 'confession' && p.id === prompt.seed.subjectId,
-        )!;
-        expect(prompt.text).toBe(`Give ${subject.name}'s answer a new question.`);
-      }
-    }
+    // Then everyone twists exactly one quote, never their own, on a fake site
+    expect(h.room.phase).toBe('FINAL_WRITING');
+    const victims = h.room.players.map((player) => {
+      const prompts = h.room.yourPrompts(player.id);
+      expect(prompts).toHaveLength(1);
+      const seed = prompts[0]!.seed;
+      expect(seed).toMatchObject({ kind: 'post', twisterId: null });
+      if (seed?.kind !== 'post') throw new Error('expected a post');
+      expect(seed.victimId).not.toBe(player.id);
+      expect(seed.quote).toMatch(/loves naps$/);
+      expect(JSON.stringify(seed)).not.toMatch(/\?/);
+      return seed.victimId;
+    });
+    expect(new Set(victims).size).toBe(h.room.players.length);
   });
 
   it('keeps the honest answer short', () => {
@@ -154,29 +164,56 @@ describe('Out of Context mode', () => {
     ).toThrowError(expect.objectContaining({ code: 'over_limit' }));
   });
 
-  it('replays the most-voted honest answer as the final', () => {
-    // Given an Out of Context game played through both rounds with every vote cast
+  it('puts every post on one wall, one vote each, never for your own twist', () => {
+    // Given every quote has been twisted
     const h = makeRoom();
     toCreating(h, 'context');
-    for (let round = 0; round < 2; round++) {
-      if (round === 1) {
+    createAll(h);
+    twistAll(h);
+    // Then voting is single, on post ids, with the twisters hidden
+    expect(h.room.phase).toBe('FINAL_VOTING');
+    const final = h.state().final!;
+    expect(final.voting).toBe('single');
+    expect(final.answers.every((a) => a.playerId === null)).toBe(true);
+    const myPost = h.room.yourPrompts('a');
+    expect(myPost).toHaveLength(0);
+    const own = final.answers.find((a) => a.text === 'a got banned')!.seed;
+    const other = final.answers.find((a) => a.text === 'b got banned')!.seed;
+    if (own?.kind !== 'post' || other?.kind !== 'post') throw new Error('expected posts');
+    expect(() => h.room.castFinalVotes('a', own.postId, '')).toThrowError(
+      expect.objectContaining({ code: 'invalid' }),
+    );
+    h.room.castFinalVotes('a', other.postId, '');
+    expect(h.state().votedIds).toContain('a');
+  });
+
+  it('plays three wall rounds, scoring each after its reveal, then the podium', () => {
+    // Given an Out of Context game where everyone creates, twists and votes each round
+    const h = makeRoom();
+    toCreating(h, 'context');
+    for (let round = 0; round < 3; round++) {
+      if (round > 0) {
         vi.advanceTimersByTime(4_000);
         expect(h.room.phase).toBe('CREATING');
       }
       createAll(h);
+      twistAll(h);
+      const wall = h.state().final!.answers;
       for (const player of h.room.players) {
-        for (const p of h.room.yourPrompts(player.id)) {
-          h.room.submitAnswer(player.id, p.promptId, `Why is ${player.id} like this?`);
-        }
+        const target = wall.find((a) => a.text !== `${player.id} got banned`)?.seed;
+        if (target?.kind === 'post') h.room.castFinalVotes(player.id, target.postId, '');
       }
-      while (h.room.phase !== 'ROUND_RESULTS') advanceToPhaseEnd(h);
+      expect(h.room.phase).toBe('FINAL_REVEAL');
       advanceToPhaseEnd(h);
+      if (round < 2) {
+        expect(h.room.phase).toBe('ROUND_RESULTS');
+        advanceToPhaseEnd(h);
+      }
     }
-    vi.advanceTimersByTime(4_000);
-    // Then the final is an honest answer from earlier, re-questioned by everyone
-    expect(h.room.phase).toBe('FINAL_WRITING');
-    expect(h.state().final!.seed).toMatchObject({ kind: 'confession' });
-    expect(h.room.yourPrompts('a')[0]!.seed).toMatchObject({ kind: 'confession' });
+    // Then the game ends on the podium with everyone's points in
+    expect(h.room.phase).toBe('PODIUM');
+    const total = h.state().players.reduce((sum, p) => sum + p.score, 0);
+    expect(total).toBeGreaterThan(0);
   });
 });
 

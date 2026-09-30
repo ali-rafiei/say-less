@@ -23,6 +23,11 @@ function playAsHuman(room: Room): void {
   }
   const state = room.publicState();
   if (state.phase === 'FINAL_VOTING' && !state.votedIds.includes('dev')) {
+    if (state.final!.voting === 'single') {
+      const post = state.final!.answers.find((a) => a.text !== 'dev answer')?.seed;
+      if (post?.kind === 'post') room.castFinalVotes('dev', post.postId, '');
+      return;
+    }
     const others = state.final!.answers.map((a) => a.playerId!).filter((id) => id !== 'dev');
     room.castFinalVotes('dev', others[0]!, others[1]!);
   }
@@ -82,7 +87,7 @@ describe('bot rooms', () => {
       // Then it reached the podium on a seeded final the bots answered
       expect(room.phase).toBe('PODIUM');
       const final = room.publicState().final!;
-      expect(final.seed).not.toBeNull();
+      expect(final.seed ?? final.answers[0]!.seed).not.toBeNull();
       expect(final.answers.filter((a) => !a.autoSubmitted).length).toBe(5);
     },
   );

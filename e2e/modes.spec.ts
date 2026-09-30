@@ -154,16 +154,17 @@ async function playMode(
   // Each screen is captured the first time Ann sees it in each round, from both of the
   // first two players, so a drawing task and a caption task both land in the evidence.
   const seen = new Set<string>();
-  let round = 1;
   const deadline = Date.now() + 8 * 60_000;
   while (Date.now() < deadline) {
     const screen = await screenOf(ann.page);
-    if (screen === 'results') round = 2;
-    if (screen === 'final' || screen === 'freveal') round = 3;
+    const header = ann.page.locator('.header__round');
+    const round = (await header.count())
+      ? (await header.innerText()).replace(/\D/g, '') || 'f'
+      : 'x';
     const key = `${round}-${screen}`;
     if (screen && !seen.has(key)) {
       seen.add(key);
-      await ann.page.waitForTimeout(screen === 'freveal' ? 9_000 : 900);
+      await ann.page.waitForTimeout(screen === 'freveal' ? 10_500 : 900);
       const shotName = `${String(seen.size + 1).padStart(2, '0')}-r${round}-${screen}`;
       await ann.page.screenshot({ path: `${out}/${shotName}-ann.png` });
       if (screen === 'create' || screen === 'writing' || screen === 'voting') {
@@ -191,14 +192,15 @@ test('Doodle: draw, caption each other, replay the favourite drawing in the fina
   await expect(players[0]!.page.locator('.podium')).toBeVisible();
 });
 
-test('Out of Context: answer honestly, others swap the question, the favourite returns', async ({
+test('Out of Context: answer honestly, get twisted, vote on the wall of posts', async ({
   browser,
 }) => {
   test.setTimeout(9 * 60_000);
+  // Twists fit the 3-word final; honest answers are typed on the CREATING screen.
   const [ann] = await playMode(browser, 'Out of Context', 'context', {
-    Ann: 'Worst thing to do at a funeral?',
-    Bob: 'Why was this person banned from the zoo?',
-    Cat: 'Your secret to a happy marriage?',
+    Ann: "Grandma's funeral speech",
+    Bob: 'Airport security',
+    Cat: 'My wedding vows',
   });
   await expect(ann!.page.locator('.podium')).toBeVisible();
 });

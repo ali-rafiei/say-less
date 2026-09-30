@@ -202,8 +202,9 @@ export function HowToPlay({ onClose }: { onClose: () => void }) {
             <UIArt name="howto-answer" className="howto__art" />
             <span>
               <b>Other modes.</b> <b>Doodle</b>: draw a secret idea, then caption each other's art.{' '}
-              <b>Out of Context</b>: answer a question about yourself honestly, then write a new
-              question for someone else's answer that makes it hilarious.
+              <b>Out of Context</b>: answer a question honestly. Someone else gets only your answer
+              and writes the headline, product or post it was under. Everyone votes for the most
+              ridiculous post.
             </span>
           </li>
         </ol>

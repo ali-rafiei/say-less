@@ -16,6 +16,10 @@ export function RoundResults({ ctl, room, me }: Props) {
     for (const [id, d] of Object.entries(m.result?.delta ?? {}))
       roundDelta.set(id, (roundDelta.get(id) ?? 0) + d);
   }
+  // Out of Context rounds are wall rounds, scored on the final's tallies.
+  for (const [id, tally] of Object.entries(room.final?.result ?? {})) {
+    roundDelta.set(id, (roundDelta.get(id) ?? 0) + tally.points + tally.pity);
+  }
   const sorted = [...room.players].sort((a, b) => b.score - a.score);
   const top = sorted[0]?.score ?? 0;
   const bottom = sorted[sorted.length - 1]?.score ?? 0;

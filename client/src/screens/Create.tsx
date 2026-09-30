@@ -54,7 +54,7 @@ export function Create({ ctl, room, me }: Props) {
               onSubmit={(text) => ctl.submitAnswer(task.promptId, text)}
             />
             <p className="dim small">
-              Everyone else gets your answer and writes a funnier question for it.
+              Someone else gets only your answer, and decides what you were talking about.
             </p>
           </section>
         )

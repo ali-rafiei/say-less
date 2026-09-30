@@ -56,15 +56,22 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
    - **Doodle**: each round opens with 75 s of drawing a secret suggestion with a finger.
      The drawings become the round's prompts: two other players caption each one, the
      artist stays anonymous until the reveal ("drawn by Cat").
-   - **Out of Context**: each round opens with 45 s of honestly answering a question about
-     yourself in up to 8 words ("What is your go-to party trick?" "juggling badly"). Two
-     other players then see the question crossed out and the answer, and write a new
-     question for that answer that makes it funny ("Why was Ann banned from the zoo?").
-     Everyone votes on the better new question.
+   - **Out of Context** (after Jackbox's _Survive the Internet_): every round, including
+     the final, opens with 45 s of answering an opinion question honestly in up to 8 words
+     ("How do you feel about fidget cubes?" "Weirdly calming."). Each quote goes to one
+     other player on a shuffled ring, who never sees the question. They get the quote as a
+     post on a fake site (News, Social, Fundraiser, Check-in, Shop, Video, Forum, Jobs;
+     `shared/src/sites.ts`) and write the headline, product, place or thread it was under,
+     within the round's word limit. All posts go on one wall, the twisters hidden, and
+     everyone gets one vote for the most ridiculous post, never the one they twisted. Each
+     vote pays the twister 100 and the victim 20 pity points; the single most-voted post
+     (at least 2 votes) is the **Best Burn**, +150 to its twister and +30 to its victim; all
+     × the round multiplier. Each round ends with the one-by-one reveal below and the
+     scoreboard. Roasts do not apply (there are no matchups) and the toggle is hidden.
 
-   In Doodle and Out of Context the final replays the round prompt that drew the most votes
-   (the crowd favourite), answered by everyone. A player who made nothing in time leaves a
-   slot that a pack prompt fills.
+   In Doodle the final replays the drawing that drew the most votes (the crowd favourite),
+   captioned by everyone. A player who drew nothing in time leaves a slot that a pack prompt
+   fills; an Out of Context player who wrote nothing is quoted as "No comment."
 
 2. **Pick a character in the lobby**: twelve characters, first tap locks it for everyone.
    Anyone who hasn't picked when the leader presses Start gets a random leftover.
@@ -83,8 +90,8 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
    prompt, everyone answers, everyone ranks their top two (not themselves).
 7. **Final reveal**: after "The votes are in…", the final answers are spotlighted one at a
    time from fewest points to most. Each shows the answer first, then its author, tally
-   and points a beat later. Answers outside the top three go by in 2 s, the top three get
-   4.5 s each, and the best answer lands last with a crown. Revealed answers stack up
+   and points a beat later. Every answer gets the same 3.5 s, the best answer lands last
+   with a crown and 2.5 s more, and there is no countdown on screen. Revealed answers stack up
    below the spotlight. Final points are added to scores only at the podium, so the
    reveal gives nothing away early.
 8. **Podium**: the top three blocks rise third, second, then first; winner mic-drops on
@@ -326,10 +333,9 @@ per point among non-winners), Roast Victim, The Silencer, Fastest Submitter.
 Custom mode: all unused custom prompts are matched to pairs that do not include their
 author (maximum bipartite matching), leftover pairs take any other unused custom prompt,
 then the packs fill the rest, so nobody answers their own prompt whenever that is
-possible. Doodle drawings and Out of Context answers are dealt the same way (the artist or
-subject is the author). The final takes a leftover custom prompt (everyone answers it,
-its author included), else in Doodle and Out of Context the most-voted seed of the game, else
-the packs.
+possible. Doodle drawings are dealt the same way (the artist is the author). The final
+takes a leftover custom prompt (everyone answers it, its author included), else in Doodle
+the most-voted drawing of the game, else the packs.
 
 **Prompts that name a player.** A prompt may contain `{player}` (every prompt in the Group
 Chat pack does). At the deal it becomes the name of someone in the room who is not one of
@@ -367,7 +373,8 @@ LOBBY ─start(leader, ≥3; unpicked get random characters)─▶ ROUND_INTRO (
   ▲                                                             │
   │                        ┌────────────────────────────────────┘
   │                        ▼
-  │   Doodle / Out of Context: ROUND_INTRO ─▶ CREATING (75s draw / 45s confess) ─▶ WRITING …
+  │   Doodle: ROUND_INTRO ─▶ CREATING (75s draw) ─▶ WRITING …   Out of Context, every round:
+  │   ROUND_INTRO ─▶ CREATING (45s) ─▶ FINAL_WRITING ─▶ FINAL_VOTING (one vote) ─▶ FINAL_REVEAL ─▶ ROUND_RESULTS
   │   rounds 1–2:   WRITING (120s) ─all in / timer─▶ VOTING (20s) ─▶ MATCHUP_REVEAL (6s) ─┐
   │                                                        ▲                                │
   │                                                        └── next matchup ────────────────┤
@@ -375,7 +382,7 @@ LOBBY ─start(leader, ≥3; unpicked get random characters)─▶ ROUND_INTRO (
   │                                                                          ROUND_RESULTS (8s)
   │                                                                                         │
   │   round 3:      ROUND_INTRO (4s) ─▶ FINAL_WRITING (60s) ─▶ FINAL_VOTING (25s)           │
-  │                 ─▶ FINAL_REVEAL (finalRevealSchedule: 2s + 2s/4.5s per answer + 4s) ─▶ PODIUM
+  │                 ─▶ FINAL_REVEAL (finalRevealSchedule: 2s + 3.5s per answer + 2.5s) ─▶ PODIUM
   │                                                                              │          │
   └────────────────────────── rematch(leader) ───────────────────────────────────┘◀─────────┘
 ```
@@ -586,7 +593,7 @@ Group Chat (`friends`, every prompt names a player), Food Fight, 9 to 5, Extreme
 Movie Night, Family Friendly, and After Dark (18+, off by default). About 55 prompts each;
 `server/test/packs.bank.test.ts` holds them to the classic bank's rules plus the catalog,
 cross-pack uniqueness and the `{player}` rule. `content/doodles.json` (97 drawing
-suggestions) and `content/questions.json` (99 questions about yourself, for Out of Context) feed the two modes.
+suggestions) and `content/questions.json` (128 opinion questions for Out of Context) feed the two modes.
 
 **Classic.** `content/prompts.json`: 407 prompts (a second editorial pass on 2026-09-29
 rewrote 31 flat ones, retired 3 and added 37), `{ id, text, rounds }` where `rounds ⊆ [0,1,2]`.

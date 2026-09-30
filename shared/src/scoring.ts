@@ -103,7 +103,9 @@ export function scoreFinal(
   multiplier: number,
 ): Record<string, FinalTally> {
   const tallies: Record<string, FinalTally> = {};
-  for (const id of playerIds) tallies[id] = { first: 0, second: 0, points: 0 };
+  for (const id of playerIds) {
+    tallies[id] = { first: 0, second: 0, points: 0, pity: 0, bestBurn: false };
+  }
   for (const [first, second] of Object.values(votes)) {
     const firstTally = tallies[first];
     if (firstTally) firstTally.first += 1;
@@ -114,6 +116,54 @@ export function scoreFinal(
     tally.points =
       scaled(POINTS.FINAL_FIRST * tally.first, multiplier) +
       scaled(POINTS.FINAL_SECOND * tally.second, multiplier);
+  }
+  return tallies;
+}
+
+export interface ScorablePost {
+  id: string;
+  victimId: string;
+  twisterId: string;
+}
+
+/**
+ * Out of Context (after Survive the Internet): each vote pays the twister 100 and the
+ * victim 20 pity points; the one post with the most votes (at least 2) is the Best Burn,
+ * +150 to its twister and +30 to its victim. All × the round multiplier.
+ */
+export function scorePosts(
+  votes: Record<string, [string, string]>,
+  posts: readonly ScorablePost[],
+  playerIds: string[],
+  multiplier: number,
+): Record<string, FinalTally> {
+  const tallies: Record<string, FinalTally> = {};
+  for (const id of playerIds) {
+    tallies[id] = { first: 0, second: 0, points: 0, pity: 0, bestBurn: false };
+  }
+  const counts = new Map<string, number>(posts.map((p) => [p.id, 0]));
+  for (const [postId] of Object.values(votes)) {
+    if (counts.has(postId)) counts.set(postId, counts.get(postId)! + 1);
+  }
+  const most = Math.max(0, ...counts.values());
+  const leaders = posts.filter((p) => counts.get(p.id) === most);
+  const burn = most >= POINTS.SILENCED_MIN_VOTES && leaders.length === 1 ? leaders[0]! : null;
+  for (const post of posts) {
+    const n = counts.get(post.id)!;
+    const twister = tallies[post.twisterId];
+    const victim = tallies[post.victimId];
+    if (twister) {
+      twister.first += n;
+      twister.points += scaled(POINTS.POST_VOTE * n, multiplier);
+      if (post === burn) {
+        twister.bestBurn = true;
+        twister.points += scaled(POINTS.BEST_BURN, multiplier);
+      }
+    }
+    if (victim) {
+      victim.pity += scaled(POINTS.PITY_PER_VOTE * n, multiplier);
+      if (post === burn) victim.pity += scaled(POINTS.BEST_BURN_PITY, multiplier);
+    }
   }
   return tallies;
 }

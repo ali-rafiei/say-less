@@ -894,6 +894,13 @@
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 12px;
 }
+.wall--posts {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+.wall--posts .wcard {
+  padding: 0;
+  text-align: left;
+}
 .wcard {
   position: relative;
   min-height: 88px;
@@ -1081,6 +1088,58 @@
 }
 
 /* ---------- Doodle and Out of Context ---------- */
+/* A fake website post: site badge, the twister's headline, the victim's quote below. */
+.post {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  text-align: left;
+}
+.post__site {
+  align-self: flex-start;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.post__twist {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.15;
+}
+.post__twist--blank {
+  opacity: 0.35;
+}
+.post__quote {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  background: rgba(26, 26, 46, 0.06);
+}
+.post__who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+}
+.post__text {
+  font-size: 18px !important;
+}
+.wall--posts .post {
+  border: none;
+}
 .seed {
   margin: 0;
 }
@@ -1103,26 +1162,6 @@
 .final .seed__art,
 .freveal .seed__art {
   width: min(100%, 180px, 26dvh);
-}
-.seed--confession {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 14px;
-  border: 3px dashed var(--ink);
-  border-radius: 14px;
-  background: var(--paper);
-  color: var(--ink);
-}
-.seed__who {
-  font-size: 15px;
-}
-.seed__question {
-  font-size: 15px;
-  opacity: 0.75;
-}
-.seed__answer {
-  font-size: 24px !important;
 }
 .create__draw {
   gap: 8px;

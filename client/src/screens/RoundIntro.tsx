@@ -22,7 +22,9 @@ export function RoundIntro({ room }: { ctl: RoomController; room: PublicRoomStat
         <p className="display">First, draw. Then caption someone else's art.</p>
       )}
       {room.roundIndex < ROUNDS.length - 1 && room.settings.mode === 'context' && (
-        <p className="display">First, a question about you. Then swap someone's question.</p>
+        <p className="display">
+          First, a question about you. Then take someone's answer out of context.
+        </p>
       )}
       <p className="dim">
         ×{round.multiplier} points

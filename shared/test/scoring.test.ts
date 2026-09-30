@@ -3,6 +3,7 @@ import {
   computePlacements,
   scoreFinal,
   scoreMatchup,
+  scorePosts,
   type ScorableAnswer,
 } from '../src/scoring.ts';
 
@@ -242,9 +243,9 @@ describe('scoreFinal', () => {
       ['a', 'b', 'c'],
       2,
     );
-    expect(tallies.a).toEqual({ first: 2, second: 1, points: 1000 });
-    expect(tallies.b).toEqual({ first: 1, second: 1, points: 600 });
-    expect(tallies.c).toEqual({ first: 0, second: 1, points: 200 });
+    expect(tallies.a).toMatchObject({ first: 2, second: 1, points: 1000 });
+    expect(tallies.b).toMatchObject({ first: 1, second: 1, points: 600 });
+    expect(tallies.c).toMatchObject({ first: 0, second: 1, points: 200 });
   });
 });
 
@@ -260,5 +261,50 @@ describe('computePlacements', () => {
       ['b', 1],
       ['c', 3],
     ]);
+  });
+});
+
+describe('scorePosts (Out of Context)', () => {
+  const posts = [
+    { id: 'p1', victimId: 'a', twisterId: 'b' },
+    { id: 'p2', victimId: 'b', twisterId: 'c' },
+    { id: 'p3', victimId: 'c', twisterId: 'a' },
+  ];
+
+  it('pays twisters per vote, victims pity points, and the Best Burn bonus', () => {
+    // Given p1 gets 3 votes and p2 gets 1
+    const votes: Record<string, [string, string]> = {
+      a: ['p2', ''],
+      c: ['p1', ''],
+      d: ['p1', ''],
+      e: ['p1', ''],
+    };
+    // When scored in a ×1 round
+    const tallies = scorePosts(votes, posts, ['a', 'b', 'c', 'd', 'e'], 1);
+    // Then B (twister of p1) gets 300 + 150 Best Burn, A (its victim) 60 + 30 pity
+    expect(tallies.b).toMatchObject({ first: 3, points: 450, bestBurn: true, pity: 20 });
+    expect(tallies.a).toMatchObject({ first: 0, points: 0, pity: 90 });
+    expect(tallies.c).toMatchObject({ first: 1, points: 100, bestBurn: false, pity: 0 });
+  });
+
+  it('gives no Best Burn on a tie for the most votes', () => {
+    // Given p1 and p2 tied on two votes each
+    const votes: Record<string, [string, string]> = {
+      a: ['p2', ''],
+      c: ['p1', ''],
+      d: ['p1', ''],
+      e: ['p2', ''],
+    };
+    // Then nobody gets the bonus
+    const tallies = scorePosts(votes, posts, ['a', 'b', 'c', 'd', 'e'], 1);
+    expect(Object.values(tallies).some((t) => t.bestBurn)).toBe(false);
+  });
+
+  it('doubles everything in the final', () => {
+    // Given one vote on p3 in a ×2 round
+    const tallies = scorePosts({ b: ['p3', ''] }, posts, ['a', 'b', 'c'], 2);
+    // Then A gets 200 and C 40 pity, and one vote is no Best Burn
+    expect(tallies.a).toMatchObject({ points: 200, bestBurn: false });
+    expect(tallies.c).toMatchObject({ pity: 40 });
   });
 });

@@ -5,7 +5,7 @@ import { sfx } from '../audio/sfx.ts';
 import { AnswerText } from '../components/AnswerText.tsx';
 import { Character } from '../components/Character.tsx';
 import { Header } from '../components/Header.tsx';
-import { SeedView } from '../components/SeedView.tsx';
+import { PostView, SeedView } from '../components/SeedView.tsx';
 import type { RoomController } from '../net/useRoom.ts';
 
 interface Props {
@@ -40,12 +40,17 @@ export function FinalReveal({ ctl, room, me }: Props) {
   const player = room.players.find((p) => p.id === current?.playerId);
   const tally = current?.playerId ? result[current.playerId] : undefined;
   const place = order.length - shown + 1;
+  const post = current?.seed?.kind === 'post' ? current.seed : null;
+  const victim = room.players.find((p) => p.id === post?.victimId);
+  // Each player is quoted on exactly one post a round, so their pity is this post's.
+  const pityHere = post ? (result[post.victimId]?.pity ?? 0) : 0;
 
   return (
     <main className="screen freveal">
-      <Header room={room} clockOffset={ctl.clockOffset} />
+      {/* No countdown: nothing to decide here, and it only rushed the reveal. */}
+      <Header room={room} clockOffset={ctl.clockOffset} showTimer={false} />
       {final.seed && <SeedView seed={final.seed} room={room} drawings={ctl.drawings} me={me} />}
-      <h2 className="prompt display center">{final.prompt.text}</h2>
+      {final.voting === 'rank' && <h2 className="prompt display center">{final.prompt.text}</h2>}
 
       {!current ? (
         <p className="freveal__wait display center">The votes are in…</p>
@@ -58,17 +63,22 @@ export function FinalReveal({ ctl, room, me }: Props) {
           <span className="fspot__place display">
             {isWinner ? (
               <>
-                <UIArt name="crown" /> Best answer
+                <UIArt name="crown" />{' '}
+                {post ? (tally?.bestBurn ? 'Best burn' : 'Top post') : 'Best answer'}
               </>
             ) : (
               `#${place}`
             )}
           </span>
-          <AnswerText
-            text={current.text ?? '…'}
-            filter={room.settings.profanityFilter && current.playerId !== me}
-            className="fspot__text"
-          />
+          {post ? (
+            <PostView seed={post} room={room} me={me} twist={current.text ?? '…'} />
+          ) : (
+            <AnswerText
+              text={current.text ?? '…'}
+              filter={room.settings.profanityFilter && current.playerId !== me}
+              className="fspot__text"
+            />
+          )}
           <div className="fspot__who">
             <Character
               characterId={player?.characterId ?? null}
@@ -83,9 +93,16 @@ export function FinalReveal({ ctl, room, me }: Props) {
             </span>
           </div>
           <span className="fspot__tally dim">
-            {tally?.first ?? 0}× 1st · {tally?.second ?? 0}× 2nd
+            {post
+              ? `twisted it · ${tally?.first ?? 0} ${tally?.first === 1 ? 'vote' : 'votes'}`
+              : `${tally?.first ?? 0}× 1st · ${tally?.second ?? 0}× 2nd`}
           </span>
           <span className="fspot__pts display">+{tally?.points ?? 0}</span>
+          {post && pityHere > 0 && (
+            <span className="fspot__tally dim small">
+              {victim?.name ?? 'Victim'} gets +{pityHere} pity points
+            </span>
+          )}
         </section>
       )}
 

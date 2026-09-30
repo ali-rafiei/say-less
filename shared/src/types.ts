@@ -1,3 +1,5 @@
+import type { SiteId } from './sites.ts';
+
 export type RoomPhase =
   | 'LOBBY'
   | 'ROUND_INTRO'
@@ -17,8 +19,9 @@ export type RoundIndex = 0 | 1 | 2;
 /**
  * classic: prompts from the chosen packs. custom: players write the prompts in the lobby.
  * doodle: everyone draws, then captions each other's drawings.
- * context: everyone answers a question about themselves, then others write a new question
- *   for that answer that takes it out of context.
+ * context: after Survive the Internet. Everyone answers a question honestly, another player
+ *   gets only that quote and writes the headline (or product, or thread) that makes it look
+ *   ridiculous, and everyone votes once on the wall of posts. Every round is a wall round.
  */
 export type GameMode = 'classic' | 'custom' | 'doodle' | 'context';
 
@@ -69,6 +72,8 @@ export interface PublicAnswer {
   autoSubmitted: boolean;
   /** null until revealed, and when word limits are off */
   effectiveLimit: number | null;
+  /** Out of Context: the post this answer is the twist for */
+  seed: PublicSeed | null;
 }
 
 export type AwardKind = 'votes' | 'silenced' | 'micDrop' | 'greatMinds' | 'steal' | 'stolen';
@@ -98,7 +103,16 @@ export type PublicSeed =
       /** null until the matchup (or final) is revealed */
       artistId: string | null;
     }
-  | { kind: 'confession'; subjectId: string; question: string; answer: string };
+  | {
+      kind: 'post';
+      /** vote with this id: the twister stays anonymous until the reveal */
+      postId: string;
+      victimId: string;
+      quote: string;
+      site: SiteId;
+      /** null until revealed */
+      twisterId: string | null;
+    };
 
 export interface Roast {
   spenderId: string;
@@ -118,14 +132,22 @@ export interface PublicMatchup {
 }
 
 export interface FinalTally {
+  /** first-choice votes, or in Out of Context every vote on this player's twist */
   first: number;
   second: number;
+  /** points for this player's answer (or twist) */
   points: number;
+  /** Out of Context: points for being the victim of the posts people voted for */
+  pity: number;
+  /** Out of Context: this player's twist drew the most votes */
+  bestBurn: boolean;
 }
 
 export interface PublicFinal {
   prompt: { id: string; text: string };
   seed: PublicSeed | null;
+  /** rank: pick your top two. single: one vote (Out of Context). */
+  voting: 'rank' | 'single';
   /** null when word limits are off */
   limit: number | null;
   answers: PublicAnswer[];

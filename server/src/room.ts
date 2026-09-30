@@ -11,6 +11,8 @@ import {
   PACKS,
   PLAYER_TOKEN,
   RECONNECT_HOLD_MS,
+  SITES,
+  SITE_IDS,
   TIMERS,
   computePlacements,
   computeSuperlatives,
@@ -21,9 +23,11 @@ import {
   roundSpec,
   scoreFinal,
   scoreMatchup,
+  scorePosts,
   validateAnswer,
   type CustomPrompt,
   type ErrorCode,
+  type FinalTally,
   type GameMode,
   type MatchupResult,
   type PlayerStats,
@@ -37,6 +41,7 @@ import {
   type RoomPhase,
   type RoomSettings,
   type RoundIndex,
+  type SiteId,
   type ServerMessage,
   type YourPrompt,
 } from './shared.ts';
@@ -81,9 +86,9 @@ interface Answer {
   effectiveLimit: number | null;
 }
 
-/** A Doodle drawing or an Out of Context honest answer that a round's prompt is built on. */
+/** A Doodle drawing or an Out of Context honest answer (the quote someone else twists). */
 interface Seed {
-  kind: 'drawing' | 'confession';
+  kind: 'drawing' | 'quote';
   authorId: string;
   /** the secret drawing suggestion, or the question the author answered */
   question: string;
@@ -95,6 +100,17 @@ interface DealtPrompt extends Prompt {
   /** custom prompts and seeds are never dealt to their author in a matchup */
   authorId?: string;
   seed?: Seed;
+  /** Out of Context: the post this prompt asks its twister to write the context for */
+  post?: Post;
+}
+
+/** Out of Context: the victim's quote on a fake site; the twister writes what it is under. */
+interface Post {
+  id: string;
+  victimId: string;
+  twisterId: string;
+  quote: string;
+  site: SiteId;
 }
 
 /** A player's CREATING job for the round. */
@@ -114,24 +130,32 @@ interface Matchup {
   revealed: boolean;
 }
 
+/**
+ * A wall round: everyone answers, every answer goes up on one wall. The final of Classic,
+ * Custom and Doodle (one shared prompt, rank your top two), and every round of Out of
+ * Context (one post each to twist, one vote).
+ */
 interface FinalRound {
   prompt: DealtPrompt;
+  /** Out of Context only */
+  posts: Post[] | null;
   playerIds: string[];
   limit: number | null;
   answers: Map<string, Answer>;
+  /** rank: [first, second] player ids. Out of Context: [post id, ''] */
   votes: Record<string, [string, string]>;
-  result: Record<string, { first: number; second: number; points: number }> | null;
+  result: Record<string, FinalTally> | null;
 }
+
+/** What a victim who wrote nothing in time is quoted as. */
+const NO_COMMENT = 'No comment.';
 
 const FALLBACK_SEEDS: SeedBanks = {
   doodles: ['A cat with a secret', 'Your dream vacation', 'A very tired robot'],
   questions: ['What did you have for breakfast?', 'What is your favorite snack?'],
 };
 
-const SEED_PROMPT_TEXT: Record<Seed['kind'], string> = {
-  drawing: 'Caption this masterpiece.',
-  confession: "Give {name}'s answer a new question.",
-};
+const DRAWING_PROMPT_TEXT = 'Caption this masterpiece.';
 
 export interface RoomDeps {
   deck: PromptDeck;
@@ -522,7 +546,7 @@ export class Room {
             : 'Tell us something. Anything.',
         );
       }
-      this.addSeed(player, task, 'confession', validation.text);
+      this.addSeed(player, task, 'quote', validation.text);
       return;
     }
     if (this.phase === 'WRITING') {
@@ -549,7 +573,10 @@ export class Room {
       return;
     }
     if (this.phase === 'FINAL_WRITING' && this.final) {
-      if (this.final.prompt.id !== promptId || !this.final.playerIds.includes(playerId))
+      if (
+        !this.final.playerIds.includes(playerId) ||
+        this.wallPrompt(this.final, playerId).id !== promptId
+      )
         throw new RoomError('invalid', 'That prompt is not yours');
       if (this.final.answers.has(playerId))
         throw new RoomError('already_submitted', 'You already answered');
@@ -602,6 +629,17 @@ export class Room {
     this.requirePlayer(playerId);
     const final = this.final;
     if (!final) throw new RoomError('bad_phase', 'No final round');
+    if (playerId in final.votes) throw new RoomError('already_submitted', 'You already voted');
+    if (final.posts) {
+      const post = final.posts.find((p) => p.id === first);
+      if (!post || second !== '') throw new RoomError('invalid', 'Pick one post');
+      if (post.twisterId === playerId)
+        throw new RoomError('invalid', 'You cannot vote for your own twist');
+      final.votes[playerId] = [first, ''];
+      if (this.allFinalVotesIn()) this.finishFinal();
+      else this.broadcast();
+      return;
+    }
     if (first === second) throw new RoomError('invalid', 'Pick two different answers');
     if (first === playerId || second === playerId)
       throw new RoomError('invalid', 'You cannot vote for yourself');
@@ -641,10 +679,12 @@ export class Room {
     this.promptsDealt = false;
     this.tasks = new Map();
     this.seeds = new Map();
-    if (index === FINAL_ROUND) {
+    this.final = null;
+    if (index === FINAL_ROUND && this.settings.mode !== 'context') {
       const prompt = this.withPlayerName(this.finalPrompt(), this.dealtPlayers());
       this.final = {
         prompt,
+        posts: null,
         playerIds: this.dealtPlayers().map((p) => p.id),
         limit: this.roundLimit(),
         answers: new Map(),
@@ -661,6 +701,18 @@ export class Room {
 
   private get seeded(): boolean {
     return this.settings.mode === 'doodle' || this.settings.mode === 'context';
+  }
+
+  /** The prompt this player answers in a wall round: their post to twist, or the shared one. */
+  private wallPrompt(final: FinalRound, playerId: string): DealtPrompt {
+    const post = final.posts?.find((p) => p.twisterId === playerId);
+    if (!post) return final.prompt;
+    return {
+      id: post.id,
+      text: SITES[post.site].instruction,
+      rounds: [this.roundIndex],
+      post,
+    };
   }
 
   /** Custom leftovers, then the replayed crowd favourite in seeded modes, then the packs. */
@@ -717,21 +769,58 @@ export class Room {
     }
   }
 
-  /** Seeds become the round's prompts; a player who made nothing leaves a slot for the packs. */
+  /**
+   * Doodle: drawings become the round's matchup prompts (a player who drew nothing leaves a
+   * slot for the packs). Out of Context: each quote goes to the next player on a shuffled
+   * ring, who twists it, and the round is a wall round.
+   */
   private endCreating(): void {
+    if (this.settings.mode === 'context') {
+      this.final = this.buildPostWall();
+      this.startWriting();
+      return;
+    }
     const authored: DealtPrompt[] = [...this.seeds.values()].map((seed) => {
       this.seedSeq += 1;
       const id = `s${this.seedSeq}`;
-      if (seed.kind === 'drawing') this.drawings.set(id, seed.content);
-      const subject = this.requirePlayer(seed.authorId).name;
-      const text =
-        seed.kind === 'drawing'
-          ? SEED_PROMPT_TEXT.drawing
-          : SEED_PROMPT_TEXT.confession.replace('{name}', subject);
-      return { id, text, rounds: [this.roundIndex], authorId: seed.authorId, seed };
+      this.drawings.set(id, seed.content);
+      return {
+        id,
+        text: DRAWING_PROMPT_TEXT,
+        rounds: [this.roundIndex],
+        authorId: seed.authorId,
+        seed,
+      };
     });
     this.matchups = this.generateMatchups(this.roundIndex, authored);
     this.startWriting();
+  }
+
+  private buildPostWall(): FinalRound {
+    const ring = this.shuffled([...this.tasks.keys()]);
+    const posts = ring.map((victimId, i): Post => {
+      this.seedSeq += 1;
+      return {
+        id: `q${this.seedSeq}`,
+        victimId,
+        twisterId: ring[(i + 1) % ring.length]!,
+        quote: this.seeds.get(victimId)?.content ?? NO_COMMENT,
+        site: SITE_IDS[Math.floor(this.random() * SITE_IDS.length)]!,
+      };
+    });
+    return {
+      prompt: {
+        id: `w${this.seedSeq}`,
+        text: 'Take it out of context.',
+        rounds: [this.roundIndex],
+      },
+      posts,
+      playerIds: ring,
+      limit: this.roundLimit(),
+      answers: new Map(),
+      votes: {},
+      result: null,
+    };
   }
 
   private allCreatingDone(): boolean {
@@ -823,7 +912,7 @@ export class Room {
 
   private startWriting(): void {
     const spec = roundSpec(this.roundIndex);
-    if (this.roundIndex === FINAL_ROUND) {
+    if (this.final) {
       this.enterPhase('FINAL_WRITING', spec.writingMs);
       this.dealPrompts();
       return;
@@ -945,22 +1034,27 @@ export class Room {
   private finishFinal(): void {
     const final = this.final;
     if (!final) throw new Error('finishFinal without a final round');
-    final.result = scoreFinal(
-      final.votes,
-      this.players.map((p) => p.id),
-      roundSpec(FINAL_ROUND).multiplier,
-    );
+    const ids = this.players.map((p) => p.id);
+    const multiplier = roundSpec(this.roundIndex).multiplier;
+    final.result = final.posts
+      ? scorePosts(final.votes, final.posts, ids, multiplier)
+      : scoreFinal(final.votes, ids, multiplier);
     this.enterPhase('FINAL_REVEAL', finalRevealSchedule(final.answers.size).totalMs);
   }
 
-  private enterPodium(): void {
+  /** Wall-round points land after the reveal; then the next round, or the podium. */
+  private afterWallReveal(): void {
     const result = this.final?.result;
-    if (!result) throw new Error('enterPodium before the final was tallied');
+    if (!result) throw new Error('afterWallReveal before the wall was tallied');
     for (const [playerId, tally] of Object.entries(result)) {
       const player = this.players.find((p) => p.id === playerId);
-      if (player) player.score += tally.points;
+      if (player) player.score += tally.points + tally.pity;
     }
     this.publishStats();
+    if (this.roundIndex !== FINAL_ROUND) {
+      this.enterPhase('ROUND_RESULTS', TIMERS.ROUND_RESULTS);
+      return;
+    }
     const publicPlayers = this.players.map((p) => this.publicPlayer(p));
     this.podium = {
       placements: computePlacements(publicPlayers),
@@ -978,7 +1072,8 @@ export class Room {
   private onPhaseTimeout(): void {
     switch (this.phase) {
       case 'ROUND_INTRO':
-        if (this.seeded && this.roundIndex !== FINAL_ROUND) this.startCreating();
+        if (this.settings.mode === 'context' || (this.seeded && this.roundIndex !== FINAL_ROUND))
+          this.startCreating();
         else this.startWriting();
         return;
       case 'CREATING':
@@ -1001,7 +1096,7 @@ export class Room {
         this.finishFinal();
         return;
       case 'FINAL_REVEAL':
-        this.enterPodium();
+        this.afterWallReveal();
         return;
       default:
         return;
@@ -1242,12 +1337,13 @@ export class Room {
       return prompts;
     }
     if (this.phase === 'FINAL_WRITING' && this.final?.playerIds.includes(playerId)) {
+      const prompt = this.wallPrompt(this.final, playerId);
       return [
         {
           kind: 'answer',
-          promptId: this.final.prompt.id,
-          text: this.final.prompt.text,
-          seed: publicSeed(this.final.prompt, false),
+          promptId: prompt.id,
+          text: prompt.text,
+          seed: publicSeed(prompt, false),
           effectiveLimit: this.final.limit,
           matchupIndex: null,
           submittedText: this.final.answers.get(playerId)?.text ?? null,
@@ -1265,7 +1361,7 @@ export class Room {
           seed: null,
           effectiveLimit: task.kind === 'confess' ? LIMITS.CONFESSION_WORDS : null,
           matchupIndex: null,
-          submittedText: seed ? (seed.kind === 'confession' ? seed.content : '') : null,
+          submittedText: seed ? (seed.kind === 'quote' ? seed.content : '') : null,
         },
       ];
     }
@@ -1351,6 +1447,7 @@ export class Room {
       wordCount: m.revealed ? (answer?.wordCount ?? null) : null,
       autoSubmitted: votingOpen ? (answer?.autoSubmitted ?? false) : false,
       effectiveLimit: m.revealed ? (answer?.effectiveLimit ?? null) : null,
+      seed: null,
     });
     return {
       promptId: votingOpen ? m.prompt.id : '',
@@ -1369,19 +1466,22 @@ export class Room {
     if (!final) return null;
     const revealed = this.phase === 'FINAL_REVEAL' || this.phase === 'PODIUM';
     const votingOpen = this.phase === 'FINAL_VOTING' || revealed;
-    // Final votes are cast by player id, so authorship is public once the wall opens.
+    // Ranked final votes are cast by player id, so authorship is public once the wall opens.
+    // Out of Context votes by post id and keeps the twister hidden until the reveal.
     const answers: PublicAnswer[] = votingOpen
       ? this.shuffledStable([...final.answers.values()]).map((answer) => ({
-          playerId: answer.playerId,
+          playerId: final.posts && !revealed ? null : answer.playerId,
           text: answer.text,
           wordCount: revealed ? answer.wordCount : null,
           autoSubmitted: answer.autoSubmitted,
           effectiveLimit: revealed ? answer.effectiveLimit : null,
+          seed: final.posts ? publicSeed(this.wallPrompt(final, answer.playerId), revealed) : null,
         }))
       : [];
     return {
       prompt: { id: final.prompt.id, text: final.prompt.text },
-      seed: publicSeed(final.prompt, revealed),
+      seed: final.posts ? null : publicSeed(final.prompt, revealed),
+      voting: final.posts ? 'single' : 'rank',
       limit: final.limit,
       answers,
       votes: revealed ? { ...final.votes } : null,
@@ -1452,19 +1552,23 @@ function isGameMode(value: unknown): value is GameMode {
   return GAME_MODES.includes(value as GameMode);
 }
 
-/** Artists stay anonymous until the reveal; an Out of Context subject is the point of the prompt. */
+/** Artists and twisters stay anonymous until the reveal; a post's victim is the point of it. */
 function publicSeed(prompt: DealtPrompt, revealed: boolean): PublicSeed | null {
-  const seed = prompt.seed;
-  if (!seed) return null;
-  if (seed.kind === 'drawing') {
+  const { post, seed } = prompt;
+  if (post) {
+    return {
+      kind: 'post',
+      postId: post.id,
+      victimId: post.victimId,
+      quote: post.quote,
+      site: post.site,
+      twisterId: revealed ? post.twisterId : null,
+    };
+  }
+  if (seed?.kind === 'drawing') {
     return { kind: 'drawing', drawingId: prompt.id, artistId: revealed ? seed.authorId : null };
   }
-  return {
-    kind: 'confession',
-    subjectId: seed.authorId,
-    question: seed.question,
-    answer: seed.content,
-  };
+  return null;
 }
 
 /** Longer answers get more time on screen: 6 s base, +1 s per 40 chars past 80, max 10 s. */

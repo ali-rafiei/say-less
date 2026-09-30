@@ -46,15 +46,15 @@ const BOT_CONFESSIONS = [
   'I cry at car adverts',
 ];
 
-/** Out of Context: short new questions that still fit a 2-word roast. */
-const BOT_QUESTIONS = [
-  'Worst wedding vow?',
-  'Who hurt you?',
-  'Your tax strategy?',
-  "Grandma's last words?",
-  'Secret to happiness?',
-  'Dating profile headline?',
-  'Why, though?',
+/** Out of Context: short contexts that make any quote look bad, and fit a 2-word limit. */
+const BOT_TWISTS = [
+  "Grandma's funeral",
+  'Divorce hearing',
+  'Airport security',
+  'Job interview',
+  'Baby shower',
+  'Local man arrested',
+  'Hospital gown',
 ];
 
 /** [min, max] think time before each kind of move, in ms */
@@ -126,8 +126,8 @@ export class BotCrew {
         );
       } else {
         const text =
-          prompt.seed?.kind === 'confession'
-            ? this.question(prompt.effectiveLimit)
+          prompt.seed?.kind === 'post'
+            ? this.twist(prompt.effectiveLimit)
             : this.answer(prompt.effectiveLimit);
         this.plan(key, DELAYS.answer, () => this.room.submitAnswer(botId, prompt.promptId, text));
       }
@@ -149,6 +149,14 @@ export class BotCrew {
       this.plan(`${game}:vote:${index}`, DELAYS.vote, () =>
         this.room.castVote(botId, index, this.random() < 0.5 ? 0 : 1),
       );
+    } else if (state.phase === 'FINAL_VOTING' && state.final?.voting === 'single') {
+      const mine = new Set(this.prompts.get(botId)?.map((p) => p.promptId));
+      const posts = state.final.answers
+        .map((a) => (a.seed?.kind === 'post' ? a.seed.postId : null))
+        .filter((id): id is string => id !== null && !mine.has(id));
+      if (posts.length === 0 || state.votedIds.includes(botId)) return;
+      const pick = this.pick(posts);
+      this.plan(`${game}:final`, DELAYS.finalVote, () => this.room.castFinalVotes(botId, pick, ''));
     } else if (state.phase === 'FINAL_VOTING' && state.final) {
       const others = state.final.answers.filter((a) => a.playerId !== null && a.playerId !== botId);
       if (others.length < 2 || state.votedIds.includes(botId)) return;
@@ -178,9 +186,9 @@ export class BotCrew {
     this.timers.add(timer);
   }
 
-  private question(limit: number | null): string {
-    const question = words(this.pick(BOT_QUESTIONS));
-    return question.slice(0, limit ?? question.length).join(' ');
+  private twist(limit: number | null): string {
+    const twist = words(this.pick(BOT_TWISTS));
+    return twist.slice(0, limit ?? twist.length).join(' ');
   }
 
   private answer(limit: number | null): string {

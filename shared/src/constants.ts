@@ -30,11 +30,10 @@ export const TIMERS = {
   CONFESSING: 45_000,
   /** "The votes are in…" before the first final answer is revealed */
   FINAL_REVEAL_LEAD: 2_000,
-  /** answers outside the final top three go by quickly */
-  FINAL_REVEAL_FAST: 2_000,
-  FINAL_REVEAL_SLOW: 4_500,
-  /** time on the winning answer before the podium */
-  FINAL_REVEAL_HOLD: 4_000,
+  /** every answer gets the same time in the spotlight */
+  FINAL_REVEAL_STEP: 3_500,
+  /** extra time on the winning answer before moving on */
+  FINAL_REVEAL_HOLD: 2_500,
 } as const;
 
 export const LIMITS = {
@@ -67,6 +66,11 @@ export const POINTS = {
   GREAT_MINDS: 100,
   FINAL_FIRST: 200,
   FINAL_SECOND: 100,
+  /** Out of Context, after Survive the Internet */
+  POST_VOTE: 100,
+  PITY_PER_VOTE: 20,
+  BEST_BURN: 150,
+  BEST_BURN_PITY: 30,
 } as const;
 
 export const AUTO_SUBMIT_TEXT = '…';
@@ -83,18 +87,16 @@ export const ROOM_CREATION_WINDOW_MS = 10 * 60_000;
 export const MAX_ROOMS = 300;
 export const RATE_LIMIT_MS = 250;
 
-/**
- * When each final answer is revealed, in ms after FINAL_REVEAL starts, lowest score first.
- * The top three get the slow reveal; the rest go quickly.
- */
+/** When each final answer is revealed, in ms after FINAL_REVEAL starts, lowest score first. */
 export function finalRevealSchedule(count: number): { starts: number[]; totalMs: number } {
-  const starts: number[] = [];
-  let at: number = TIMERS.FINAL_REVEAL_LEAD;
-  for (let i = 0; i < count; i++) {
-    starts.push(at);
-    at += count - i <= 3 ? TIMERS.FINAL_REVEAL_SLOW : TIMERS.FINAL_REVEAL_FAST;
-  }
-  return { starts, totalMs: at + TIMERS.FINAL_REVEAL_HOLD };
+  const starts = Array.from(
+    { length: count },
+    (_, i) => TIMERS.FINAL_REVEAL_LEAD + i * TIMERS.FINAL_REVEAL_STEP,
+  );
+  return {
+    starts,
+    totalMs: TIMERS.FINAL_REVEAL_LEAD + count * TIMERS.FINAL_REVEAL_STEP + TIMERS.FINAL_REVEAL_HOLD,
+  };
 }
 
 export function roundSpec(index: RoundIndex): RoundSpec {

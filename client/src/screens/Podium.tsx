@@ -68,7 +68,9 @@ export function Podium({ ctl, room, me }: Props) {
 
       {final && final.result && (
         <section className="card stack">
-          <h2 className="display">Final round: {final.prompt.text}</h2>
+          <h2 className="display">
+            {final.voting === 'single' ? 'Final round posts' : `Final round: ${final.prompt.text}`}
+          </h2>
           <div className="stack">
             {[...final.answers]
               .sort(
@@ -89,7 +91,10 @@ export function Podium({ ctl, room, me }: Props) {
                         className="fanswer__text"
                       />
                       <span className="dim small">
-                        {player?.name} · {tally?.first ?? 0}× 1st, {tally?.second ?? 0}× 2nd
+                        {player?.name} ·{' '}
+                        {final.voting === 'single'
+                          ? `${tally?.first ?? 0} ${tally?.first === 1 ? 'vote' : 'votes'}`
+                          : `${tally?.first ?? 0}× 1st, ${tally?.second ?? 0}× 2nd`}
                       </span>
                     </div>
                     <span className="display fanswer__pts">+{tally?.points ?? 0}</span>

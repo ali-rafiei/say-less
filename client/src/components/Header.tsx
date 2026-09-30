@@ -8,9 +8,11 @@ interface Props {
   clockOffset: number;
   limit?: number | null;
   limitLabel?: string;
+  /** false on screens with no decision to make against the clock */
+  showTimer?: boolean;
 }
 
-export function Header({ room, clockOffset, limit, limitLabel }: Props) {
+export function Header({ room, clockOffset, limit, limitLabel, showTimer = true }: Props) {
   const inRound = room.phase !== 'LOBBY' && room.phase !== 'PODIUM';
   const round = ROUNDS[room.roundIndex];
   return (
@@ -27,12 +29,14 @@ export function Header({ room, clockOffset, limit, limitLabel }: Props) {
         {limit != null && <LimitChips limit={limit} label={limitLabel ?? `${limit}`} />}
       </div>
       <div className="header__right">
-        <TimerRing
-          endsAt={room.phaseEndsAt}
-          startedAt={room.phaseStartedAt}
-          clockOffset={clockOffset}
-          size={48}
-        />
+        {showTimer && (
+          <TimerRing
+            endsAt={room.phaseEndsAt}
+            startedAt={room.phaseStartedAt}
+            clockOffset={clockOffset}
+            size={48}
+          />
+        )}
         <SoundControls />
       </div>
     </header>

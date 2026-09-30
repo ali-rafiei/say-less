@@ -1,5 +1,6 @@
-import type { PublicRoomState, PublicSeed } from '@say-less/shared';
+import { SITES, type PublicRoomState, type PublicSeed } from '@say-less/shared';
 import { AnswerText } from './AnswerText.tsx';
+import { Character } from './Character.tsx';
 import { DrawingView } from './DrawingView.tsx';
 
 interface Props {
@@ -25,19 +26,44 @@ export function SeedView({ seed, room, drawings, me }: Props) {
       </figure>
     );
   }
-  const subject = room.players.find((p) => p.id === seed.subjectId);
+  return <PostView seed={seed} room={room} me={me} twist={null} />;
+}
+
+interface PostProps {
+  seed: Extract<PublicSeed, { kind: 'post' }>;
+  room: PublicRoomState;
+  me: string;
+  /** the twister's context; null while it is still being written */
+  twist: string | null;
+}
+
+/** Out of Context: the victim's quote dressed up as a post on a fake site, under the twist. */
+export function PostView({ seed, room, me, twist }: PostProps) {
+  const site = SITES[seed.site];
+  const victim = room.players.find((p) => p.id === seed.victimId);
   return (
-    <div className="seed seed--confession">
-      <span className="seed__who display">{subject?.name ?? 'Someone'} was asked</span>
-      {/* The real question is crossed out: the game is writing a better one. */}
-      <s className="seed__question">{seed.question}</s>
-      <span className="seed__who display">and answered</span>
-      <AnswerText
-        text={seed.answer}
-        compact
-        filter={room.settings.profanityFilter && seed.subjectId !== me}
-        className="seed__answer"
-      />
-    </div>
+    <article className={`post post--${site.id}`}>
+      <span className="post__site display">{site.name}</span>
+      <h3 className={`post__twist display ${twist === null ? 'post__twist--blank' : ''}`}>
+        {twist === null ? (
+          '???'
+        ) : (
+          <AnswerText text={twist} compact filter={room.settings.profanityFilter} />
+        )}
+      </h3>
+      <div className="post__quote">
+        <span className="post__label dim small">{site.quoteLabel}</span>
+        <span className="post__who">
+          <Character characterId={victim?.characterId ?? null} size={28} />
+          <b>{victim?.name ?? 'Someone'}</b>
+        </span>
+        <AnswerText
+          text={seed.quote}
+          compact
+          filter={room.settings.profanityFilter && seed.victimId !== me}
+          className="post__text"
+        />
+      </div>
+    </article>
   );
 }

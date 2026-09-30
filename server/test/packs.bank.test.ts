@@ -42,7 +42,8 @@ const MIN_DOODLES = 90;
 const MAX_DOODLE_CHARS = 49;
 const DOODLE_ID = /^d\d{3}$/;
 const TRAILING_PUNCTUATION = /[.,;:!?…"'\s]$/;
-const MIN_BURNS = 90;
+const MIN_BURNS = 110;
+const MAX_BURNS_PER_OPENING = 12;
 const MAX_BURN_CHARS = 69;
 const BURN_ID = /^b\d{3}$/;
 
@@ -383,6 +384,19 @@ describe('Out of Context questions', () => {
     // Then none is a repeat or breaks the content rules
     expect(duplicates(texts.map(normalizeForComparison))).toEqual([]);
     expect(offending).toEqual([]);
+  });
+
+  it(`never lets more than ${MAX_BURNS_PER_OPENING} questions share their first two words`, () => {
+    // Given the first two words of every question
+    const openings = burns.map((b) => b.text.toLowerCase().split(/\s+/).slice(0, 2).join(' '));
+
+    // When counting how often each opening appears
+    const counts = new Map<string, number>();
+    for (const opening of openings) counts.set(opening, (counts.get(opening) ?? 0) + 1);
+
+    // Then no opening dominates the bank
+    const overused = [...counts].filter(([, count]) => count > MAX_BURNS_PER_OPENING);
+    expect(overused).toEqual([]);
   });
 });
 
