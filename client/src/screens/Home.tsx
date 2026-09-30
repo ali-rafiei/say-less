@@ -198,6 +198,13 @@ export function HowToPlay({ onClose }: { onClose: () => void }) {
               two. Highest total takes the podium.
             </span>
           </li>
+          <li className="howto__step">
+            <UIArt name="howto-answer" className="howto__art" />
+            <span>
+              <b>Other modes.</b> <b>Doodle</b>: draw a secret idea, then caption each other's art.{' '}
+              <b>Burn Book</b>: answer a question about yourself, then make someone else look bad.
+            </span>
+          </li>
         </ol>
         <button className="btn btn--block" type="button" onClick={onClose}>
           Got it

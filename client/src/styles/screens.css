@@ -279,29 +279,68 @@
   opacity: 0.7;
   cursor: default;
 }
-.seg {
+/* ---------- lobby: game mode and prompt packs ---------- */
+.modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.mode {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 72px;
+  padding: 10px 12px;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  text-align: left;
+}
+.mode--on {
+  background: var(--accent);
+  box-shadow: 0 4px 0 var(--ink);
+}
+.mode:disabled {
+  cursor: default;
+}
+.mode__name {
+  font-size: 18px;
+}
+.mode__blurb {
+  font-size: 13px;
+  line-height: 1.25;
+}
+.packs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pack {
   display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
   border: 3px solid var(--ink);
   border-radius: 999px;
-  overflow: hidden;
   background: var(--paper);
-}
-.seg__btn {
-  min-height: 44px;
-  padding: 0 12px;
-  border: none;
-  background: transparent;
   color: var(--ink);
   font-weight: 700;
 }
-.seg__btn + .seg__btn {
-  border-left: 3px solid var(--ink);
-}
-.seg__btn--on {
+.pack--on {
   background: var(--accent);
 }
-.seg__btn:disabled {
+.pack:disabled {
   cursor: default;
+}
+.pack__tag {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 11px;
 }
 
 /* ---------- character select ---------- */
@@ -1039,6 +1078,58 @@
     opacity: 0;
     transform: scale(0.7);
   }
+}
+
+/* ---------- Doodle and Burn Book ---------- */
+.seed {
+  margin: 0;
+}
+.seed--drawing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+/* Sized to leave the answers on screen: the drawing is context, the captions are the game. */
+.seed__art {
+  width: min(100%, 240px, 34dvh);
+  overflow: hidden;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 0 4px 0 var(--ink);
+}
+.voting .seed__art,
+.reveal .seed__art,
+.final .seed__art,
+.freveal .seed__art {
+  width: min(100%, 180px, 26dvh);
+}
+.seed--confession {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 3px dashed var(--ink);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.seed__who {
+  font-size: 15px;
+}
+.seed__question {
+  font-size: 15px;
+  opacity: 0.75;
+}
+.seed__answer {
+  font-size: 24px !important;
+}
+.create__draw {
+  gap: 8px;
+  margin-bottom: 72px;
+}
+.create__draw .prompt {
+  font-size: 20px;
 }
 
 .ticker {

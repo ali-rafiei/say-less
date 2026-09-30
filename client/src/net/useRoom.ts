@@ -30,6 +30,8 @@ export interface RoomController {
   prompts: YourPrompt[];
   /** Every prompt dealt to me this round (promptId -> my answer or null), kept through voting. */
   myPrompts: Record<string, string | null>;
+  /** Doodle drawings received so far, by drawing id (encoded strokes). */
+  drawings: Record<string, string>;
   /** My own roast token count (public state only updates it between rounds). */
   myRoastTokens: number;
   roastedBy: string | null;
@@ -55,6 +57,7 @@ export interface RoomController {
   removePrompt: (promptId: string) => void;
   spendRoast: (targetId: string) => void;
   submitAnswer: (promptId: string, text: string) => void;
+  submitDrawing: (promptId: string, drawing: string) => void;
   castVote: (matchupIndex: number, answerIndex: 0 | 1) => void;
   castFinalVotes: (first: string, second: string) => void;
   rematch: () => void;
@@ -68,6 +71,7 @@ export function useRoom(): RoomController {
   const [me, setMe] = useState<string | null>(null);
   const [prompts, setPrompts] = useState<YourPrompt[]>([]);
   const [myPrompts, setMyPrompts] = useState<Record<string, string | null>>({});
+  const [drawings, setDrawings] = useState<Record<string, string>>({});
   const [myRoastTokens, setMyRoastTokens] = useState(1);
   const [roastedBy, setRoastedBy] = useState<string | null>(null);
   const [error, setError] = useState<UiError | null>(null);
@@ -144,7 +148,11 @@ export function useRoom(): RoomController {
           if (phaseRef.current !== state.phase) {
             phaseRef.current = state.phase;
             inflightRef.current.clear();
-            if (state.phase !== 'WRITING' && state.phase !== 'FINAL_WRITING') {
+            if (
+              state.phase !== 'CREATING' &&
+              state.phase !== 'WRITING' &&
+              state.phase !== 'FINAL_WRITING'
+            ) {
               setPrompts([]);
               setRoastedBy(null);
             }
@@ -166,6 +174,11 @@ export function useRoom(): RoomController {
             return next;
           });
           return;
+        case 'drawings': {
+          const { items } = message.payload;
+          setDrawings((current) => ({ ...current, ...items }));
+          return;
+        }
         case 'roasted':
           setRoastedBy(message.payload.byName);
           sfx.roast();
@@ -180,6 +193,7 @@ export function useRoom(): RoomController {
           setMe(null);
           setPrompts([]);
           setMyPrompts({});
+          setDrawings({});
           return;
         case 'error': {
           const { code, message: text } = message.payload;
@@ -240,6 +254,7 @@ export function useRoom(): RoomController {
       | 'me'
       | 'prompts'
       | 'myPrompts'
+      | 'drawings'
       | 'myRoastTokens'
       | 'roastedBy'
       | 'error'
@@ -294,6 +309,8 @@ export function useRoom(): RoomController {
       spendRoast: (targetId) => send({ type: 'spend_roast', payload: { targetId } }),
       submitAnswer: (promptId, text) =>
         send({ type: 'submit_answer', payload: { promptId, text } }),
+      submitDrawing: (promptId, drawing) =>
+        send({ type: 'submit_drawing', payload: { promptId, drawing } }),
       castVote: (matchupIndex, answerIndex) =>
         sendOnce('cast_vote', { type: 'cast_vote', payload: { matchupIndex, answerIndex } }),
       castFinalVotes: (first, second) =>
@@ -310,6 +327,7 @@ export function useRoom(): RoomController {
     me,
     prompts,
     myPrompts,
+    drawings,
     myRoastTokens,
     roastedBy,
     error,

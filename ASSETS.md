@@ -1007,7 +1007,37 @@ and the Rabbit, standing together as a compact group, one of them dropping a bla
 microphone beside a raised paw or wing. Spell the text exactly as given. No other text.
 ```
 
-### 3.7 Phase backgrounds, and optional confetti
+### 3.7 Game-mode sheet (wanted; the lobby uses text cards until it exists)
+
+Save as `art/raw/sheets/modes.png` (2 columns x 2 rows; order: `mode-classic`,
+`mode-custom`, `mode-doodle`, `mode-burn`). One small illustration per game-mode card in
+the lobby and per mode line in "How to play". Attach the Reel Town character sheet again.
+
+```
+Sheet: game-mode illustrations, for the game Say Less. Use the attached Reel Town cast.
+
+Background: a perfectly flat, uniform, pure magenta #FF00FF background filling the whole
+canvas edge to edge. No magenta, hot pink or fuchsia anywhere in the illustrations.
+
+Style: exactly the attached Reel Town style: soft low-poly characters painted flat, gentle
+faceted shading lit from the upper left, matte, simple big graphic eyes, warm muted
+colours, no outlines, no ground shadows. Props use the game palette: navy #1A1A2E, cream
+#FFFAF0, yellow #FFD23F, orange #FF6B35, lime #C6FF3D, teal #0B7A75.
+
+Layout: square 2048x2048 canvas, 2 columns x 2 rows, one illustration per cell, each a
+compact vignette filling about 70% of its cell, nothing crossing into a neighbouring cell,
+no scenery, no frames.
+1. classic: the Monkey reading a cream prompt card, a row of yellow word tiles above it.
+2. custom: the Bear writing on a stack of blank cream cards with a yellow pencil.
+3. doodle: the Rabbit drawing a wobbly smiley face with its finger on a big cream phone
+   screen, a few coloured scribbles around it.
+4. burn book: the Penguin holding a small navy notebook with an orange flame on its cover,
+   smirking, while the Duck behind it looks embarrassed.
+
+No text anywhere.
+```
+
+### 3.8 Phase backgrounds, and optional confetti
 
 **Phase backgrounds** are done: six abstract paintings, one per palette (`home`, `lobby`,
 `writing`, `voting`, `results`, `podium`), portrait 1024 x 1536 and full-bleed, so no

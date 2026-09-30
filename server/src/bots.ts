@@ -1,6 +1,10 @@
 import {
   CHARACTER_IDS,
+  DRAW_COLORS,
+  DRAW_WIDTHS,
+  encodeDrawing,
   words,
+  type Drawing,
   type PublicRoomState,
   type ServerMessage,
   type YourPrompt,
@@ -33,9 +37,19 @@ const BOT_ANSWERS = [
   'free trial, never cancelled',
 ];
 
+const BOT_CONFESSIONS = [
+  'pineapple on everything',
+  'I talk to my plants',
+  'three alarms, minimum',
+  'I still sleep with a teddy',
+  'reality TV, all of it',
+  'I cry at car adverts',
+];
+
 /** [min, max] think time before each kind of move, in ms */
 const DELAYS = {
   answer: [3_000, 12_000],
+  create: [4_000, 15_000],
   roast: [1_000, 6_000],
   vote: [1_500, 5_000],
   finalVote: [3_000, 8_000],
@@ -90,9 +104,20 @@ export class BotCrew {
     this.prompts.set(botId, prompts);
     for (const prompt of prompts) {
       if (prompt.submittedText !== null) continue;
-      this.plan(`${botId}:${this.round}:answer:${prompt.promptId}`, DELAYS.answer, () =>
-        this.room.submitAnswer(botId, prompt.promptId, this.answer(prompt.effectiveLimit)),
-      );
+      const key = `${botId}:${this.round}:${prompt.kind}:${prompt.promptId}`;
+      if (prompt.kind === 'draw') {
+        this.plan(key, DELAYS.create, () =>
+          this.room.submitDrawing(botId, prompt.promptId, encodeDrawing(this.scribble())),
+        );
+      } else if (prompt.kind === 'confess') {
+        this.plan(key, DELAYS.create, () =>
+          this.room.submitAnswer(botId, prompt.promptId, this.pick(BOT_CONFESSIONS)),
+        );
+      } else {
+        this.plan(key, DELAYS.answer, () =>
+          this.room.submitAnswer(botId, prompt.promptId, this.answer(prompt.effectiveLimit)),
+        );
+      }
     }
   }
 
@@ -143,6 +168,26 @@ export class BotCrew {
   private answer(limit: number | null): string {
     const phrase = words(this.pick(BOT_ANSWERS));
     return phrase.slice(0, limit ?? phrase.length).join(' ');
+  }
+
+  /** A few wandering lines in random ink: enough to caption. */
+  private scribble(): Drawing {
+    const strokes = Array.from({ length: 3 + Math.floor(this.random() * 4) }, () => {
+      let x = 40 + Math.floor(this.random() * 176);
+      let y = 40 + Math.floor(this.random() * 176);
+      const points: number[] = [];
+      for (let i = 0; i < 12; i++) {
+        points.push(x, y);
+        x = Math.min(255, Math.max(0, x + Math.floor(this.random() * 41) - 20));
+        y = Math.min(255, Math.max(0, y + Math.floor(this.random() * 41) - 20));
+      }
+      return {
+        color: Math.floor(this.random() * (DRAW_COLORS.length - 1)),
+        width: Math.floor(this.random() * DRAW_WIDTHS.length),
+        points,
+      };
+    });
+    return { strokes };
   }
 
   private pick<T>(items: readonly T[]): T {

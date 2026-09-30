@@ -994,6 +994,7 @@ export const SONGS = {
 const BY_PHASE: Record<RoomPhase, Song | null> = {
   LOBBY: SONGS.lobby,
   ROUND_INTRO: SONGS.roundIntro,
+  CREATING: SONGS.writing,
   WRITING: SONGS.writing,
   FINAL_WRITING: SONGS.writing,
   VOTING: SONGS.voting,

@@ -18,6 +18,12 @@ export function RoundIntro({ room }: { ctl: RoomController; room: PublicRoomStat
       <p className="intro__limit display">
         {limited ? `${round.limit} ${round.limit === 1 ? 'word' : 'words'}` : 'No word limit'}
       </p>
+      {room.roundIndex < ROUNDS.length - 1 && room.settings.mode === 'doodle' && (
+        <p className="display">First, draw. Then caption someone else's art.</p>
+      )}
+      {room.roundIndex < ROUNDS.length - 1 && room.settings.mode === 'burn' && (
+        <p className="display">First, the truth about you. Then burn someone else.</p>
+      )}
       <p className="dim">
         ×{round.multiplier} points
         {room.roundIndex === 1 && room.settings.roasts ? ' · roast tokens unlocked' : ''}

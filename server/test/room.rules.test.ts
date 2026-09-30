@@ -678,7 +678,7 @@ describe('custom prompts', () => {
 
   it('deals custom prompts first in custom mode, fills from the bank, and avoids the author', () => {
     const h = makeRoom(['a', 'b', 'c', 'd']);
-    h.room.updateSettings('a', { promptMode: 'custom' });
+    h.room.updateSettings('a', { mode: 'custom' });
     h.room.addPrompt('a', 'Prompt written by A');
     h.room.addPrompt('b', 'Prompt written by B');
     startToWriting(h);
@@ -699,7 +699,7 @@ describe('custom prompts', () => {
     // rotation-only search this replaced could miss it. Try many shuffles.
     for (let seed = 1; seed <= 40; seed++) {
       const h = makeRoom(['a', 'b', 'c', 'd'], seed);
-      h.room.updateSettings('a', { promptMode: 'custom' });
+      h.room.updateSettings('a', { mode: 'custom' });
       h.room.addPrompt('a', `A prompt ${seed}`);
       h.room.addPrompt('b', `B prompt ${seed}`);
       h.room.addPrompt('c', `C one ${seed}`);
@@ -716,7 +716,7 @@ describe('custom prompts', () => {
     // Three players and two prompts by the same author: the author is in two of the
     // three pairs, so only one pair is clean. Nobody is left without a prompt.
     const h = makeRoom(['a', 'b', 'c']);
-    h.room.updateSettings('a', { promptMode: 'custom' });
+    h.room.updateSettings('a', { mode: 'custom' });
     h.room.addPrompt('a', 'First by A');
     h.room.addPrompt('a', 'Second by A');
     startToWriting(h);
@@ -736,7 +736,7 @@ describe('custom prompts', () => {
     for (let seed = 1; seed <= 40; seed++) {
       // Arrange
       const h = makeRoom(['a', 'b', 'c', 'd'], seed);
-      h.room.updateSettings('a', { promptMode: 'custom' });
+      h.room.updateSettings('a', { mode: 'custom' });
       for (const text of ['A one', 'A two', 'A three', 'B one', 'C one']) {
         h.room.addPrompt(text[0]!.toLowerCase(), `${text} ${seed}`);
       }
@@ -762,14 +762,25 @@ describe('custom prompts', () => {
     );
   });
 
-  it('draws the final prompt from the bank so its author never answers it', () => {
-    // Arrange: plenty of custom prompts left over for the final
+  it('uses a leftover custom prompt for the final', () => {
+    // Given plenty of custom prompts left over for the final
     const h = makeRoom();
-    h.room.updateSettings('a', { promptMode: 'custom' });
+    h.room.updateSettings('a', { mode: 'custom' });
     for (let i = 0; i < 20; i++) h.room.addPrompt('abc'[i % 3]!, `Custom prompt ${i}`);
-    // Act
+    // When the game reaches the final
     toFinalWriting(h);
-    // Assert
+    // Then everyone answers one of the custom prompts
+    expect(h.room.yourPrompts('a')[0]!.promptId).toMatch(/^c/);
+  });
+
+  it('falls back to the bank for the final when every custom prompt was dealt', () => {
+    // Given too few custom prompts to last until the final
+    const h = makeRoom();
+    h.room.updateSettings('a', { mode: 'custom' });
+    h.room.addPrompt('a', 'The only custom prompt');
+    // When the game reaches the final
+    toFinalWriting(h);
+    // Then the final prompt comes from the bank
     expect(h.room.yourPrompts('a')[0]!.promptId).toMatch(/^p/);
   });
 

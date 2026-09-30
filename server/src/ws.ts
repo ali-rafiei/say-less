@@ -225,6 +225,9 @@ export class Gateway {
       case 'submit_answer':
         room.submitAnswer(playerId, str(message.payload.promptId), str(message.payload.text));
         return;
+      case 'submit_drawing':
+        room.submitDrawing(playerId, str(message.payload.promptId), str(message.payload.drawing));
+        return;
       case 'cast_vote': {
         const { matchupIndex, answerIndex } = message.payload;
         if (answerIndex !== 0 && answerIndex !== 1)
@@ -307,7 +310,8 @@ function str(value: unknown): string {
 }
 
 export function parseClientMessage(raw: string): ClientMessage {
-  if (raw.length > 4_096) throw new Error('Message too large');
+  // Drawings are the one large frame; everything else stays small.
+  if (raw.length > LIMITS.MAX_DRAWING_MESSAGE) throw new Error('Message too large');
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -319,6 +323,7 @@ export function parseClientMessage(raw: string): ClientMessage {
   if (typeof type !== 'string' || !CLIENT_MESSAGE_TYPES.includes(type as ClientMessage['type'])) {
     throw new Error('Unknown message type');
   }
+  if (type !== 'submit_drawing' && raw.length > 4_096) throw new Error('Message too large');
   if (payload !== undefined && (typeof payload !== 'object' || payload === null)) {
     throw new Error('payload must be an object');
   }

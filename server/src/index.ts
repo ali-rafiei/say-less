@@ -4,7 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { WebSocketServer } from 'ws';
-import { PromptDeck } from './prompts.ts';
+import { PromptDeck, loadSeedBanks } from './prompts.ts';
 import { RoomManager } from './roomManager.ts';
 import { SessionSigner } from './session.ts';
 import { Gateway } from './ws.ts';
@@ -20,11 +20,13 @@ function log(message: string, fields: Record<string, unknown> = {}): void {
   console.log(JSON.stringify({ ts: new Date().toISOString(), msg: message, ...fields }));
 }
 
-const deck = PromptDeck.fromFile(promptsPath);
+const deck = PromptDeck.fromContent(promptsPath);
+const seedBanks = loadSeedBanks(dirname(promptsPath));
 const signer = new SessionSigner();
 let gateway: Gateway;
 const rooms = new RoomManager({
   deck,
+  seedBanks,
   send: (playerId, message) => gateway.send(playerId, message),
   log,
 });
@@ -45,7 +47,7 @@ if (existsSync(clientDist)) {
 }
 
 const httpServer = createServer(app);
-const wss = new WebSocketServer({ server: httpServer, path: '/ws', maxPayload: 8_192 });
+const wss = new WebSocketServer({ server: httpServer, path: '/ws', maxPayload: 40_960 });
 gateway.attach(wss);
 
 httpServer.listen(port, host, () => {

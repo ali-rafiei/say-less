@@ -5,6 +5,7 @@ import { sfx } from '../audio/sfx.ts';
 import { Character } from '../components/Character.tsx';
 import { Header } from '../components/Header.tsx';
 import { PlayerChip } from '../components/PlayerChip.tsx';
+import { SeedView } from '../components/SeedView.tsx';
 import { TimerRing } from '../components/TimerRing.tsx';
 import { WordInput } from '../components/WordInput.tsx';
 import type { RoomController } from '../net/useRoom.ts';
@@ -153,6 +154,9 @@ export function Writing({ ctl, room, me }: Props) {
                 </>
               )}
             </span>
+            {current.seed && (
+              <SeedView seed={current.seed} room={room} drawings={ctl.drawings} me={me} />
+            )}
             <h2 className="prompt display">{current.text}</h2>
             <WordInput
               key={current.promptId}

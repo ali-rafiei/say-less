@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { sfx } from './audio/sfx.ts';
 import { Backdrop, type Palette } from './components/Backdrop.tsx';
 import { useRoom } from './net/useRoom.ts';
+import { Create } from './screens/Create.tsx';
 import { FinalReveal } from './screens/FinalReveal.tsx';
 import { FinalVoting } from './screens/FinalVoting.tsx';
 import { Home } from './screens/Home.tsx';
@@ -17,6 +18,7 @@ import { Writing } from './screens/Writing.tsx';
 const PALETTES: Record<RoomPhase, Palette> = {
   LOBBY: 'lobby',
   ROUND_INTRO: 'writing',
+  CREATING: 'writing',
   WRITING: 'writing',
   FINAL_WRITING: 'writing',
   VOTING: 'voting',
@@ -69,6 +71,9 @@ export function App() {
         break;
       case 'ROUND_INTRO':
         screen = <RoundIntro ctl={ctl} room={room} />;
+        break;
+      case 'CREATING':
+        screen = <Create ctl={ctl} room={room} me={me} />;
         break;
       case 'WRITING':
       case 'FINAL_WRITING':

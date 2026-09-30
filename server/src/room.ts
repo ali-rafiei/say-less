@@ -1,16 +1,22 @@
 import {
   AUTO_SUBMIT_TEXT,
   CHARACTER_IDS,
+  DEFAULT_PACKS,
+  DrawingError,
   DISCONNECT_GRACE_MS,
   FINAL_ROUND,
   LEFT_TEXT,
   LIMITS,
   LOBBY_HOLD_MS,
+  PACKS,
+  PLAYER_TOKEN,
   RECONNECT_HOLD_MS,
   TIMERS,
   computePlacements,
   computeSuperlatives,
+  decodeDrawing,
   finalRevealSchedule,
+  isBlankDrawing,
   normalizeWhitespace,
   roundSpec,
   scoreFinal,
@@ -18,6 +24,7 @@ import {
   validateAnswer,
   type CustomPrompt,
   type ErrorCode,
+  type GameMode,
   type MatchupResult,
   type PlayerStats,
   type Prompt,
@@ -25,6 +32,7 @@ import {
   type PublicMatchup,
   type PublicPlayer,
   type PublicRoomState,
+  type PublicSeed,
   type Roast,
   type RoomPhase,
   type RoomSettings,
@@ -32,7 +40,7 @@ import {
   type ServerMessage,
   type YourPrompt,
 } from './shared.ts';
-import type { PromptDeck } from './prompts.ts';
+import type { PromptDeck, SeedBanks } from './prompts.ts';
 
 export class RoomError extends Error {
   constructor(
@@ -73,8 +81,31 @@ interface Answer {
   effectiveLimit: number | null;
 }
 
+/** A Doodle drawing or a Burn Book confession that a round's prompt is built on. */
+interface Seed {
+  kind: 'drawing' | 'confession';
+  authorId: string;
+  /** the secret drawing suggestion, or the question the author answered */
+  question: string;
+  /** the encoded drawing, or the honest answer */
+  content: string;
+}
+
+interface DealtPrompt extends Prompt {
+  /** custom prompts and seeds are never dealt to their author in a matchup */
+  authorId?: string;
+  seed?: Seed;
+}
+
+/** A player's CREATING job for the round. */
+interface Task {
+  id: string;
+  kind: 'draw' | 'confess';
+  text: string;
+}
+
 interface Matchup {
-  prompt: Prompt;
+  prompt: DealtPrompt;
   playerIds: [string, string];
   answers: [Answer | null, Answer | null];
   votes: Record<string, 0 | 1>;
@@ -84,7 +115,7 @@ interface Matchup {
 }
 
 interface FinalRound {
-  prompt: Prompt;
+  prompt: DealtPrompt;
   playerIds: string[];
   limit: number | null;
   answers: Map<string, Answer>;
@@ -92,8 +123,19 @@ interface FinalRound {
   result: Record<string, { first: number; second: number; points: number }> | null;
 }
 
+const FALLBACK_SEEDS: SeedBanks = {
+  doodles: ['A cat with a secret', 'Your dream vacation', 'A very tired robot'],
+  burns: ['What did you have for breakfast?', 'What is your favorite snack?'],
+};
+
+const SEED_PROMPT_TEXT: Record<Seed['kind'], string> = {
+  drawing: 'Caption this masterpiece.',
+  confession: 'Make them look bad.',
+};
+
 export interface RoomDeps {
   deck: PromptDeck;
+  seedBanks?: SeedBanks;
   send: (playerId: string, message: ServerMessage) => void;
   random?: () => number;
   onEmpty?: (room: Room) => void;
@@ -127,7 +169,8 @@ export class Room {
   settings: RoomSettings = {
     profanityFilter: false,
     wordLimits: true,
-    promptMode: 'bank',
+    mode: 'classic',
+    packs: [...DEFAULT_PACKS],
     roasts: false,
   };
   gamesPlayed = 0;
@@ -144,6 +187,13 @@ export class Room {
   private promptsDealt = false;
   private promptsDealtAt = 0;
   private readonly usedPromptIds = new Set<string>();
+  private tasks = new Map<string, Task>();
+  private seeds = new Map<string, Seed>();
+  private seedSeq = 0;
+  /** this game's seeded prompts with their vote totals; the final replays the favourite */
+  private encore: { prompt: DealtPrompt; votes: number }[] = [];
+  private readonly drawings = new Map<string, string>();
+  private readonly sentDrawings = new Map<string, Set<string>>();
   private phaseTimer: ReturnType<typeof setTimeout> | null = null;
   private roastTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly random: () => number;
@@ -230,6 +280,8 @@ export class Room {
       player.graceTimer = null;
     }
     const wasConnected = player.connected;
+    // A fresh page has an empty drawing cache.
+    this.sentDrawings.delete(playerId);
     player.connected = true;
     player.slotExpired = false;
     player.graceEndsAt = 0;
@@ -350,8 +402,11 @@ export class Room {
       this.settings.profanityFilter = patch.profanityFilter;
     if (typeof patch.wordLimits === 'boolean') this.settings.wordLimits = patch.wordLimits;
     if (typeof patch.roasts === 'boolean') this.settings.roasts = patch.roasts;
-    if (patch.promptMode === 'bank' || patch.promptMode === 'custom') {
-      this.settings.promptMode = patch.promptMode;
+    if (isGameMode(patch.mode)) this.settings.mode = patch.mode;
+    if (Array.isArray(patch.packs)) {
+      const packs = PACKS.map((p) => p.id).filter((id) => (patch.packs as unknown[]).includes(id));
+      if (packs.length === 0) throw new RoomError('invalid', 'Pick at least one pack');
+      this.settings.packs = packs;
     }
     this.broadcast();
   }
@@ -409,6 +464,7 @@ export class Room {
     this.podium = null;
     this.final = null;
     this.matchups = [];
+    this.encore = [];
     // Characters are picked in the lobby; anyone who did not pick gets a random leftover.
     this.assignMissingCharacters();
     this.beginRound(0);
@@ -455,6 +511,20 @@ export class Room {
 
   submitAnswer(playerId: string, promptId: string, rawText: string): void {
     const player = this.requirePlayer(playerId);
+    if (this.phase === 'CREATING') {
+      const task = this.requireTask(playerId, promptId, 'confess');
+      const validation = validateAnswer(cleanText(rawText), LIMITS.CONFESSION_WORDS);
+      if (!validation.ok) {
+        throw new RoomError(
+          validation.error ?? 'invalid',
+          validation.error === 'over_limit'
+            ? `Keep it to ${LIMITS.CONFESSION_WORDS} words`
+            : 'Tell us something. Anything.',
+        );
+      }
+      this.addSeed(player, task, 'confession', validation.text);
+      return;
+    }
     if (this.phase === 'WRITING') {
       if (!this.promptsDealt) throw new RoomError('bad_phase', 'Prompts have not been dealt yet');
       const index = this.matchups.findIndex(
@@ -494,6 +564,21 @@ export class Room {
       return;
     }
     throw new RoomError('bad_phase', 'Nobody is writing right now');
+  }
+
+  submitDrawing(playerId: string, promptId: string, encoded: string): void {
+    this.requirePhase('CREATING');
+    const player = this.requirePlayer(playerId);
+    const task = this.requireTask(playerId, promptId, 'draw');
+    let blank: boolean;
+    try {
+      blank = isBlankDrawing(decodeDrawing(encoded));
+    } catch (error) {
+      if (!(error instanceof DrawingError)) throw error;
+      throw new RoomError('invalid', 'That drawing did not come through. Try again.');
+    }
+    if (blank) throw new RoomError('empty', 'Draw something first');
+    this.addSeed(player, task, 'drawing', encoded);
   }
 
   castVote(playerId: string, matchupIndex: number, answerIndex: 0 | 1): void {
@@ -541,6 +626,7 @@ export class Room {
     this.roundIndex = 0;
     this.currentMatchupIndex = 0;
     this.promptsDealt = false;
+    this.encore = [];
     this.customPrompts = this.customPrompts.filter((p) => !this.usedPromptIds.has(p.id));
     this.banner = null;
     this.enterPhase('LOBBY', null);
@@ -553,9 +639,10 @@ export class Room {
     this.currentMatchupIndex = 0;
     this.roastWindowEndsAt = null;
     this.promptsDealt = false;
+    this.tasks = new Map();
+    this.seeds = new Map();
     if (index === FINAL_ROUND) {
-      // Everyone answers the final, so a custom prompt would always reach its author.
-      const prompt = this.deps.deck.draw(FINAL_ROUND, 1, this.usedPromptIds)[0]!;
+      const prompt = this.withPlayerName(this.finalPrompt(), this.dealtPlayers());
       this.final = {
         prompt,
         playerIds: this.dealtPlayers().map((p) => p.id),
@@ -566,18 +653,121 @@ export class Room {
       };
       this.matchups = [];
     } else {
-      this.matchups = this.generateMatchups(index);
+      // Seeded modes deal once the round's drawings or confessions are in.
+      this.matchups = this.seeded ? [] : this.generateMatchups(index, this.unusedCustomPrompts());
     }
     this.enterPhase('ROUND_INTRO', TIMERS.ROUND_INTRO);
   }
 
+  private get seeded(): boolean {
+    return this.settings.mode === 'doodle' || this.settings.mode === 'burn';
+  }
+
+  /** Custom leftovers, then the replayed crowd favourite in seeded modes, then the packs. */
+  private finalPrompt(): DealtPrompt {
+    const custom = this.unusedCustomPrompts();
+    if (custom.length > 0) {
+      const pick = custom[Math.floor(this.random() * custom.length)]!;
+      this.usedPromptIds.add(pick.id);
+      return pick;
+    }
+    if (this.seeded && this.encore.length > 0) {
+      const most = Math.max(...this.encore.map((e) => e.votes));
+      const favourites = this.encore.filter((e) => e.votes === most);
+      return favourites[Math.floor(this.random() * favourites.length)]!.prompt;
+    }
+    return this.deps.deck.draw(FINAL_ROUND, 1, this.usedPromptIds, this.settings.packs)[0]!;
+  }
+
+  private unusedCustomPrompts(): DealtPrompt[] {
+    if (this.settings.mode !== 'custom') return [];
+    return this.customPrompts
+      .filter((p) => !this.usedPromptIds.has(p.id))
+      .map((p) => ({ id: p.id, text: p.text, rounds: [0, 1, 2], authorId: p.authorId }));
+  }
+
+  /** Doodle / Burn Book: everyone gets a secret suggestion or a question about themselves. */
+  private startCreating(): void {
+    const banks = this.deps.seedBanks ?? FALLBACK_SEEDS;
+    const kind = this.settings.mode === 'doodle' ? 'draw' : 'confess';
+    const pool = this.shuffled(kind === 'draw' ? banks.doodles : banks.burns);
+    this.dealtPlayers().forEach((player, i) => {
+      this.seedSeq += 1;
+      this.tasks.set(player.id, {
+        id: `t${this.seedSeq}`,
+        kind,
+        text: pool[i % pool.length]!,
+      });
+    });
+    this.enterPhase('CREATING', kind === 'draw' ? TIMERS.DRAWING : TIMERS.CONFESSING);
+    for (const player of this.players) {
+      if (player.connected) this.sendPrivateState(player.id);
+    }
+    if (this.allCreatingDone()) this.endCreating();
+  }
+
+  private addSeed(player: Player, task: Task, kind: Seed['kind'], content: string): void {
+    if (this.seeds.has(player.id))
+      throw new RoomError('already_submitted', 'You already sent that one');
+    this.seeds.set(player.id, { kind, authorId: player.id, question: task.text, content });
+    if (this.allCreatingDone()) this.endCreating();
+    else {
+      this.broadcast();
+      this.sendPrivateState(player.id);
+    }
+  }
+
+  /** Seeds become the round's prompts; a player who made nothing leaves a slot for the packs. */
+  private endCreating(): void {
+    const authored: DealtPrompt[] = [...this.seeds.values()].map((seed) => {
+      this.seedSeq += 1;
+      const id = `s${this.seedSeq}`;
+      if (seed.kind === 'drawing') this.drawings.set(id, seed.content);
+      const subject = this.requirePlayer(seed.authorId).name;
+      const text =
+        seed.kind === 'drawing'
+          ? SEED_PROMPT_TEXT.drawing
+          : SEED_PROMPT_TEXT.confession.replace('them', subject);
+      return { id, text, rounds: [this.roundIndex], authorId: seed.authorId, seed };
+    });
+    this.matchups = this.generateMatchups(this.roundIndex, authored);
+    this.startWriting();
+  }
+
+  private allCreatingDone(): boolean {
+    return [...this.tasks.keys()].every(
+      (id) => this.seeds.has(id) || !this.isPlaying(this.requirePlayer(id)),
+    );
+  }
+
+  private requireTask(playerId: string, promptId: string, kind: Task['kind']): Task {
+    const task = this.tasks.get(playerId);
+    if (!task || task.id !== promptId || task.kind !== kind)
+      throw new RoomError('invalid', 'That is not your task');
+    return task;
+  }
+
+  /** Fills {player} with someone in the room, preferring anyone not answering it. */
+  private withPlayerName(prompt: DealtPrompt, candidates: Player[]): DealtPrompt {
+    if (!prompt.text.includes(PLAYER_TOKEN)) return prompt;
+    const pool = candidates.length > 0 ? candidates : this.players;
+    const named = pool[Math.floor(this.random() * pool.length)];
+    return { ...prompt, text: prompt.text.split(PLAYER_TOKEN).join(named?.name ?? 'someone') };
+  }
+
   /** Ring pairing: player i vs player i+1 (mod N); N matchups. */
-  private generateMatchups(round: RoundIndex): Matchup[] {
-    const order = this.shuffled(this.dealtPlayers().map((p) => p.id));
+  private generateMatchups(round: RoundIndex, authored: DealtPrompt[]): Matchup[] {
+    const dealt = this.dealtPlayers();
+    const order = this.shuffled(dealt.map((p) => p.id));
     const pairs = order.map(
       (playerId, i) => [playerId, order[(i + 1) % order.length]!] as [string, string],
     );
-    const prompts = this.promptsForPairs(round, pairs);
+    const prompts = this.promptsForPairs(round, pairs, authored).map((prompt, i) =>
+      this.withPlayerName(
+        prompt,
+        dealt.filter((p) => !pairs[i]!.includes(p.id)),
+      ),
+    );
     // Public slot order and matchup order must not follow the ring, or a revealed
     // matchup would name a neighbour in the next one.
     const matchups: Matchup[] = order.map((_, i) => {
@@ -596,16 +786,17 @@ export class Room {
     return this.shuffled(matchups);
   }
 
-  /** Custom prompts matched away from their authors first, leftovers next, then the bank. */
-  private promptsForPairs(round: RoundIndex, pairs: [string, string][]): Prompt[] {
-    const fresh =
-      this.settings.promptMode === 'custom'
-        ? this.shuffled(this.customPrompts.filter((p) => !this.usedPromptIds.has(p.id)))
-        : [];
+  /** Authored prompts matched away from their authors first, leftovers next, then the packs. */
+  private promptsForPairs(
+    round: RoundIndex,
+    pairs: [string, string][],
+    authored: DealtPrompt[],
+  ): DealtPrompt[] {
+    const fresh = this.shuffled(authored);
     const holder: (number | undefined)[] = pairs.map(() => undefined);
     const augment = (index: number, seen: Set<number>): boolean => {
       for (let slot = 0; slot < pairs.length; slot++) {
-        if (seen.has(slot) || pairs[slot]!.includes(fresh[index]!.authorId)) continue;
+        if (seen.has(slot) || pairs[slot]!.includes(fresh[index]!.authorId ?? '')) continue;
         seen.add(slot);
         const current = holder[slot];
         if (current === undefined || augment(current, seen)) {
@@ -621,10 +812,13 @@ export class Room {
     const leftovers = fresh.filter((_, index) => !holder.includes(index));
     const custom = holder.map((index) => (index === undefined ? leftovers.shift() : fresh[index]));
     for (const prompt of custom) if (prompt) this.usedPromptIds.add(prompt.id);
-    const bank = this.deps.deck.draw(round, custom.filter((p) => !p).length, this.usedPromptIds);
-    return custom.map((prompt) =>
-      prompt ? { id: prompt.id, text: prompt.text, rounds: [0, 1, 2] } : bank.shift()!,
+    const bank = this.deps.deck.draw(
+      round,
+      custom.filter((p) => !p).length,
+      this.usedPromptIds,
+      this.settings.packs,
     );
+    return custom.map((prompt) => prompt ?? bank.shift()!);
   }
 
   private startWriting(): void {
@@ -738,6 +932,10 @@ export class Room {
       this.currentMatchupIndex += 1;
       this.startVoting();
     } else {
+      for (const m of this.matchups) {
+        if (m.prompt.seed)
+          this.encore.push({ prompt: m.prompt, votes: Object.keys(m.votes).length });
+      }
       this.publishStats();
       this.enterPhase('ROUND_RESULTS', TIMERS.ROUND_RESULTS);
     }
@@ -780,7 +978,11 @@ export class Room {
   private onPhaseTimeout(): void {
     switch (this.phase) {
       case 'ROUND_INTRO':
-        this.startWriting();
+        if (this.seeded && this.roundIndex !== FINAL_ROUND) this.startCreating();
+        else this.startWriting();
+        return;
+      case 'CREATING':
+        this.endCreating();
         return;
       case 'WRITING':
       case 'FINAL_WRITING':
@@ -829,7 +1031,9 @@ export class Room {
 
   /** A disconnect can be the last thing a phase was waiting on. */
   private afterPresenceChange(): void {
-    if ((this.phase === 'WRITING' && this.promptsDealt) || this.phase === 'FINAL_WRITING') {
+    if (this.phase === 'CREATING') {
+      if (this.allCreatingDone()) this.endCreating();
+    } else if ((this.phase === 'WRITING' && this.promptsDealt) || this.phase === 'FINAL_WRITING') {
       if (this.allWritingDone()) this.endWriting();
     } else if (this.phase === 'VOTING') {
       if (this.allVotesIn()) this.revealMatchup();
@@ -1026,8 +1230,10 @@ export class Room {
         const slot = m.playerIds.indexOf(playerId);
         if (slot === -1) return;
         prompts.push({
+          kind: 'answer',
           promptId: m.prompt.id,
           text: m.prompt.text,
+          seed: publicSeed(m.prompt, false),
           effectiveLimit: this.answerLimit(m, playerId),
           matchupIndex,
           submittedText: m.answers[slot as 0 | 1]?.text ?? null,
@@ -1038,21 +1244,79 @@ export class Room {
     if (this.phase === 'FINAL_WRITING' && this.final?.playerIds.includes(playerId)) {
       return [
         {
+          kind: 'answer',
           promptId: this.final.prompt.id,
           text: this.final.prompt.text,
+          seed: publicSeed(this.final.prompt, false),
           effectiveLimit: this.final.limit,
           matchupIndex: null,
           submittedText: this.final.answers.get(playerId)?.text ?? null,
         },
       ];
     }
+    const task = this.phase === 'CREATING' ? this.tasks.get(playerId) : undefined;
+    if (task) {
+      const seed = this.seeds.get(playerId);
+      return [
+        {
+          kind: task.kind,
+          promptId: task.id,
+          text: task.text,
+          seed: null,
+          effectiveLimit: task.kind === 'confess' ? LIMITS.CONFESSION_WORDS : null,
+          matchupIndex: null,
+          submittedText: seed ? (seed.kind === 'confession' ? seed.content : '') : null,
+        },
+      ];
+    }
     return [];
+  }
+
+  /** Drawing ids the player's current screen can show. */
+  private visibleDrawings(playerId: string): string[] {
+    const ids = (prompts: DealtPrompt[]) =>
+      prompts.filter((p) => p.seed?.kind === 'drawing').map((p) => p.id);
+    switch (this.phase) {
+      case 'WRITING':
+        if (!this.promptsDealt) return [];
+        return ids(
+          this.matchups.filter((m) => m.playerIds.includes(playerId)).map((m) => m.prompt),
+        );
+      case 'VOTING':
+      case 'MATCHUP_REVEAL':
+      case 'ROUND_RESULTS':
+        return ids(this.matchups.map((m) => m.prompt));
+      case 'ROUND_INTRO':
+      case 'FINAL_WRITING':
+      case 'FINAL_VOTING':
+      case 'FINAL_REVEAL':
+      case 'PODIUM':
+        return this.final ? ids([this.final.prompt]) : [];
+      default:
+        return [];
+    }
+  }
+
+  /** Each drawing goes to each player once, ahead of the state that shows it. */
+  private pushDrawings(playerId: string): void {
+    const sent = this.sentDrawings.get(playerId) ?? new Set<string>();
+    const items: Record<string, string> = {};
+    for (const id of this.visibleDrawings(playerId)) {
+      const encoded = this.drawings.get(id);
+      if (encoded === undefined || sent.has(id)) continue;
+      items[id] = encoded;
+      sent.add(id);
+    }
+    this.sentDrawings.set(playerId, sent);
+    if (Object.keys(items).length > 0) {
+      this.deps.send(playerId, { type: 'drawings', payload: { items } });
+    }
   }
 
   private sendPrivateState(playerId: string): void {
     const prompts = this.yourPrompts(playerId);
     const roastTokens = this.players.find((p) => p.id === playerId)?.roastTokens ?? 0;
-    if (prompts.length > 0 || this.phase === 'WRITING') {
+    if (prompts.length > 0 || this.phase === 'WRITING' || this.phase === 'CREATING') {
       this.deps.send(playerId, { type: 'your_prompts', payload: { prompts, roastTokens } });
     }
     if (this.phase === 'WRITING') {
@@ -1091,6 +1355,7 @@ export class Room {
     return {
       promptId: votingOpen ? m.prompt.id : '',
       promptText: votingOpen ? m.prompt.text : '',
+      seed: votingOpen ? publicSeed(m.prompt, m.revealed) : null,
       answers: [toPublic(m.answers[0]), toPublic(m.answers[1])],
       votes: m.revealed ? { ...m.votes } : null,
       roast: m.revealed ? m.roast : null,
@@ -1116,6 +1381,7 @@ export class Room {
       : [];
     return {
       prompt: { id: final.prompt.id, text: final.prompt.text },
+      seed: publicSeed(final.prompt, revealed),
       limit: final.limit,
       answers,
       votes: revealed ? { ...final.votes } : null,
@@ -1129,6 +1395,11 @@ export class Room {
   }
 
   private submittedIds(): string[] {
+    if (this.phase === 'CREATING') {
+      return this.players
+        .filter((p) => !this.tasks.has(p.id) || this.seeds.has(p.id))
+        .map((p) => p.id);
+    }
     if (this.phase === 'WRITING') {
       return this.players
         .filter((p) =>
@@ -1162,6 +1433,7 @@ export class Room {
     const state = this.publicState();
     for (const player of this.players) {
       if (!player.connected) continue;
+      if (this.drawings.size > 0) this.pushDrawings(player.id);
       const payload = { ...state, votedIds: this.votedIds(player.id) };
       this.deps.send(player.id, { type: 'room_state', payload });
     }
@@ -1172,6 +1444,27 @@ export class Room {
       if (player.connected) this.deps.send(player.id, message);
     }
   }
+}
+
+const GAME_MODES: readonly GameMode[] = ['classic', 'custom', 'doodle', 'burn'];
+
+function isGameMode(value: unknown): value is GameMode {
+  return GAME_MODES.includes(value as GameMode);
+}
+
+/** Artists stay anonymous until the reveal; a Burn Book subject is the point of the prompt. */
+function publicSeed(prompt: DealtPrompt, revealed: boolean): PublicSeed | null {
+  const seed = prompt.seed;
+  if (!seed) return null;
+  if (seed.kind === 'drawing') {
+    return { kind: 'drawing', drawingId: prompt.id, artistId: revealed ? seed.authorId : null };
+  }
+  return {
+    kind: 'confession',
+    subjectId: seed.authorId,
+    question: seed.question,
+    answer: seed.content,
+  };
 }
 
 /** Longer answers get more time on screen: 6 s base, +1 s per 40 chars past 80, max 10 s. */

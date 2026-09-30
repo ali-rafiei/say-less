@@ -5,6 +5,7 @@ import { sfx } from '../audio/sfx.ts';
 import { AnswerText } from '../components/AnswerText.tsx';
 import { Character } from '../components/Character.tsx';
 import { Header } from '../components/Header.tsx';
+import { SeedView } from '../components/SeedView.tsx';
 import type { RoomController } from '../net/useRoom.ts';
 
 const stampArt = {
@@ -60,6 +61,7 @@ export function MatchupReveal({ ctl, room, me }: Props) {
   return (
     <main className="screen reveal">
       <Header room={room} clockOffset={ctl.clockOffset} />
+      {matchup.seed && <SeedView seed={matchup.seed} room={room} drawings={ctl.drawings} me={me} />}
       <h2 className="prompt display center">{matchup.promptText}</h2>
       {result.greatMinds && (
         <div className="stamp-banner">

@@ -1,11 +1,18 @@
 import { UIArt } from '../components/UIArt.tsx';
 import { SoundControls } from '../components/SoundControls.tsx';
-import { CHARACTERS, LIMITS, type PublicRoomState } from '@say-less/shared';
+import { CHARACTERS, LIMITS, PACKS, type GameMode, type PublicRoomState } from '@say-less/shared';
 import { useState, type FormEvent } from 'react';
 import { sfx } from '../audio/sfx.ts';
 import { Character } from '../components/Character.tsx';
 import { PlayerChip } from '../components/PlayerChip.tsx';
 import type { RoomController } from '../net/useRoom.ts';
+
+const MODES: { id: GameMode; name: string; blurb: string }[] = [
+  { id: 'classic', name: 'Classic', blurb: 'Answer prompts from the packs' },
+  { id: 'custom', name: 'Custom', blurb: 'Everyone writes the prompts' },
+  { id: 'doodle', name: 'Doodle', blurb: 'Draw, then caption the art' },
+  { id: 'burn', name: 'Burn Book', blurb: 'Tell the truth, get roasted' },
+];
 
 interface Props {
   ctl: RoomController;
@@ -19,7 +26,8 @@ export function Lobby({ ctl, room, me }: Props) {
   const mine = room.players.find((p) => p.id === me)?.characterId ?? null;
   const [copied, setCopied] = useState(false);
   const [promptDraft, setPromptDraft] = useState('');
-  const custom = room.settings.promptMode === 'custom';
+  const custom = room.settings.mode === 'custom';
+  const usesPacks = room.settings.mode === 'classic' || custom;
   const promptsNeeded = room.players.length * 2 + 1;
 
   function addPrompt(event: FormEvent) {
@@ -121,27 +129,65 @@ export function Lobby({ ctl, room, me }: Props) {
 
       <section className="card stack">
         <h2 className="display">Settings</h2>
-        <div className="row row--between">
-          <span>Game mode</span>
-          <div className="seg" role="radiogroup" aria-label="Game mode">
-            {(['bank', 'custom'] as const).map((mode) => (
+        <span>Game mode</span>
+        <div className="modes" role="radiogroup" aria-label="Game mode">
+          {MODES.map((mode) => {
+            const on = room.settings.mode === mode.id;
+            return (
               <button
-                key={mode}
+                key={mode.id}
                 type="button"
                 role="radio"
-                aria-checked={room.settings.promptMode === mode}
-                className={`seg__btn ${room.settings.promptMode === mode ? 'seg__btn--on' : ''}`}
+                aria-checked={on}
+                aria-label={mode.name}
+                className={`mode ${on ? 'mode--on' : ''}`}
                 disabled={!isLeader}
                 onClick={() => {
                   sfx.tap();
-                  ctl.updateSettings({ promptMode: mode });
+                  ctl.updateSettings({ mode: mode.id });
                 }}
               >
-                {mode === 'bank' ? 'Classic' : 'Custom'}
+                <span className="mode__name display">{mode.name}</span>
+                <span className="mode__blurb">{mode.blurb}</span>
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
+        {usesPacks && (
+          <>
+            <span>
+              Prompt packs
+              <span className="dim small setting__hint">mix as many as you like</span>
+            </span>
+            <div className="packs" role="group" aria-label="Prompt packs">
+              {PACKS.map((pack) => {
+                const on = room.settings.packs.includes(pack.id);
+                return (
+                  <button
+                    key={pack.id}
+                    type="button"
+                    aria-pressed={on}
+                    aria-label={pack.name}
+                    title={pack.blurb}
+                    className={`pack ${on ? 'pack--on' : ''}`}
+                    disabled={!isLeader || (on && room.settings.packs.length === 1)}
+                    onClick={() => {
+                      sfx.tap();
+                      ctl.updateSettings({
+                        packs: on
+                          ? room.settings.packs.filter((id) => id !== pack.id)
+                          : [...room.settings.packs, pack.id],
+                      });
+                    }}
+                  >
+                    {pack.name}
+                    {pack.mature && <span className="pack__tag">18+</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
         <div className="row row--between">
           <span>Profanity filter</span>
           <button

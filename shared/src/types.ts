@@ -1,6 +1,8 @@
 export type RoomPhase =
   | 'LOBBY'
   | 'ROUND_INTRO'
+  /** Doodle and Burn Book only: everyone draws, or answers about themselves, before writing */
+  | 'CREATING'
   | 'WRITING'
   | 'VOTING'
   | 'MATCHUP_REVEAL'
@@ -12,14 +14,21 @@ export type RoomPhase =
 
 export type RoundIndex = 0 | 1 | 2;
 
-export type PromptMode = 'bank' | 'custom';
+/**
+ * classic: prompts from the chosen packs. custom: players write the prompts in the lobby.
+ * doodle: everyone draws, then captions each other's drawings.
+ * burn: everyone answers a question about themselves, then others make them look bad.
+ */
+export type GameMode = 'classic' | 'custom' | 'doodle' | 'burn';
 
 export interface RoomSettings {
   profanityFilter: boolean;
   /** false lifts every word limit; a roast still cuts its target to 2 words */
   wordLimits: boolean;
-  /** 'custom' deals player-written prompts first and fills any shortfall from the bank */
-  promptMode: PromptMode;
+  /** 'custom' deals player-written prompts first and fills any shortfall from the packs */
+  mode: GameMode;
+  /** prompt pack ids (see PACKS) the bank draws from */
+  packs: string[];
   /** false skips the round 2 roast window, so nobody can cut an opponent to 2 words */
   roasts: boolean;
 }
@@ -79,6 +88,17 @@ export interface MatchupResult {
   delta: Record<string, number>;
 }
 
+/** What a Doodle or Burn Book prompt is built on. */
+export type PublicSeed =
+  | {
+      kind: 'drawing';
+      /** fetch the strokes from the `drawings` message */
+      drawingId: string;
+      /** null until the matchup (or final) is revealed */
+      artistId: string | null;
+    }
+  | { kind: 'confession'; subjectId: string; question: string; answer: string };
+
 export interface Roast {
   spenderId: string;
   targetId: string;
@@ -87,6 +107,8 @@ export interface Roast {
 export interface PublicMatchup {
   promptId: string;
   promptText: string;
+  /** null until voting opens, and in Classic and Custom */
+  seed: PublicSeed | null;
   answers: [PublicAnswer, PublicAnswer];
   votes: Record<string, 0 | 1> | null;
   roast: Roast | null;
@@ -102,6 +124,7 @@ export interface FinalTally {
 
 export interface PublicFinal {
   prompt: { id: string; text: string };
+  seed: PublicSeed | null;
   /** null when word limits are off */
   limit: number | null;
   answers: PublicAnswer[];
@@ -150,8 +173,11 @@ export interface PublicRoomState {
 }
 
 export interface YourPrompt {
+  /** answer: write under the limit. draw / confess: the CREATING task for Doodle / Burn Book. */
+  kind: 'answer' | 'draw' | 'confess';
   promptId: string;
   text: string;
+  seed: PublicSeed | null;
   /** null when word limits are off */
   effectiveLimit: number | null;
   matchupIndex: number | null;
@@ -162,4 +188,6 @@ export interface Prompt {
   id: string;
   text: string;
   rounds: RoundIndex[];
+  /** pack id; the classic bank when absent */
+  pack?: string;
 }

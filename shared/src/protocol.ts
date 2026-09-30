@@ -28,6 +28,7 @@ export type ClientMessage =
   | { type: 'remove_prompt'; payload: { promptId: string } }
   | { type: 'spend_roast'; payload: { targetId: string } }
   | { type: 'submit_answer'; payload: { promptId: string; text: string } }
+  | { type: 'submit_drawing'; payload: { promptId: string; drawing: string } }
   | { type: 'cast_vote'; payload: { matchupIndex: number; answerIndex: 0 | 1 } }
   | { type: 'cast_final_votes'; payload: { first: string; second: string } }
   | { type: 'rematch'; payload: Record<string, never> }
@@ -46,6 +47,8 @@ export type ServerMessage =
   | { type: 'your_prompts'; payload: { prompts: YourPrompt[]; roastTokens: number } }
   | { type: 'roasted'; payload: { byName: string } }
   | { type: 'reveal'; payload: RevealPayload }
+  /** encoded drawings by id, each sent to a player once, before the state that shows it */
+  | { type: 'drawings'; payload: { items: Record<string, string> } }
   | { type: 'error'; payload: { code: ErrorCode; message: string } }
   | { type: 'left'; payload: Record<string, never> }
   | { type: 'pong'; payload: { serverTime: number } };
@@ -60,6 +63,7 @@ export const CLIENT_MESSAGE_TYPES: readonly ClientMessageType[] = [
   'remove_prompt',
   'spend_roast',
   'submit_answer',
+  'submit_drawing',
   'cast_vote',
   'cast_final_votes',
   'rematch',

@@ -26,6 +26,8 @@ export const TIMERS = {
   MATCHUP_REVEAL_MAX: 10_000,
   ROUND_RESULTS: 8_000,
   FINAL_VOTING: 25_000,
+  DRAWING: 75_000,
+  CONFESSING: 45_000,
   /** "The votes are in…" before the first final answer is revealed */
   FINAL_REVEAL_LEAD: 2_000,
   /** answers outside the final top three go by quickly */
@@ -45,6 +47,10 @@ export const LIMITS = {
   ROAST_FROM_ROUND: 1 as RoundIndex,
   PROMPT_MAX_CHARS: 120,
   MAX_CUSTOM_PROMPTS: 60,
+  /** Burn Book's honest answer about yourself */
+  CONFESSION_WORDS: 8,
+  /** the drawing message is the one frame allowed past the usual 4 KiB */
+  MAX_DRAWING_MESSAGE: 32_768,
   /** per client address (IPv4, or IPv6 /64): a whole household shares one */
   MAX_LIVE_ROOMS_PER_CLIENT: 5,
   ROOM_CREATIONS_PER_WINDOW: 10,

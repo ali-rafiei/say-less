@@ -3,6 +3,7 @@ import { sfx } from '../audio/sfx.ts';
 import { AnswerText } from '../components/AnswerText.tsx';
 import { Character } from '../components/Character.tsx';
 import { Header } from '../components/Header.tsx';
+import { SeedView } from '../components/SeedView.tsx';
 import type { RoomController } from '../net/useRoom.ts';
 
 interface Props {
@@ -25,6 +26,7 @@ export function Voting({ ctl, room, me }: Props) {
       <span className="center dim">
         Matchup {room.currentMatchupIndex + 1} of {room.matchups.length}
       </span>
+      {matchup.seed && <SeedView seed={matchup.seed} room={room} drawings={ctl.drawings} me={me} />}
       <h2 className="prompt display center">{matchup.promptText}</h2>
 
       <div className="vcards">

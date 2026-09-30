@@ -48,9 +48,22 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
 
 1. One player creates a room and gets a 4-letter code (no O or I). Others join with the
    code or the invite link (`/?code=ABCD`). The creator is the **leader** and owns the
-   Start button and settings: game mode (Classic bank or Custom, where players write the prompts), profanity
-   filter, word limits. In Custom mode anyone in the lobby can add prompts; they
-   are dealt first, nobody gets a prompt they wrote, and the bank fills any shortfall.
+   Start button and settings: game mode, prompt packs, profanity filter, word limits,
+   roasts. The four game modes:
+   - **Classic**: prompts from the ticked packs.
+   - **Custom**: anyone in the lobby adds prompts. They are dealt first, nobody gets a
+     prompt they wrote, the packs fill any shortfall, and a leftover one becomes the final.
+   - **Doodle**: each round opens with 75 s of drawing a secret suggestion with a finger.
+     The drawings become the round's prompts: two other players caption each one, the
+     artist stays anonymous until the reveal ("drawn by Cat").
+   - **Burn Book**: each round opens with 45 s of answering a question about yourself in
+     up to 8 words ("What is your go-to karaoke song?"). Each answer becomes a prompt that
+     two other players answer to make its subject look bad.
+
+   In Doodle and Burn Book the final replays the round prompt that drew the most votes
+   (the crowd favourite), answered by everyone. A player who made nothing in time leaves a
+   slot that a pack prompt fills.
+
 2. **Pick a character in the lobby**: twelve characters, first tap locks it for everyone.
    Anyone who hasn't picked when the leader presses Start gets a random leftover.
 3. **Round 1 "Say Some"** – 12 words, 120 s, ×1 points. Each player gets two prompts;
@@ -310,8 +323,15 @@ per point among non-winners), Roast Victim, The Silencer, Fastest Submitter.
 
 Custom mode: all unused custom prompts are matched to pairs that do not include their
 author (maximum bipartite matching), leftover pairs take any other unused custom prompt,
-then the bank fills the rest, so nobody answers their own prompt whenever that is
-possible. The final-round prompt always comes from the bank, since everyone answers it.
+then the packs fill the rest, so nobody answers their own prompt whenever that is
+possible. Doodle drawings and Burn Book confessions are dealt the same way (the artist or
+subject is the author). The final takes a leftover custom prompt (everyone answers it,
+its author included), else in Doodle and Burn Book the most-voted seed of the game, else
+the packs.
+
+**Prompts that name a player.** A prompt may contain `{player}` (every prompt in the Group
+Chat pack does). At the deal it becomes the name of someone in the room who is not one of
+that prompt's two writers; in the final, anyone.
 
 Players are shuffled into a ring; matchup _i_ is player _i_ vs player _i+1 (mod N)_ with
 prompt _i_. Every player writes exactly two answers, every prompt gets exactly two
@@ -345,6 +365,7 @@ LOBBY ─start(leader, ≥3; unpicked get random characters)─▶ ROUND_INTRO (
   ▲                                                             │
   │                        ┌────────────────────────────────────┘
   │                        ▼
+  │   Doodle / Burn Book: ROUND_INTRO ─▶ CREATING (75s draw / 45s confess) ─▶ WRITING …
   │   rounds 1–2:   WRITING (120s) ─all in / timer─▶ VOTING (20s) ─▶ MATCHUP_REVEAL (6s) ─┐
   │                                                        ▲                                │
   │                                                        └── next matchup ────────────────┤
@@ -367,7 +388,8 @@ immediately. `Room` uses the global clock so tests drive it with Vitest fake tim
 ## WebSocket protocol
 
 Endpoint: `/ws`. Frames are JSON `{ "type": string, "payload": object }`.
-Max frame 8 KiB (server) / 4 KiB parse guard. Rate limit: one intent per 250 ms per
+Max frame 40 KiB (server) / 4 KiB parse guard, except `submit_drawing` (up to 32 KiB; a
+typical doodle encodes to about 3.4 KB, see `shared/src/drawing.ts`). Rate limit: one intent per 250 ms per
 socket (`rate_limited`); the client paces its own sends to that gap so a double-tap is
 delayed, not dropped. `ping` is exempt.
 
@@ -375,7 +397,8 @@ Client → server: `create_room {name}`, `join_room {code, name, sessionToken?}`
 `update_settings {profanityFilter?, wordLimits?, roasts?, promptMode?}` (leader, LOBBY),
 `add_prompt {text}` / `remove_prompt {promptId}` (LOBBY; authors or the leader remove), `start_game {}`
 (leader, LOBBY, ≥3), `pick_character {characterId}` (LOBBY), `spend_roast
-{targetId}` (WRITING, round 2, first 10 s), `submit_answer {promptId, text}`
+{targetId}` (WRITING, round 2, first 10 s), `submit_answer {promptId, text}` (also a Burn Book confession in CREATING),
+`submit_drawing {promptId, drawing}` (CREATING, Doodle)
 (WRITING/FINAL_WRITING), `cast_vote {matchupIndex, answerIndex}` (VOTING),
 `cast_final_votes {first, second}` (FINAL_VOTING), `rematch {}` (leader, PODIUM),
 `leave_room {}`, `ping {}`.
@@ -383,7 +406,8 @@ Client → server: `create_room {name}`, `join_room {code, name, sessionToken?}`
 Server → client: `welcome {playerId, sessionToken, code}`, `room_state <PublicRoomState>`
 (on every mutation), `your_prompts {prompts: [{promptId, text, effectiveLimit, mode,
 matchupIndex, submittedText}]}` (private; at deal time, after each accepted submission,
-and on reconnect), `roasted {byName}` (private), `reveal {matchupIndex}`, `error {code,
+and on reconnect), `roasted {byName}` (private), `reveal {matchupIndex}`, `drawings {items: {id: encoded}}` (each drawing sent to each
+player once, just before the state that shows it, and again after a reconnect), `error {code,
 message}`, `left {}`, `pong {serverTime}`.
 
 Error codes: `over_limit, already_roasted, char_taken, bad_phase, room_full, not_found,
@@ -554,7 +578,16 @@ opaque icon supplies every icon size.
 
 ## Prompt bank
 
-`content/prompts.json`: 373 prompts, `{ id, text, rounds }` where `rounds ⊆ [0,1,2]`.
+**Packs.** The host ticks any mix of packs in the lobby (Classic and Group Chat by
+default); `shared/src/packs.ts` is the catalog and `content/packs/<id>.json` the prompts:
+Group Chat (`friends`, every prompt names a player), Food Fight, 9 to 5, Extremely Online,
+Movie Night, Family Friendly, and After Dark (18+, off by default). About 55 prompts each;
+`server/test/packs.bank.test.ts` holds them to the classic bank's rules plus the catalog,
+cross-pack uniqueness and the `{player}` rule. `content/doodles.json` (97 drawing
+suggestions) and `content/burns.json` (99 questions about yourself) feed the two modes.
+
+**Classic.** `content/prompts.json`: 407 prompts (a second editorial pass on 2026-09-29
+rewrote 31 flat ones, retired 3 and added 37), `{ id, text, rounds }` where `rounds ⊆ [0,1,2]`.
 367 are usable in round 1, 372 in round 2, 286 as final prompts (tag 2 only goes on
 prompts that land in one to three words). Tone is absurd and cheeky; nothing about real
 people, groups, brands, religion or politics; no adult tier; plain ASCII, blanks written

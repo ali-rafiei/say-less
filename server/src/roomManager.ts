@@ -7,12 +7,13 @@ import {
   type ServerMessage,
 } from './shared.ts';
 import { BotCrew } from './bots.ts';
-import type { PromptDeck } from './prompts.ts';
+import type { PromptDeck, SeedBanks } from './prompts.ts';
 import { Room, RoomError } from './room.ts';
 import { generateRoomCode } from './roomCode.ts';
 
 export interface RoomManagerDeps {
   deck: PromptDeck;
+  seedBanks?: SeedBanks;
   send: (playerId: string, message: ServerMessage) => void;
   random?: () => number;
   log?: (message: string, fields?: Record<string, unknown>) => void;
@@ -53,6 +54,7 @@ export class RoomManager {
     let crew: BotCrew | null = null;
     const room = new Room(code, {
       deck: this.deps.deck,
+      ...(this.deps.seedBanks ? { seedBanks: this.deps.seedBanks } : {}),
       send: (playerId, message) =>
         crew?.isBot(playerId) ? crew.receive(playerId, message) : this.deps.send(playerId, message),
       onEmpty: (emptied) => this.scheduleExpiry(emptied),

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PromptDeck } from '../src/prompts.ts';
 import { RoomManager } from '../src/roomManager.ts';
 import type { Room } from '../src/room.ts';
+import { encodeDrawing } from '../src/shared.ts';
 import { fixturePrompts, seededRandom } from './helpers.ts';
 
 function botRoom(): { rooms: RoomManager; room: Room } {
@@ -59,6 +60,32 @@ describe('bot rooms', () => {
     expect(botAnswers).toHaveLength(4);
     expect(botAnswers.every((a) => !a.autoSubmitted)).toBe(true);
   });
+
+  it.each(['doodle', 'burn'] as const)(
+    'plays a whole %s game with the bots creating too',
+    (mode) => {
+      // Given a bot room in a seeded mode, with the dev drawing or confessing when asked
+      const { room } = botRoom();
+      room.updateSettings('dev', { mode });
+      room.startGame('dev');
+      const scribble = encodeDrawing({ strokes: [{ color: 0, width: 1, points: [5, 5, 90, 90] }] });
+      // When time passes
+      for (let tick = 0; tick < 1_000 && room.phase !== 'PODIUM'; tick++) {
+        const task = room
+          .yourPrompts('dev')
+          .find((p) => p.kind !== 'answer' && p.submittedText === null);
+        if (task?.kind === 'draw') room.submitDrawing('dev', task.promptId, scribble);
+        if (task?.kind === 'confess') room.submitAnswer('dev', task.promptId, 'naps');
+        if (room.phase !== 'CREATING') playAsHuman(room);
+        vi.advanceTimersByTime(1_000);
+      }
+      // Then it reached the podium on a seeded final the bots answered
+      expect(room.phase).toBe('PODIUM');
+      const final = room.publicState().final!;
+      expect(final.seed).not.toBeNull();
+      expect(final.answers.filter((a) => !a.autoSubmitted).length).toBe(5);
+    },
+  );
 
   it('keeps the room alive only while a human is connected', () => {
     // Given a bot room whose only human leaves
