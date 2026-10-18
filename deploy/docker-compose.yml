@@ -15,6 +15,12 @@ services:
     environment:
       - PORT=8080
       - HOST=127.0.0.1
+    # STATS_KEY (the private /stats page key) lives in this untracked file on the instance.
+    env_file:
+      - path: ./stats.env
+        required: false
+    volumes:
+      - app_data:/data
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
@@ -34,5 +40,6 @@ services:
       options: { max-size: "10m", max-file: "3" }
 
 volumes:
+  app_data:
   caddy_data:
   caddy_config:

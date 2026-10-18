@@ -8,13 +8,15 @@ import {
 } from './shared.ts';
 import { BotCrew } from './bots.ts';
 import type { PromptDeck, SeedBanks } from './prompts.ts';
-import { Room, RoomError } from './room.ts';
+import { Room, RoomError, type GameEvent } from './room.ts';
+import type { OnlineNow } from './stats.ts';
 import { generateRoomCode } from './roomCode.ts';
 
 export interface RoomManagerDeps {
   deck: PromptDeck;
   seedBanks?: SeedBanks;
   bailOuts?: readonly string[];
+  onGameEvent?: (event: GameEvent) => void;
   send: (playerId: string, message: ServerMessage) => void;
   random?: () => number;
   log?: (message: string, fields?: Record<string, unknown>) => void;
@@ -60,6 +62,7 @@ export class RoomManager {
       send: (playerId, message) =>
         crew?.isBot(playerId) ? crew.receive(playerId, message) : this.deps.send(playerId, message),
       onEmpty: (emptied) => this.scheduleExpiry(emptied),
+      ...(this.deps.onGameEvent ? { onGameEvent: this.deps.onGameEvent } : {}),
       ...(this.deps.random ? { random: this.deps.random } : {}),
     });
     this.rooms.set(code, room);
@@ -74,6 +77,17 @@ export class RoomManager {
     }
     this.deps.log?.('room created', { code, withBots });
     return room;
+  }
+
+  /** Connected humans across every room (bots never count). */
+  online(): OnlineNow {
+    let players = 0;
+    let audience = 0;
+    for (const room of this.rooms.values()) {
+      players += room.connectedHumans;
+      audience += room.connectedAudience;
+    }
+    return { players, audience, rooms: this.rooms.size };
   }
 
   get(code: string): Room | undefined {

@@ -3,6 +3,7 @@ cloud/secrets/
 *-openrc.sh
 *.pem
 clouds.yaml
+deploy/stats.env
 .env
 .env.*
 !.env.example

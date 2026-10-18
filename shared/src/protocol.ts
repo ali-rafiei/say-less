@@ -21,8 +21,12 @@ export type ErrorCode =
   | 'paused';
 
 export type ClientMessage =
-  | { type: 'create_room'; payload: { name: string } }
-  | { type: 'join_room'; payload: { code: string; name: string; sessionToken?: string } }
+  /** deviceId: an anonymous random id the browser keeps, for play counts only */
+  | { type: 'create_room'; payload: { name: string; deviceId?: string } }
+  | {
+      type: 'join_room';
+      payload: { code: string; name: string; sessionToken?: string; deviceId?: string };
+    }
   | { type: 'update_settings'; payload: Partial<RoomSettings> }
   | { type: 'start_game'; payload: Record<string, never> }
   | { type: 'pick_character'; payload: { characterId: string } }
