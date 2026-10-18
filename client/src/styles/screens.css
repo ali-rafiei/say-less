@@ -1438,33 +1438,6 @@
   background: var(--danger);
   color: var(--paper);
 }
-.vslot,
-.wslot {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-.vslot .vcard,
-.wslot .wcard {
-  flex: 1;
-}
-.censor {
-  align-self: flex-end;
-  min-height: 32px;
-  padding: 0 10px;
-  border: 2px solid currentColor;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--fg-dim);
-  font-size: 13px;
-  font-weight: 700;
-}
-.censor.confirm--armed {
-  border-color: var(--ink);
-  background: var(--danger);
-  color: var(--paper);
-}
 .bailout {
   align-self: center;
 }

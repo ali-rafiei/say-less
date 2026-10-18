@@ -11,7 +11,7 @@ interface Props {
   ariaLabel?: string;
 }
 
-/** Two taps for anything that cannot be undone (Bail Out, censor, kick). */
+/** Two taps for anything that cannot be undone (Bail Out, remove a player). */
 export function ConfirmButton({
   label,
   confirmLabel,

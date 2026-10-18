@@ -1,0 +1,281 @@
+{
+  "id": "love",
+  "name": "Love Life",
+  "prompts": [
+    {
+      "id": "love-001",
+      "text": "Something you should not admit before the appetizers arrive.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-002",
+      "text": "The name of a dating app for people who hate each other.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-003",
+      "text": "Your crush finally texted back. It says ___.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-004",
+      "text": "A red flag that only shows up on the third date.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "love-005",
+      "text": "The real reason the wedding was called off.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-006",
+      "text": "A wedding vow that should not have been read out loud.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "love-007",
+      "text": "The best man's speech went wrong when he mentioned ___.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-008",
+      "text": "A breakup text sent by a very polite robot.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "love-009",
+      "text": "Something you should never bring to meet the parents.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-010",
+      "text": "A pickup line that has never worked, not even once.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-011",
+      "text": "What the couple at the next table is fighting about.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-012",
+      "text": "The magic words that end every argument.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-013",
+      "text": "An honest profile bio for someone who has been single for ten years.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "love-014",
+      "text": "A wedding gift that says I do not support this.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-015",
+      "text": "My dream date includes a picnic, a sunset and ___.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-016",
+      "text": "The exact moment the first date went downhill.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-017",
+      "text": "The worst place to propose.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-018",
+      "text": "The tiny couple on top of the wedding cake are secretly ___.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-019",
+      "text": "A love note that is a little too honest.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "love-020",
+      "text": "A nickname that should never be used in public.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-021",
+      "text": "The ex shows up at the wedding with ___.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-022",
+      "text": "A first date activity that guarantees no second date.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-023",
+      "text": "Things you learn about your partner on a long road trip.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "love-024",
+      "text": "I knew it was love when they ___.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-025",
+      "text": "Dating profile red flag: a photo of them holding ___.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-026",
+      "text": "The text you regret sending at two in the morning.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "love-027",
+      "text": "The wedding DJ refuses to play ___.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-028",
+      "text": "A breakup excuse even worse than it's not you, it's me.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "love-029",
+      "text": "The real reason the matchmaker is still single.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-030",
+      "text": "What the wedding planner says when the bride is not looking.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "love-031",
+      "text": "A couple's costume that ends the relationship.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-032",
+      "text": "Speed dating went wrong when I said ___.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-033",
+      "text": "The first fight of every new couple is about ___.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-034",
+      "text": "A terrible thing to engrave inside a wedding ring.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-035",
+      "text": "An awkward question from grandma at the wedding.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "love-036",
+      "text": "The one thing on the wedding registry nobody will buy.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-037",
+      "text": "What your ex is doing right now.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-038",
+      "text": "A song that should never be the first dance.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-039",
+      "text": "A sign your date is secretly a vampire.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-040",
+      "text": "The objection someone shouted at the wedding.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-041",
+      "text": "A love poem written by someone who hates poetry.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "love-042",
+      "text": "A wedding hashtag that went horribly wrong.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-043",
+      "text": "A text that means the relationship is over.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-044",
+      "text": "The crush finally noticed you because of ___.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-045",
+      "text": "A deal-breaker that is actually completely reasonable.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-046",
+      "text": "Matchmaking service slogan: we guarantee ___.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-047",
+      "text": "How the couple's first date ended up on the evening news.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "love-048",
+      "text": "The anniversary gift that was clearly bought at a gas station.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "love-049",
+      "text": "A first date location that should be illegal.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-050",
+      "text": "An honest wedding toast from the bride's little brother.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "love-051",
+      "text": "Every bridesmaid secretly wants to say ___.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-052",
+      "text": "{player}'s secret crush is ___.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "love-053",
+      "text": "{player} got dumped by text. What did it say?",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "love-054",
+      "text": "A romantic comedy plot so cheesy that even the actors laughed.",
+      "rounds": [0, 1]
+    },
+    {
+      "id": "love-055",
+      "text": "The perfect couple, according to {player}: ___.",
+      "rounds": [0, 1, 2]
+    }
+  ]
+}

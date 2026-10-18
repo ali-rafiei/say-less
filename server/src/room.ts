@@ -1,6 +1,5 @@
 import {
   AUTO_SUBMIT_TEXT,
-  CENSORED_TEXT,
   CHARACTER_IDS,
   DEFAULT_PACKS,
   DrawingError,
@@ -104,7 +103,6 @@ interface Answer {
   autoSubmitted: boolean;
   effectiveLimit: number | null;
   bailOut: boolean;
-  censored: boolean;
 }
 
 interface PauseInfo {
@@ -844,39 +842,10 @@ export class Room {
     this.broadcast();
   }
 
-  /** The leader hides an answer on the open matchup (never one in their own matchup). */
-  censorAnswer(leaderId: string, matchupIndex: number, answerIndex: 0 | 1): void {
-    this.requireLeader(leaderId);
-    this.requirePhase('VOTING');
-    if (matchupIndex !== this.currentMatchupIndex)
-      throw new RoomError('bad_phase', 'That matchup is not open');
-    const matchup = this.currentMatchup();
-    if (matchup.playerIds.includes(leaderId))
-      throw new RoomError('invalid', 'You cannot censor your own matchup');
-    const answer = matchup.answers[answerIndex];
-    if (!answer) throw new RoomError('invalid', 'Pick one of the two answers');
-    answer.censored = true;
-    this.broadcast();
-  }
-
-  /** Wall rounds: the leader hides an answer by the id it is voted with. */
-  censorFinal(leaderId: string, answerId: string): void {
-    this.requireLeader(leaderId);
-    this.requirePhase('FINAL_VOTING');
-    const final = this.final;
-    if (!final) throw new RoomError('bad_phase', 'No final round');
-    const authorId = this.wallAuthor(final, answerId);
-    if (authorId === null) throw new RoomError('invalid', 'Unknown answer');
-    if (authorId === leaderId) throw new RoomError('invalid', 'You cannot censor your own answer');
-    const answer = final.answers.get(authorId);
-    if (!answer) throw new RoomError('invalid', 'Unknown answer');
-    answer.censored = true;
-    this.broadcast();
-  }
-
   submitDrawing(playerId: string, promptId: string, encoded: string): void {
     this.requirePhase('CREATING');
-    const player = this.requirePlayer(playerId);
+    this.requireUnpaused();
+    const player = this.requireActor(playerId);
     const task = this.requireTask(playerId, promptId, 'draw');
     let blank: boolean;
     try {
@@ -897,8 +866,6 @@ export class Room {
     const matchup = this.currentMatchup();
     if (answerIndex !== 0 && answerIndex !== 1)
       throw new RoomError('invalid', 'Pick one of the two answers');
-    if (matchup.answers[answerIndex]?.censored)
-      throw new RoomError('invalid', 'That answer was censored');
     if (this.audience.has(playerId)) {
       // The audience never holds up the room: their votes only decide the Crowd Favourite.
       if (playerId in matchup.audienceVotes)
@@ -928,8 +895,6 @@ export class Room {
       const authorId = this.wallAuthor(final, rawFirst);
       if (authorId === null || !final.answers.has(authorId))
         throw new RoomError('invalid', 'Pick one answer');
-      if (final.answers.get(authorId)!.censored)
-        throw new RoomError('invalid', 'That answer was censored');
       final.audienceVotes[playerId] = final.posts ? rawFirst : authorId;
       this.broadcast();
       return;
@@ -941,8 +906,6 @@ export class Room {
       if (!post || rawSecond !== '') throw new RoomError('invalid', 'Pick one post');
       if (post.twisterId === playerId)
         throw new RoomError('invalid', 'You cannot vote for your own twist');
-      if (final.answers.get(post.twisterId)?.censored)
-        throw new RoomError('invalid', 'That post was censored');
       final.votes[playerId] = [rawFirst, ''];
       if (this.allFinalVotesIn()) this.finishFinal();
       else this.broadcast();
@@ -955,8 +918,6 @@ export class Room {
       throw new RoomError('invalid', 'You cannot vote for yourself');
     if (!final.answers.has(first) || !final.answers.has(second))
       throw new RoomError('invalid', 'Unknown answer');
-    if (final.answers.get(first)!.censored || final.answers.get(second)!.censored)
-      throw new RoomError('invalid', 'That answer was censored');
     final.votes[playerId] = [first, second];
     if (this.allFinalVotesIn()) this.finishFinal();
     else this.broadcast();
@@ -1382,7 +1343,6 @@ export class Room {
     const answers = [...final.answers.values()];
     const options = {
       bailOutIds: new Set(answers.filter((a) => a.bailOut).map((a) => a.playerId)),
-      censoredIds: new Set(answers.filter((a) => a.censored).map((a) => a.playerId)),
       audienceVotes: final.audienceVotes,
     };
     final.result = final.posts
@@ -1557,7 +1517,6 @@ export class Room {
       autoSubmitted: false,
       effectiveLimit: limit,
       bailOut: false,
-      censored: false,
     };
   }
 
@@ -1569,7 +1528,6 @@ export class Room {
       autoSubmitted: true,
       effectiveLimit: limit,
       bailOut: false,
-      censored: false,
     };
   }
 
@@ -1677,7 +1635,7 @@ export class Room {
     for (const m of this.matchups) {
       m.answers.forEach((answer, slot) => {
         const votes = m.result?.voteCounts[slot] ?? 0;
-        if (!answer || answer.autoSubmitted || answer.censored || votes === 0) return;
+        if (!answer || answer.autoSubmitted || votes === 0) return;
         if (best && votes <= best.votes) return;
         best = {
           roundIndex: this.roundIndex,
@@ -1696,7 +1654,7 @@ export class Room {
     for (const [playerId, tally] of Object.entries(final.result ?? {})) {
       const answer = final.answers.get(playerId);
       const votes = tally.first + tally.second;
-      if (!answer || answer.autoSubmitted || answer.censored || votes === 0) continue;
+      if (!answer || answer.autoSubmitted || votes === 0) continue;
       if (best && votes <= best.votes) continue;
       const post = final.posts?.find((p) => p.twisterId === playerId);
       best = {
@@ -1911,13 +1869,12 @@ export class Room {
       m.revealed || (this.phase === 'VOTING' && index === this.currentMatchupIndex);
     const toPublic = (answer: Answer | null): PublicAnswer => ({
       playerId: m.revealed ? (answer?.playerId ?? null) : null,
-      text: votingOpen ? publicText(answer) : null,
+      text: votingOpen ? (answer?.text ?? null) : null,
       wordCount: m.revealed ? (answer?.wordCount ?? null) : null,
       autoSubmitted: votingOpen ? (answer?.autoSubmitted ?? false) : false,
       effectiveLimit: m.revealed ? (answer?.effectiveLimit ?? null) : null,
       seed: null,
       bailOut: m.revealed ? (answer?.bailOut ?? false) : false,
-      censored: votingOpen ? (answer?.censored ?? false) : false,
       answerId: null,
     });
     return {
@@ -1943,13 +1900,12 @@ export class Room {
     const answers: PublicAnswer[] = votingOpen
       ? this.shuffledStable([...final.answers.values()]).map((answer) => ({
           playerId: (final.posts || final.anonIds) && !revealed ? null : answer.playerId,
-          text: publicText(answer),
+          text: answer.text,
           wordCount: revealed ? answer.wordCount : null,
           autoSubmitted: answer.autoSubmitted,
           effectiveLimit: revealed ? answer.effectiveLimit : null,
           seed: final.posts ? publicSeed(this.wallPrompt(final, answer.playerId), revealed) : null,
           bailOut: revealed && answer.bailOut,
-          censored: answer.censored,
           answerId: this.wallAnswerId(final, answer.playerId),
         }))
       : [];
@@ -2056,12 +2012,6 @@ function isGameLength(value: unknown): value is GameLength {
 function nextRound(current: RoundIndex, length: GameLength): RoundIndex {
   if (current === 0 && length === 'short') return FINAL_ROUND;
   return (current + 1) as RoundIndex;
-}
-
-/** Censored text is replaced for everyone, its author included. */
-function publicText(answer: Answer | null | undefined): string | null {
-  if (!answer) return null;
-  return answer.censored ? CENSORED_TEXT : answer.text;
 }
 
 /** Artists and twisters stay anonymous until the reveal; a post's victim is the point of it. */

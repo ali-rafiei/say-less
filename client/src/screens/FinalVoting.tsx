@@ -2,7 +2,6 @@ import type { PublicRoomState } from '@say-less/shared';
 import { useEffect, useState } from 'react';
 import { sfx } from '../audio/sfx.ts';
 import { AnswerText } from '../components/AnswerText.tsx';
-import { ConfirmButton } from '../components/ConfirmButton.tsx';
 import { Header } from '../components/Header.tsx';
 import { LetterTiles } from '../components/LetterTiles.tsx';
 import { PostView, SeedView } from '../components/SeedView.tsx';
@@ -27,11 +26,10 @@ export function FinalVoting({ ctl, room, me }: Props) {
   const posts = final.voting === 'single';
   const single = posts || watching;
   const need = single ? 1 : 2;
-  const isLeader = room.leaderId === me;
   const idOf = (answer: (typeof final.answers)[number]) => answer.answerId;
   const isMine = (answer: (typeof final.answers)[number]) =>
     answer.answerId !== null && answer.answerId === room.viewer.finalAnswerId;
-  const canVoteAtAll = final.answers.filter((a) => !isMine(a) && !a.censored).length >= need;
+  const canVoteAtAll = final.answers.filter((a) => !isMine(a)).length >= need;
 
   function toggle(id: string) {
     if (voted) return;
@@ -70,36 +68,24 @@ export function FinalVoting({ ctl, room, me }: Props) {
           const mine = isMine(answer);
           const rank = picks.indexOf(id ?? '');
           return (
-            <div key={id ?? answer.text} className="wslot">
-              <button
-                type="button"
-                className={`card wcard ${mine ? 'wcard--mine' : ''} ${rank >= 0 ? 'wcard--picked' : ''}`}
-                disabled={mine || voted || answer.censored}
-                onClick={() => id && toggle(id)}
-              >
-                {rank >= 0 && !single && <span className="wcard__rank display">{rank + 1}</span>}
-                {answer.seed?.kind === 'post' ? (
-                  <PostView seed={answer.seed} room={room} me={me} twist={answer.text ?? '…'} />
-                ) : (
-                  <AnswerText
-                    text={answer.text ?? '…'}
-                    compact
-                    filter={room.settings.profanityFilter && !mine}
-                  />
-                )}
-              </button>
-              {isLeader && !mine && !answer.censored && id && (
-                <ConfirmButton
-                  label="Censor"
-                  confirmLabel="Censor it?"
-                  className="censor"
-                  onConfirm={() => {
-                    setPicks((current) => current.filter((x) => x !== id));
-                    ctl.censorFinal(id);
-                  }}
+            <button
+              key={id ?? answer.text}
+              type="button"
+              className={`card wcard ${mine ? 'wcard--mine' : ''} ${rank >= 0 ? 'wcard--picked' : ''}`}
+              disabled={mine || voted}
+              onClick={() => id && toggle(id)}
+            >
+              {rank >= 0 && !single && <span className="wcard__rank display">{rank + 1}</span>}
+              {answer.seed?.kind === 'post' ? (
+                <PostView seed={answer.seed} room={room} me={me} twist={answer.text ?? '…'} />
+              ) : (
+                <AnswerText
+                  text={answer.text ?? '…'}
+                  compact
+                  filter={room.settings.profanityFilter && !mine}
                 />
               )}
-            </div>
+            </button>
           );
         })}
       </div>

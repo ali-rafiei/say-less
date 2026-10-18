@@ -160,26 +160,93 @@ export const win: Effect = (g, t) => {
   });
 };
 
-/** Muted-brass "wah-wah" down a semitone at a time, the last note sagging. */
+/** A soft marimba "aww": two short notes stepping down, no buzz. */
 export const lose: Effect = (g, t) => {
   let end = t;
-  [62, 61, 60].forEach((midi, i) => {
-    const last = i === 2;
-    end = tone(g, g.fx, t + i * 0.22, {
+  [64, 60].forEach((midi, i) => {
+    end = tone(g, g.fx, t + i * 0.16, {
       notes: [midiToHz(midi)],
-      layers: [
-        { type: 'sawtooth', gain: 0.5 },
-        { type: 'sawtooth', gain: 0.5, detune: 10 },
-      ],
-      ...(last ? { pitchFrom: 1, pitchTo: 0.94, pitchTime: 0.4 } : {}),
-      filter: { type: 'lowpass', freq: 500, to: 1500, time: 0.08, q: 3 },
-      gain: 0.12,
-      duration: last ? 0.4 : 0.17,
-      env: { attack: 0.02, decay: 0.1, sustain: 0.8, release: 0.08 },
+      layers: [{ type: 'sine' }, { type: 'sine', ratio: 4, gain: 0.12 }],
+      gain: 0.16,
+      duration: i === 1 ? 0.3 : 0.12,
+      env: { attack: 0.004, decay: 0.25, sustain: 0, release: 0.15 },
       send: 0.15,
     });
   });
   return end;
+};
+
+/** A soft pop with a short bell on top; `step` raises the bell so a run of reveals climbs. */
+export function reveal(step: number): Effect {
+  return (g, t) => {
+    tone(g, g.fx, t, {
+      notes: [420],
+      layers: [{ type: 'sine' }],
+      pitchFrom: 0.55,
+      pitchTime: 0.04,
+      gain: 0.18,
+      duration: 0.07,
+      env: { attack: 0.002, decay: 0.07, sustain: 0, release: 0.03 },
+    });
+    // C major scale from G4, capped at two octaves so long walls stay pleasant.
+    const scale = [67, 69, 71, 72, 74, 76, 77, 79, 81, 83, 84];
+    const midi = scale[Math.min(Math.max(step, 0), scale.length - 1)]!;
+    return tone(g, g.fx, t + 0.03, {
+      notes: [midiToHz(midi)],
+      layers: BELL,
+      gain: 0.15,
+      duration: 0.1,
+      env: { attack: 0.004, decay: 0.2, sustain: 0.2, release: 0.25 },
+      send: 0.25,
+    });
+  };
+}
+
+/** The final winner: a quick rising bell triad that opens into a bright held chord. */
+export const fanfare: Effect = (g, t) => {
+  [72, 76, 79].forEach((midi, i) => {
+    tone(g, g.fx, t + i * 0.07, {
+      notes: [midiToHz(midi)],
+      layers: BELL,
+      gain: 0.14,
+      duration: 0.1,
+      env: { attack: 0.004, decay: 0.2, sustain: 0.3, release: 0.25 },
+      send: 0.3,
+    });
+  });
+  noise(g, g.fx, t + 0.21, {
+    gain: 0.025,
+    duration: 0.5,
+    env: { attack: 0.05, decay: 0.45 },
+    filter: { type: 'highpass', freq: 7000 },
+    send: 0.4,
+  });
+  return tone(g, g.fx, t + 0.21, {
+    notes: [72, 76, 79, 84].map(midiToHz),
+    layers: [{ type: 'triangle' }, { type: 'sine', ratio: 2, gain: 0.25 }],
+    gain: 0.07,
+    duration: 0.55,
+    env: { attack: 0.02, decay: 0.3, sustain: 0.5, release: 0.6 },
+    send: 0.45,
+  });
+};
+
+/** Silenced!: a quick "shh" that lands on one clear, ringing bell. */
+export const silenced: Effect = (g, t) => {
+  noise(g, g.fx, t, {
+    gain: 0.05,
+    duration: 0.28,
+    env: { attack: 0.06, decay: 0.1, sustain: 0.6, release: 0.1 },
+    filter: { type: 'bandpass', freq: 4200, q: 1.4 },
+  });
+  return tone(g, g.fx, t + 0.34, {
+    notes: [midiToHz(79), midiToHz(86)],
+    layers: BELL,
+    gain: 0.11,
+    duration: 0.25,
+    env: { attack: 0.004, decay: 0.5, sustain: 0.25, release: 0.7 },
+    send: 0.4,
+  });
 };
 
 /** A thump, a bright burst and scattered inharmonic glass pings. */

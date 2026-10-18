@@ -29,11 +29,11 @@ export const TIMERS = {
   DRAWING: 75_000,
   CONFESSING: 45_000,
   /** "The votes are in…" before the first final answer is revealed */
-  FINAL_REVEAL_LEAD: 2_000,
-  /** every answer gets the same time in the spotlight */
-  FINAL_REVEAL_STEP: 3_500,
+  FINAL_REVEAL_LEAD: 1_500,
+  /** every answer gets the same time in the spotlight (its author lands 1.75 s in) */
+  FINAL_REVEAL_STEP: 2_500,
   /** extra time on the winning answer before moving on */
-  FINAL_REVEAL_HOLD: 2_500,
+  FINAL_REVEAL_HOLD: 2_000,
   /** relaxed timers multiply every writing, drawing and voting clock by this */
   RELAXED_FACTOR: 2,
   /** the hurry-up warning shows to anyone still writing when this much time is left */
@@ -87,7 +87,6 @@ export const INITIALS_LENGTHS: readonly [number, number, number] = [5, 4, 3];
 
 export const AUTO_SUBMIT_TEXT = '…';
 export const LEFT_TEXT = '[left the chat]';
-export const CENSORED_TEXT = '[censored]';
 
 export const RECONNECT_HOLD_MS = 3 * 60_000;
 /** A player dropped for less than this still counts as playing (an app switch, not a dead phone). */

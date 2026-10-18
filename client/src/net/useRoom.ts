@@ -67,8 +67,6 @@ export interface RoomController {
   resumeGame: () => void;
   bailOut: (promptId: string) => void;
   kickPlayer: (playerId: string) => void;
-  censorAnswer: (matchupIndex: number, answerIndex: 0 | 1) => void;
-  censorFinal: (answerId: string) => void;
   dismissError: () => void;
 }
 
@@ -343,9 +341,6 @@ export function useRoom(): RoomController {
       resumeGame: () => sendOnce('resume_game', { type: 'resume_game', payload: {} }),
       bailOut: (promptId) => send({ type: 'bail_out', payload: { promptId } }),
       kickPlayer: (playerId) => send({ type: 'kick_player', payload: { playerId } }),
-      censorAnswer: (matchupIndex, answerIndex) =>
-        send({ type: 'censor_answer', payload: { matchupIndex, answerIndex } }),
-      censorFinal: (answerId) => send({ type: 'censor_final', payload: { answerId } }),
       dismissError: () => setError(null),
     }),
     [send, sendOnce],
