@@ -7,7 +7,11 @@
     { "id": "food-003", "text": "The secret ingredient in a cursed soup.", "rounds": [0, 1, 2] },
     { "id": "food-004", "text": "A terrible name for a bakery.", "rounds": [0, 1, 2] },
     { "id": "food-005", "text": "What the last slice of pizza is thinking.", "rounds": [0, 1, 2] },
-    { "id": "food-006", "text": "The worst possible pizza topping.", "rounds": [0, 1, 2] },
+    {
+      "id": "food-006",
+      "text": "A pizza topping that only makes sense at 4 a.m.",
+      "rounds": [0, 1, 2]
+    },
     { "id": "food-007", "text": "Something you should never deep fry.", "rounds": [0, 1, 2] },
     { "id": "food-008", "text": "The menu item nobody orders twice.", "rounds": [0, 1, 2] },
     { "id": "food-009", "text": "A dangerous thing to say to a chef.", "rounds": [0, 1, 2] },
@@ -53,7 +57,7 @@
       "rounds": [0, 1, 2]
     },
     { "id": "food-027", "text": "A food that is secretly a scam.", "rounds": [0, 1, 2] },
-    { "id": "food-028", "text": "The last thing you want in your soup.", "rounds": [0, 1, 2] },
+    { "id": "food-028", "text": "The soup of the day at a haunted diner.", "rounds": [0, 1, 2] },
     {
       "id": "food-029",
       "text": "A five-star review written by a very angry seagull.",
@@ -92,13 +96,21 @@
       "text": "What the buffet does after everyone goes home.",
       "rounds": [0, 1]
     },
-    { "id": "food-039", "text": "The worst thing to bring to a potluck.", "rounds": [0, 1] },
+    {
+      "id": "food-039",
+      "text": "The dish your aunt brings to every family dinner.",
+      "rounds": [0, 1, 2]
+    },
     {
       "id": "food-040",
       "text": "What a waiter thinks when you ask for just water.",
       "rounds": [0, 1]
     },
-    { "id": "food-041", "text": "A breakfast that should come with a warning.", "rounds": [0, 1] },
+    {
+      "id": "food-041",
+      "text": "The breakfast cereal mascot that got fired.",
+      "rounds": [0, 1, 2]
+    },
     {
       "id": "food-042",
       "text": "The sign above a restaurant with zero customers.",
@@ -106,23 +118,27 @@
     },
     {
       "id": "food-043",
-      "text": "Something you would eat if it were free and awful.",
-      "rounds": [0, 1]
+      "text": "Something gross you would still eat if it were free.",
+      "rounds": [0, 1, 2]
     },
     { "id": "food-044", "text": "A slogan for a very honest fast food place.", "rounds": [0, 1] },
     { "id": "food-045", "text": "The ingredient that ruins any recipe.", "rounds": [0, 1, 2] },
     { "id": "food-046", "text": "A terrible name for a sushi roll.", "rounds": [0, 1, 2] },
-    { "id": "food-047", "text": "The worst thing to microwave.", "rounds": [0, 1, 2] },
+    { "id": "food-047", "text": "A kitchen appliance's biggest regret.", "rounds": [0, 1, 2] },
     { "id": "food-048", "text": "What the cheese says to the cracker.", "rounds": [0, 1, 2] },
     { "id": "food-049", "text": "A crumb's last words.", "rounds": [0, 1, 2] },
     {
       "id": "food-050",
-      "text": "Something you should never ask a chef to make.",
+      "text": "The dish a chef makes only for people they hate.",
       "rounds": [0, 1, 2]
     },
     { "id": "food-051", "text": "The most useless kitchen gadget ever sold.", "rounds": [0, 1] },
     { "id": "food-052", "text": "What a pirate orders at a drive-through.", "rounds": [0, 1] },
-    { "id": "food-053", "text": "A noodle with a bad attitude.", "rounds": [0, 1, 2] },
+    {
+      "id": "food-053",
+      "text": "What a noodle with a bad attitude says to the fork.",
+      "rounds": [0, 1, 2]
+    },
     { "id": "food-054", "text": "The spiciest thing ever said at dinner.", "rounds": [0, 1, 2] },
     { "id": "food-055", "text": "The fifth food group nobody mentions.", "rounds": [0, 1, 2] }
   ]

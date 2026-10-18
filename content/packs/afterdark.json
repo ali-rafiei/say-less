@@ -4,7 +4,11 @@
   "prompts": [
     { "id": "afterdark-001", "text": "The worst pickup line at a wedding.", "rounds": [0, 1, 2] },
     { "id": "afterdark-002", "text": "What your phone hears at 2 a.m.", "rounds": [0, 1, 2] },
-    { "id": "afterdark-003", "text": "A terrible name for a dating app.", "rounds": [0, 1, 2] },
+    {
+      "id": "afterdark-003",
+      "text": "The dating app feature nobody asked for.",
+      "rounds": [0, 1, 2]
+    },
     {
       "id": "afterdark-004",
       "text": "The last thing you want to hear after a kiss.",
@@ -49,7 +53,7 @@
     },
     {
       "id": "afterdark-014",
-      "text": "What happens in Vegas, but embarrassing.",
+      "text": "The secret that did not stay at the stag party.",
       "rounds": [0, 1, 2]
     },
     { "id": "afterdark-015", "text": "A terrible thing to text your crush.", "rounds": [0, 1, 2] },
@@ -69,8 +73,16 @@
       "rounds": [0, 1, 2]
     },
     { "id": "afterdark-019", "text": "The most unsexy thing to say in bed.", "rounds": [0, 1, 2] },
-    { "id": "afterdark-020", "text": "The worst thing to drunk-text.", "rounds": [0, 1, 2] },
-    { "id": "afterdark-021", "text": "A very bad reason to call in sick.", "rounds": [0, 1, 2] },
+    {
+      "id": "afterdark-020",
+      "text": "The contact name you gave your ex after the breakup.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "afterdark-021",
+      "text": "The real reason you called in sick after the office party.",
+      "rounds": [0, 1]
+    },
     {
       "id": "afterdark-022",
       "text": "What the fortune teller says about your love life.",
@@ -81,14 +93,22 @@
       "text": "A confession that ends a dinner party.",
       "rounds": [0, 1, 2]
     },
-    { "id": "afterdark-024", "text": "The worst pillow talk.", "rounds": [0, 1, 2] },
+    {
+      "id": "afterdark-024",
+      "text": "The safe word chosen by an accountant.",
+      "rounds": [0, 1, 2]
+    },
     {
       "id": "afterdark-025",
       "text": "The title of a very steamy novel about a plumber.",
       "rounds": [0, 1, 2]
     },
     { "id": "afterdark-026", "text": "A pun that ruins the mood.", "rounds": [0, 1, 2] },
-    { "id": "afterdark-027", "text": "What your beer goggles say.", "rounds": [0, 1, 2] },
+    {
+      "id": "afterdark-027",
+      "text": "Your beer goggles' review of last night's date.",
+      "rounds": [0, 1, 2]
+    },
     {
       "id": "afterdark-028",
       "text": "The worst thing to shout at a karaoke bar.",
@@ -122,7 +142,7 @@
     },
     {
       "id": "afterdark-035",
-      "text": "What your spirit animal does on a Saturday night.",
+      "text": "What your inner party animal does after last call.",
       "rounds": [0, 1]
     },
     { "id": "afterdark-036", "text": "The worst wingman advice in history.", "rounds": [0, 1] },
@@ -148,16 +168,16 @@
       "text": "What the bouncer says when you try to talk your way in.",
       "rounds": [0, 1]
     },
-    { "id": "afterdark-043", "text": "A cheeky name for a very small boat.", "rounds": [0, 1] },
+    { "id": "afterdark-043", "text": "A cheeky name for a very small boat.", "rounds": [0, 1, 2] },
     {
       "id": "afterdark-044",
-      "text": "A terrible line to use at a speed dating event.",
+      "text": "The question that ends a speed date in under ten seconds.",
       "rounds": [0, 1]
     },
     {
       "id": "afterdark-045",
-      "text": "What a cupid with a bad aim might accidentally cause.",
-      "rounds": [0, 1]
+      "text": "The worst couple a cupid with bad aim ever created.",
+      "rounds": [0, 1, 2]
     },
     { "id": "afterdark-046", "text": "A rejected perfume name.", "rounds": [0, 1] },
     { "id": "afterdark-047", "text": "The worst thing to lose at a party.", "rounds": [0, 1, 2] },
@@ -171,7 +191,7 @@
     { "id": "afterdark-051", "text": "A sign the date is going badly.", "rounds": [0, 1, 2] },
     {
       "id": "afterdark-052",
-      "text": "The most embarrassing thing to say by accident.",
+      "text": "The wrong name to say during a romantic moment.",
       "rounds": [0, 1, 2]
     },
     {

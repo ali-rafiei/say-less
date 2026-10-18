@@ -9,7 +9,7 @@
     },
     {
       "id": "love-002",
-      "text": "The name of a dating app for people who hate each other.",
+      "text": "The dating app matched you because you both love ___.",
       "rounds": [0, 1, 2]
     },
     {
@@ -19,7 +19,7 @@
     },
     {
       "id": "love-004",
-      "text": "A red flag that only shows up on the third date.",
+      "text": "Why your date spent forty minutes in the restaurant bathroom.",
       "rounds": [0, 1]
     },
     {
@@ -105,13 +105,13 @@
     },
     {
       "id": "love-026",
-      "text": "The text you regret sending at two in the morning.",
+      "text": "The text you accidentally sent your crush instead of your mom.",
       "rounds": [0, 1]
     },
     { "id": "love-027", "text": "The wedding DJ refuses to play ___.", "rounds": [0, 1, 2] },
     {
       "id": "love-028",
-      "text": "A breakup excuse even worse than it's not you, it's me.",
+      "text": "A breakup excuse even worse than \"It's not you, it's me.\"",
       "rounds": [0, 1]
     },
     {
@@ -129,7 +129,11 @@
       "text": "A couple's costume that ends the relationship.",
       "rounds": [0, 1, 2]
     },
-    { "id": "love-032", "text": "Speed dating went wrong when I said ___.", "rounds": [0, 1, 2] },
+    {
+      "id": "love-032",
+      "text": "Your blind date showed up wearing a full ___.",
+      "rounds": [0, 1, 2]
+    },
     {
       "id": "love-033",
       "text": "The first fight of every new couple is about ___.",
@@ -202,11 +206,7 @@
       "text": "The anniversary gift that was clearly bought at a gas station.",
       "rounds": [0, 1]
     },
-    {
-      "id": "love-049",
-      "text": "A first date location that should be illegal.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "love-049", "text": "The couple's matching tattoos say ___.", "rounds": [0, 1, 2] },
     {
       "id": "love-050",
       "text": "An honest wedding toast from the bride's little brother.",
@@ -217,7 +217,11 @@
       "text": "Every bridesmaid secretly wants to say ___.",
       "rounds": [0, 1, 2]
     },
-    { "id": "love-052", "text": "{player}'s secret crush is ___.", "rounds": [0, 1, 2] },
+    {
+      "id": "love-052",
+      "text": "The pickup line {player} swears has worked before.",
+      "rounds": [0, 1, 2]
+    },
     { "id": "love-053", "text": "{player} got dumped by text. What did it say?", "rounds": [0, 1] },
     {
       "id": "love-054",

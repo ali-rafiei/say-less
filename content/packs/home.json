@@ -5,26 +5,30 @@
     { "id": "home-001", "text": "The worst chore to get stuck with forever.", "rounds": [0, 1, 2] },
     {
       "id": "home-002",
-      "text": "A passive-aggressive note left on the fridge.",
+      "text": "Your roommate's label on their leftovers says ___.",
       "rounds": [0, 1, 2]
     },
     {
       "id": "home-003",
-      "text": "What the neighbors heard through the wall last night.",
-      "rounds": [0, 1, 2]
+      "text": "Why the neighbors suddenly moved out in the middle of the night.",
+      "rounds": [0, 1]
     },
     { "id": "home-004", "text": "A terrible name for a house party.", "rounds": [0, 1, 2] },
     {
       "id": "home-005",
       "text": "Something your roommate does that should be illegal.",
-      "rounds": [0, 1]
+      "rounds": [0, 1, 2]
     },
     {
       "id": "home-006",
       "text": "The real reason the couch will not fit through the door.",
       "rounds": [0, 1, 2]
     },
-    { "id": "home-007", "text": "The creature living behind the fridge.", "rounds": [0, 1, 2] },
+    {
+      "id": "home-007",
+      "text": "What the dust bunnies under the couch have been building.",
+      "rounds": [0, 1, 2]
+    },
     {
       "id": "home-008",
       "text": "An item in the junk drawer that nobody can explain.",
@@ -58,7 +62,7 @@
       "rounds": [0, 1, 2]
     },
     { "id": "home-016", "text": "Home repair tip: just use ___.", "rounds": [0, 1, 2] },
-    { "id": "home-017", "text": "What the nosy neighbor writes in her diary.", "rounds": [0, 1] },
+    { "id": "home-017", "text": "What the nosy neighbor writes in their diary.", "rounds": [0, 1] },
     { "id": "home-018", "text": "The worst thing to find in a moving box.", "rounds": [0, 1, 2] },
     {
       "id": "home-019",
@@ -67,7 +71,7 @@
     },
     {
       "id": "home-020",
-      "text": "The moment the house party officially got out of hand.",
+      "text": "The house party got shut down when someone brought out ___.",
       "rounds": [0, 1, 2]
     },
     {
@@ -87,7 +91,7 @@
     },
     {
       "id": "home-024",
-      "text": "House rule number one: no ___ after midnight.",
+      "text": "The basement light stays off because nobody wants to see ___.",
       "rounds": [0, 1, 2]
     },
     {
@@ -156,10 +160,14 @@
       "text": "The roommate agreement has one very strange clause: ___.",
       "rounds": [0, 1, 2]
     },
-    { "id": "home-043", "text": "The garden gnome's evil plan.", "rounds": [0, 1, 2] },
+    {
+      "id": "home-043",
+      "text": "The bird feeder in the backyard has started attracting ___.",
+      "rounds": [0, 1, 2]
+    },
     {
       "id": "home-044",
-      "text": "A scented candle that smells like a damp basement.",
+      "text": "The new scented candle smells exactly like ___.",
       "rounds": [0, 1, 2]
     },
     {
@@ -201,8 +209,8 @@
     { "id": "home-053", "text": "What {player} hides when guests come over.", "rounds": [0, 1] },
     {
       "id": "home-054",
-      "text": "A real estate listing for the worst house on the street.",
-      "rounds": [0, 1]
+      "text": "The open house went badly when the buyers found ___.",
+      "rounds": [0, 1, 2]
     },
     {
       "id": "home-055",

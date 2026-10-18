@@ -33,16 +33,20 @@
       "text": "Airport security just confiscated my ___.",
       "rounds": [0, 1, 2]
     },
-    { "id": "travel-008", "text": "A terrible name for a cruise ship.", "rounds": [0, 1, 2] },
+    {
+      "id": "travel-008",
+      "text": "Tonight's entertainment on the cruise ship: ___.",
+      "rounds": [0, 1, 2]
+    },
     {
       "id": "travel-009",
-      "text": "The worst game to play on a twelve-hour drive.",
+      "text": "The reason someone got left behind at the gas station.",
       "rounds": [0, 1, 2]
     },
     {
       "id": "travel-010",
-      "text": "What the GPS says right before it gives up completely.",
-      "rounds": [0, 1]
+      "text": "Why the GPS keeps routing you through the same farm.",
+      "rounds": [0, 1, 2]
     },
     {
       "id": "travel-011",
@@ -56,7 +60,7 @@
     },
     {
       "id": "travel-013",
-      "text": "Something you should never pack in a carry-on.",
+      "text": "The person in the window seat needs to get up again because ___.",
       "rounds": [0, 1, 2]
     },
     {
@@ -71,7 +75,7 @@
     },
     {
       "id": "travel-016",
-      "text": "The airplane seat that will not recline is plotting ___.",
+      "text": "The passenger behind you keeps kicking your seat because ___.",
       "rounds": [0, 1, 2]
     },
     { "id": "travel-017", "text": "Rejected in-flight snack: ___.", "rounds": [0, 1, 2] },
@@ -106,7 +110,11 @@
       "text": "An unhelpful announcement over the airport speakers.",
       "rounds": [0, 1]
     },
-    { "id": "travel-025", "text": "Vacation ruined. The cause: ___.", "rounds": [0, 1, 2] },
+    {
+      "id": "travel-025",
+      "text": "The all-inclusive resort's one thing not included: ___.",
+      "rounds": [0, 1, 2]
+    },
     {
       "id": "travel-026",
       "text": "The only thing a one-star motel does well.",
@@ -121,10 +129,14 @@
       "text": "Something you should never feed the pigeons in the town square.",
       "rounds": [0, 1, 2]
     },
-    { "id": "travel-032", "text": "A terrible thing to forget at home.", "rounds": [0, 1, 2] },
+    {
+      "id": "travel-032",
+      "text": "Halfway to the airport, you realize you left ___ running.",
+      "rounds": [0, 1, 2]
+    },
     {
       "id": "travel-033",
-      "text": "Something left in the rental car glovebox by the last driver.",
+      "text": "The rental car company's reason for keeping your deposit.",
       "rounds": [0, 1, 2]
     },
     { "id": "travel-034", "text": "A new fee the airline just invented.", "rounds": [0, 1, 2] },
@@ -190,8 +202,8 @@
     { "id": "travel-050", "text": "A terrible name for a travel agency.", "rounds": [0, 1, 2] },
     {
       "id": "travel-051",
-      "text": "The last thing you want to see when you open your hotel room door.",
-      "rounds": [0, 1]
+      "text": "The hotel's \"ocean view\" turned out to be ___.",
+      "rounds": [0, 1, 2]
     },
     {
       "id": "travel-052",
@@ -205,7 +217,7 @@
     },
     {
       "id": "travel-054",
-      "text": "The hidden charge at the bottom of the hotel bill: ___.",
+      "text": "The towel animal the housekeeper left on your bed tonight: ___.",
       "rounds": [0, 1, 2]
     },
     {

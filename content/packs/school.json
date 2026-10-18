@@ -4,7 +4,7 @@
   "prompts": [
     {
       "id": "school-001",
-      "text": "The homework excuse that the teacher actually believed.",
+      "text": "The group project member who did nothing finally contributed ___.",
       "rounds": [0, 1, 2]
     },
     {
@@ -29,7 +29,7 @@
     },
     {
       "id": "school-006",
-      "text": "What the lunch lady puts in the mystery meat.",
+      "text": "What the cafeteria cook puts in the mystery meat.",
       "rounds": [0, 1, 2]
     },
     { "id": "school-007", "text": "The worst sport to play in gym class.", "rounds": [0, 1, 2] },
@@ -74,7 +74,11 @@
       "text": "The yearbook superlative nobody wants: Most Likely to ___.",
       "rounds": [0, 1, 2]
     },
-    { "id": "school-017", "text": "Today's show and tell item: ___.", "rounds": [0, 1, 2] },
+    {
+      "id": "school-017",
+      "text": "The kindergarten's new rule after nap time: no more ___.",
+      "rounds": [0, 1, 2]
+    },
     {
       "id": "school-018",
       "text": "The announcement over the school speakers that causes total chaos.",
@@ -98,7 +102,7 @@
     { "id": "school-022", "text": "A terrible theme for the school dance.", "rounds": [0, 1, 2] },
     {
       "id": "school-023",
-      "text": "The class every school should teach but does not.",
+      "text": "The one career the guidance counsellor recommends to everyone.",
       "rounds": [0, 1, 2]
     },
     {
@@ -139,7 +143,7 @@
     },
     {
       "id": "school-032",
-      "text": "The secret ingredient in cafeteria pizza.",
+      "text": "A cafeteria special that comes with a permission slip.",
       "rounds": [0, 1, 2]
     },
     {
@@ -184,7 +188,7 @@
     },
     {
       "id": "school-041",
-      "text": "The note passed in class that got everyone sent to the office.",
+      "text": "Why the whole class got detention on picture day.",
       "rounds": [0, 1]
     },
     { "id": "school-042", "text": "Overheard in the teachers' lounge: ___.", "rounds": [0, 1, 2] },
@@ -207,7 +211,11 @@
       "text": "A line from a very honest graduation speech.",
       "rounds": [0, 1]
     },
-    { "id": "school-050", "text": "The janitor's greatest secret.", "rounds": [0, 1, 2] },
+    {
+      "id": "school-050",
+      "text": "What the janitor has been building in the boiler room.",
+      "rounds": [0, 1, 2]
+    },
     {
       "id": "school-051",
       "text": "The scariest line on a field trip permission slip.",
