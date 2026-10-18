@@ -9,7 +9,7 @@
     },
     {
       "id": "love-002",
-      "text": "The name of a dating app for people who hate each other.",
+      "text": "The dating app matched you because you both love ___.",
       "rounds": [0, 1, 2]
     },
     {
@@ -19,7 +19,7 @@
     },
     {
       "id": "love-004",
-      "text": "A red flag that only shows up on the third date.",
+      "text": "Why your date spent forty minutes in the restaurant bathroom.",
       "rounds": [0, 1]
     },
     {
@@ -37,11 +37,7 @@
       "text": "The best man's speech went wrong when he mentioned ___.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "love-008",
-      "text": "A breakup text sent by a very polite robot.",
-      "rounds": [0, 1]
-    },
+    { "id": "love-008", "text": "A breakup text sent by a very polite robot.", "rounds": [0, 1] },
     {
       "id": "love-009",
       "text": "Something you should never bring to meet the parents.",
@@ -57,11 +53,7 @@
       "text": "What the couple at the next table is fighting about.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "love-012",
-      "text": "The magic words that end every argument.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "love-012", "text": "The magic words that end every argument.", "rounds": [0, 1, 2] },
     {
       "id": "love-013",
       "text": "An honest profile bio for someone who has been single for ten years.",
@@ -82,31 +74,19 @@
       "text": "The exact moment the first date went downhill.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "love-017",
-      "text": "The worst place to propose.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "love-017", "text": "The worst place to propose.", "rounds": [0, 1, 2] },
     {
       "id": "love-018",
       "text": "The tiny couple on top of the wedding cake are secretly ___.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "love-019",
-      "text": "A love note that is a little too honest.",
-      "rounds": [0, 1]
-    },
+    { "id": "love-019", "text": "A love note that is a little too honest.", "rounds": [0, 1] },
     {
       "id": "love-020",
       "text": "A nickname that should never be used in public.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "love-021",
-      "text": "The ex shows up at the wedding with ___.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "love-021", "text": "The ex shows up at the wedding with ___.", "rounds": [0, 1, 2] },
     {
       "id": "love-022",
       "text": "A first date activity that guarantees no second date.",
@@ -117,11 +97,7 @@
       "text": "Things you learn about your partner on a long road trip.",
       "rounds": [0, 1]
     },
-    {
-      "id": "love-024",
-      "text": "I knew it was love when they ___.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "love-024", "text": "I knew it was love when they ___.", "rounds": [0, 1, 2] },
     {
       "id": "love-025",
       "text": "Dating profile red flag: a photo of them holding ___.",
@@ -129,17 +105,13 @@
     },
     {
       "id": "love-026",
-      "text": "The text you regret sending at two in the morning.",
+      "text": "The text you accidentally sent your crush instead of your mom.",
       "rounds": [0, 1]
     },
-    {
-      "id": "love-027",
-      "text": "The wedding DJ refuses to play ___.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "love-027", "text": "The wedding DJ refuses to play ___.", "rounds": [0, 1, 2] },
     {
       "id": "love-028",
-      "text": "A breakup excuse even worse than it's not you, it's me.",
+      "text": "A breakup excuse even worse than \"It's not you, it's me.\"",
       "rounds": [0, 1]
     },
     {
@@ -159,7 +131,7 @@
     },
     {
       "id": "love-032",
-      "text": "Speed dating went wrong when I said ___.",
+      "text": "Your blind date showed up wearing a full ___.",
       "rounds": [0, 1, 2]
     },
     {
@@ -182,21 +154,13 @@
       "text": "The one thing on the wedding registry nobody will buy.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "love-037",
-      "text": "What your ex is doing right now.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "love-037", "text": "What your ex is doing right now.", "rounds": [0, 1, 2] },
     {
       "id": "love-038",
       "text": "A song that should never be the first dance.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "love-039",
-      "text": "A sign your date is secretly a vampire.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "love-039", "text": "A sign your date is secretly a vampire.", "rounds": [0, 1, 2] },
     {
       "id": "love-040",
       "text": "The objection someone shouted at the wedding.",
@@ -242,11 +206,7 @@
       "text": "The anniversary gift that was clearly bought at a gas station.",
       "rounds": [0, 1]
     },
-    {
-      "id": "love-049",
-      "text": "A first date location that should be illegal.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "love-049", "text": "The couple's matching tattoos say ___.", "rounds": [0, 1, 2] },
     {
       "id": "love-050",
       "text": "An honest wedding toast from the bride's little brother.",
@@ -259,14 +219,10 @@
     },
     {
       "id": "love-052",
-      "text": "{player}'s secret crush is ___.",
+      "text": "The pickup line {player} swears has worked before.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "love-053",
-      "text": "{player} got dumped by text. What did it say?",
-      "rounds": [0, 1]
-    },
+    { "id": "love-053", "text": "{player} got dumped by text. What did it say?", "rounds": [0, 1] },
     {
       "id": "love-054",
       "text": "A romantic comedy plot so cheesy that even the actors laughed.",

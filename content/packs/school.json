@@ -4,7 +4,7 @@
   "prompts": [
     {
       "id": "school-001",
-      "text": "The homework excuse that the teacher actually believed.",
+      "text": "The group project member who did nothing finally contributed ___.",
       "rounds": [0, 1, 2]
     },
     {
@@ -29,24 +29,16 @@
     },
     {
       "id": "school-006",
-      "text": "What the lunch lady puts in the mystery meat.",
+      "text": "What the cafeteria cook puts in the mystery meat.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "school-007",
-      "text": "The worst sport to play in gym class.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "school-007", "text": "The worst sport to play in gym class.", "rounds": [0, 1, 2] },
     {
       "id": "school-008",
       "text": "A note you do not want your teacher to read out loud.",
       "rounds": [0, 1]
     },
-    {
-      "id": "school-009",
-      "text": "A rejected topic for the science fair.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "school-009", "text": "A rejected topic for the science fair.", "rounds": [0, 1, 2] },
     {
       "id": "school-010",
       "text": "My report card says I am excellent at ___.",
@@ -84,7 +76,7 @@
     },
     {
       "id": "school-017",
-      "text": "Today's show and tell item: ___.",
+      "text": "The kindergarten's new rule after nap time: no more ___.",
       "rounds": [0, 1, 2]
     },
     {
@@ -107,14 +99,10 @@
       "text": "A pep rally chant for a team that has never won a game.",
       "rounds": [0, 1]
     },
-    {
-      "id": "school-022",
-      "text": "A terrible theme for the school dance.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "school-022", "text": "A terrible theme for the school dance.", "rounds": [0, 1, 2] },
     {
       "id": "school-023",
-      "text": "The class every school should teach but does not.",
+      "text": "The one career the guidance counsellor recommends to everyone.",
       "rounds": [0, 1, 2]
     },
     {
@@ -137,11 +125,7 @@
       "text": "An answer on the history test that is technically correct.",
       "rounds": [0, 1]
     },
-    {
-      "id": "school-028",
-      "text": "The worst field trip destination.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "school-028", "text": "The worst field trip destination.", "rounds": [0, 1, 2] },
     {
       "id": "school-029",
       "text": "The fire drill went wrong because of ___.",
@@ -159,7 +143,7 @@
     },
     {
       "id": "school-032",
-      "text": "The secret ingredient in cafeteria pizza.",
+      "text": "A cafeteria special that comes with a permission slip.",
       "rounds": [0, 1, 2]
     },
     {
@@ -204,44 +188,24 @@
     },
     {
       "id": "school-041",
-      "text": "The note passed in class that got everyone sent to the office.",
+      "text": "Why the whole class got detention on picture day.",
       "rounds": [0, 1]
     },
-    {
-      "id": "school-042",
-      "text": "Overheard in the teachers' lounge: ___.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "school-042", "text": "Overheard in the teachers' lounge: ___.", "rounds": [0, 1, 2] },
     {
       "id": "school-043",
       "text": "Forget dodgeballs, gym class now uses ___.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "school-044",
-      "text": "How you find out there is a pop quiz today.",
-      "rounds": [0, 1]
-    },
+    { "id": "school-044", "text": "How you find out there is a pop quiz today.", "rounds": [0, 1] },
     {
       "id": "school-045",
       "text": "A strange thing to see in the school nurse's office.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "school-046",
-      "text": "The last thing the class pet saw.",
-      "rounds": [0, 1, 2]
-    },
-    {
-      "id": "school-047",
-      "text": "Why the science teacher has no eyebrows.",
-      "rounds": [0, 1, 2]
-    },
-    {
-      "id": "school-048",
-      "text": "An unusual elective: Advanced ___.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "school-046", "text": "The last thing the class pet saw.", "rounds": [0, 1, 2] },
+    { "id": "school-047", "text": "Why the science teacher has no eyebrows.", "rounds": [0, 1, 2] },
+    { "id": "school-048", "text": "An unusual elective: Advanced ___.", "rounds": [0, 1, 2] },
     {
       "id": "school-049",
       "text": "A line from a very honest graduation speech.",
@@ -249,7 +213,7 @@
     },
     {
       "id": "school-050",
-      "text": "The janitor's greatest secret.",
+      "text": "What the janitor has been building in the boiler room.",
       "rounds": [0, 1, 2]
     },
     {
@@ -262,11 +226,7 @@
       "text": "{player} got sent to the principal's office for ___.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "school-053",
-      "text": "What {player} wrote in everyone's yearbook.",
-      "rounds": [0, 1]
-    },
+    { "id": "school-053", "text": "What {player} wrote in everyone's yearbook.", "rounds": [0, 1] },
     {
       "id": "school-054",
       "text": "The new recess rule after the incident on the monkey bars.",

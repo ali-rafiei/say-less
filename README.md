@@ -102,8 +102,9 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
    below the spotlight. Final points are added to scores only at the podium, so the
    reveal gives nothing away early.
 8. **Podium**: the top three blocks rise third, second, then first; winner mic-drops on
-   loop, "Best of the game" (each round's most-voted answer), superlatives ticker, Rematch
-   (leader) or Leave. A rematch keeps the room and excludes prompts already used; waiting
+   loop. Under them, **Final scores** (everyone's total, in order), the superlatives ticker,
+   "Best of the game" (each round's most-voted answer), then the last question's answers
+   with the points that question alone gave, and Rematch (leader) or Leave. A rematch keeps the room and excludes prompts already used; waiting
    audience members take any free seats first.
 
 ### Room options
@@ -790,7 +791,10 @@ flat-vector art direction, one unique character per player.
   losing a matchup is a soft two-note marimba instead of the brass wah-wah. Offline renders
   through the real bus (`AudioGraph` on an `OfflineAudioContext`): fanfare -7 dBFS peak / -20
   RMS, silenced -9 / -21, lose -10 / -21, reveal pop -13 / -22.5, against the voting chime's
-  -10 / -21; no clipping. Mic Drop keeps its thud. Five new packs (Road Trip, School Daze,
+  -10 / -21; no clipping. Mic Drop keeps its thud. The podium leads with the total scores;
+  the last question's points moved to the bottom (players read them as the final standings).
+  An editorial pass rewrote 149 prompts (66 cross-game repeats, 33 of them in the new packs,
+  plus awkward, flat, off-tone and mis-tagged ones), keeping their ids. Five new packs (Road Trip, School Daze,
   Out of This World, Home Sweet Home, Love Life; 55 prompts each, 36 to 41 final-tagged),
   checked against every existing prompt for exact and near duplicates.
 

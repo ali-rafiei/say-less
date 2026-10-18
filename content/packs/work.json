@@ -8,7 +8,7 @@
       "rounds": [0, 1, 2]
     },
     { "id": "work-002", "text": "A rejected company slogan.", "rounds": [0, 1, 2] },
-    { "id": "work-003", "text": "The real meaning of let's circle back.", "rounds": [0, 1, 2] },
+    { "id": "work-003", "text": "What \"let's circle back\" actually means.", "rounds": [0, 1, 2] },
     { "id": "work-004", "text": "Something you should never reply-all to.", "rounds": [0, 1, 2] },
     {
       "id": "work-005",
@@ -68,7 +68,7 @@
     { "id": "work-028", "text": "What the boss says instead of thank you.", "rounds": [0, 1, 2] },
     {
       "id": "work-029",
-      "text": "The worst thing a coworker has ever microwaved.",
+      "text": "The passive-aggressive note taped to the office fridge.",
       "rounds": [0, 1]
     },
     {
@@ -90,15 +90,19 @@
     { "id": "work-038", "text": "What happens at the office after midnight.", "rounds": [0, 1] },
     {
       "id": "work-039",
-      "text": "A very bad thing to hear after we need to talk.",
+      "text": "The worst sentence to follow \"Got a minute?\" from your boss.",
       "rounds": [0, 1]
     },
-    { "id": "work-040", "text": "What a mascot for your office would be like.", "rounds": [0, 1] },
+    {
+      "id": "work-040",
+      "text": "The name of your office's terrifying new mascot.",
+      "rounds": [0, 1, 2]
+    },
     { "id": "work-041", "text": "The secret to surviving a pointless meeting.", "rounds": [0, 1] },
     {
       "id": "work-042",
       "text": "A corporate buzzword that should be banned immediately.",
-      "rounds": [0, 1]
+      "rounds": [0, 1, 2]
     },
     { "id": "work-043", "text": "A scary line in the company handbook.", "rounds": [0, 1] },
     { "id": "work-044", "text": "What your chair does when you leave the room.", "rounds": [0, 1] },
@@ -132,9 +136,13 @@
     {
       "id": "work-056",
       "text": "The job title of someone who does nothing all day.",
+      "rounds": [0, 1, 2]
+    },
+    {
+      "id": "work-057",
+      "text": "What you whisper while sneaking out at 4:59 on a Friday.",
       "rounds": [0, 1]
     },
-    { "id": "work-057", "text": "The worst excuse to leave early on a Friday.", "rounds": [0, 1] },
     { "id": "work-058", "text": "Your boss's secret hobby.", "rounds": [0, 1, 2] }
   ]
 }

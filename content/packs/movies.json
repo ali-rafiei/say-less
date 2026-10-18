@@ -81,27 +81,39 @@
       "text": "The title of a documentary about your morning.",
       "rounds": [0, 1, 2]
     },
-    { "id": "movies-024", "text": "The worst thing to overhear at a cinema.", "rounds": [0, 1, 2] },
+    {
+      "id": "movies-024",
+      "text": "The snack that ruins a silent movie screening.",
+      "rounds": [0, 1, 2]
+    },
     {
       "id": "movies-025",
-      "text": "The worst line to say at a wedding scene.",
+      "text": "The line that ruins the big wedding scene in a romcom.",
       "rounds": [0, 1, 2]
     },
     { "id": "movies-026", "text": "What the alien says upon landing.", "rounds": [0, 1, 2] },
-    { "id": "movies-027", "text": "A cheesy line for a movie poster.", "rounds": [0, 1, 2] },
+    {
+      "id": "movies-027",
+      "text": "The tagline for a horror movie about a haunted dishwasher.",
+      "rounds": [0, 1, 2]
+    },
     {
       "id": "movies-028",
-      "text": "The most predictable thing in a thriller.",
+      "text": "The clue the thriller detective somehow misses for two hours.",
       "rounds": [0, 1, 2]
     },
     { "id": "movies-029", "text": "A very confusing trailer voiceover line.", "rounds": [0, 1] },
     { "id": "movies-030", "text": "What the villain's evil lair is missing.", "rounds": [0, 1] },
-    { "id": "movies-031", "text": "A cooking show hosted by a vampire.", "rounds": [0, 1] },
+    {
+      "id": "movies-031",
+      "text": "The name of a cooking show hosted by a vampire.",
+      "rounds": [0, 1, 2]
+    },
     { "id": "movies-032", "text": "The worst outfit for a heist movie.", "rounds": [0, 1] },
     {
       "id": "movies-033",
-      "text": "The main character's fatal flaw in a very small film.",
-      "rounds": [0, 1]
+      "text": "The fatal flaw of an action hero who is three inches tall.",
+      "rounds": [0, 1, 2]
     },
     {
       "id": "movies-034",
@@ -110,7 +122,7 @@
     },
     {
       "id": "movies-035",
-      "text": "The most dramatic way to end a boring meeting.",
+      "text": "How a movie villain would end a boring meeting.",
       "rounds": [0, 1]
     },
     {
@@ -126,7 +138,7 @@
       "text": "A famous movie speech, but it is about laundry.",
       "rounds": [0, 1]
     },
-    { "id": "movies-041", "text": "The award nobody wants at the ceremony.", "rounds": [0, 1] },
+    { "id": "movies-041", "text": "The award nobody wants at the ceremony.", "rounds": [0, 1, 2] },
     {
       "id": "movies-042",
       "text": "The behind-the-scenes disaster of a big movie.",

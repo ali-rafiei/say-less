@@ -66,11 +66,84 @@ export function Podium({ ctl, room, me }: Props) {
         })}
       </div>
 
+      <section className="stack" aria-labelledby="final-scores">
+        <h2 id="final-scores" className="display center">
+          Final scores
+        </h2>
+        <ol className={`board ${placements.length > 8 ? 'board--dense' : ''}`}>
+          {placements.map((p) => {
+            const player = byId.get(p.playerId);
+            return (
+              <li
+                key={p.playerId}
+                className={`board__row ${p.playerId === me ? 'board__row--me' : ''}`}
+              >
+                <span className="board__rank display">{p.place}</span>
+                <Character
+                  characterId={player?.characterId ?? null}
+                  size={placements.length > 8 ? 34 : 44}
+                />
+                <span
+                  className="board__name"
+                  style={{ background: characterMeta(player?.characterId)?.accent }}
+                >
+                  {player?.name}
+                </span>
+                <span className="board__score display">{p.score}</span>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+
+      {podium && podium.superlatives.length > 0 && (
+        <section className="card ticker">
+          <div className="ticker__track">
+            {[...podium.superlatives, ...podium.superlatives].map((s, i) => (
+              <span key={i} className="ticker__item">
+                <b className="display">{s.title}:</b> {byId.get(s.playerId)?.name ?? '?'}{' '}
+                <span className="dim">· {s.detail}</span>
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {room.highlights.length > 0 && (
+        <section className="card stack">
+          <h2 className="display">Best of the game</h2>
+          {room.highlights.map((h) => {
+            const author = byId.get(h.playerId);
+            return (
+              <div key={h.roundIndex} className="highlight row">
+                <Character characterId={author?.characterId ?? null} size={40} />
+                <div className="grow">
+                  <span className="dim small">
+                    {ROUNDS[h.roundIndex]!.name} · {h.promptText}
+                  </span>
+                  <AnswerText
+                    text={h.text}
+                    filter={room.settings.profanityFilter && h.playerId !== me}
+                    className="highlight__text"
+                  />
+                  <span className="dim small">
+                    {author?.name ?? '?'} · {h.votes} {h.votes === 1 ? 'vote' : 'votes'}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </section>
+      )}
+
       {final && final.result && (
         <section className="card stack">
           <h2 className="display">
-            {final.voting === 'single' ? 'Final round posts' : `Final round: ${final.prompt.text}`}
+            {final.voting === 'single'
+              ? 'Last round: the posts'
+              : `Last question: ${final.prompt.text}`}
           </h2>
+          <p className="dim small">Points from this question only; they are in the totals above.</p>
           <div className="stack">
             {[...final.answers]
               .sort(
@@ -104,71 +177,6 @@ export function Podium({ ctl, room, me }: Props) {
           </div>
         </section>
       )}
-
-      {room.highlights.length > 0 && (
-        <section className="card stack">
-          <h2 className="display">Best of the game</h2>
-          {room.highlights.map((h) => {
-            const author = byId.get(h.playerId);
-            return (
-              <div key={h.roundIndex} className="highlight row">
-                <Character characterId={author?.characterId ?? null} size={40} />
-                <div className="grow">
-                  <span className="dim small">
-                    {ROUNDS[h.roundIndex]!.name} · {h.promptText}
-                  </span>
-                  <AnswerText
-                    text={h.text}
-                    filter={room.settings.profanityFilter && h.playerId !== me}
-                    className="highlight__text"
-                  />
-                  <span className="dim small">
-                    {author?.name ?? '?'} · {h.votes} {h.votes === 1 ? 'vote' : 'votes'}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </section>
-      )}
-
-      {podium && podium.superlatives.length > 0 && (
-        <section className="card ticker">
-          <div className="ticker__track">
-            {[...podium.superlatives, ...podium.superlatives].map((s, i) => (
-              <span key={i} className="ticker__item">
-                <b className="display">{s.title}:</b> {byId.get(s.playerId)?.name ?? '?'}{' '}
-                <span className="dim">· {s.detail}</span>
-              </span>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <ol className={`board ${placements.length > 8 ? 'board--dense' : ''}`}>
-        {placements.map((p) => {
-          const player = byId.get(p.playerId);
-          return (
-            <li
-              key={p.playerId}
-              className={`board__row ${p.playerId === me ? 'board__row--me' : ''}`}
-            >
-              <span className="board__rank display">{p.place}</span>
-              <Character
-                characterId={player?.characterId ?? null}
-                size={placements.length > 8 ? 34 : 44}
-              />
-              <span
-                className="board__name"
-                style={{ background: characterMeta(player?.characterId)?.accent }}
-              >
-                {player?.name}
-              </span>
-              <span className="board__score display">{p.score}</span>
-            </li>
-          );
-        })}
-      </ol>
 
       <div className="row">
         {isLeader ? (

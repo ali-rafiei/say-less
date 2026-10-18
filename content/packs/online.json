@@ -9,7 +9,7 @@
     },
     {
       "id": "online-002",
-      "text": "A terrible username for a job application.",
+      "text": "The email address that gets your job application deleted.",
       "rounds": [0, 1, 2]
     },
     { "id": "online-003", "text": "What your search history says about you.", "rounds": [0, 1, 2] },
@@ -27,10 +27,14 @@
     { "id": "online-007", "text": "What the wifi password should be.", "rounds": [0, 1, 2] },
     { "id": "online-008", "text": "A very bad thing to say in a video call.", "rounds": [0, 1, 2] },
     { "id": "online-009", "text": "The caption for the worst selfie ever.", "rounds": [0, 1, 2] },
-    { "id": "online-010", "text": "What the autocorrect did this time.", "rounds": [0, 1, 2] },
+    {
+      "id": "online-010",
+      "text": "The group chat name that made half the members leave.",
+      "rounds": [0, 1, 2]
+    },
     {
       "id": "online-011",
-      "text": "The title of an unwatched video with three views.",
+      "text": "The title of a video with exactly three views, all from Mom.",
       "rounds": [0, 1, 2]
     },
     {
@@ -54,7 +58,11 @@
       "text": "What your battery percentage says about your life.",
       "rounds": [0, 1, 2]
     },
-    { "id": "online-017", "text": "The worst notification to get at church.", "rounds": [0, 1, 2] },
+    {
+      "id": "online-017",
+      "text": "The worst notification to pop up during wedding vows.",
+      "rounds": [0, 1, 2]
+    },
     { "id": "online-018", "text": "A reply that ends any conversation.", "rounds": [0, 1, 2] },
     {
       "id": "online-019",
@@ -82,7 +90,7 @@
     { "id": "online-026", "text": "What the loading wheel is thinking.", "rounds": [0, 1, 2] },
     {
       "id": "online-027",
-      "text": "What your phone whispers when it is at one percent.",
+      "text": "The worst thing to accidentally screen-share.",
       "rounds": [0, 1, 2]
     },
     {
@@ -113,15 +121,19 @@
     },
     {
       "id": "online-038",
-      "text": "An email subject line that guarantees no one opens it.",
-      "rounds": [0, 1]
+      "text": "An email subject line that makes IT shut down the whole network.",
+      "rounds": [0, 1, 2]
     },
     {
       "id": "online-039",
       "text": "A terrible name for a group chat with your relatives.",
       "rounds": [0, 1]
     },
-    { "id": "online-040", "text": "The most awkward thing to say on a hot mic.", "rounds": [0, 1] },
+    {
+      "id": "online-040",
+      "text": "The thing behind you on a video call you forgot to hide.",
+      "rounds": [0, 1, 2]
+    },
     {
       "id": "online-041",
       "text": "What a pop-up ad would say if it were honest.",
@@ -129,7 +141,7 @@
     },
     {
       "id": "online-042",
-      "text": "What your screen time report should say in shame.",
+      "text": "The brutally honest headline on your weekly screen time report.",
       "rounds": [0, 1]
     },
     {
@@ -147,7 +159,11 @@
       "text": "A recap of a group chat argument, in one sentence.",
       "rounds": [0, 1]
     },
-    { "id": "online-046", "text": "The worst emoji replacement for words.", "rounds": [0, 1, 2] },
+    {
+      "id": "online-046",
+      "text": "A word that should never be replaced with an emoji.",
+      "rounds": [0, 1, 2]
+    },
     {
       "id": "online-047",
       "text": "A dating app opener that should be illegal.",
