@@ -19,11 +19,20 @@ export type RoundIndex = 0 | 1 | 2;
 /**
  * classic: prompts from the chosen packs. custom: players write the prompts in the lobby.
  * doodle: everyone draws, then captions each other's drawings.
+ * initials: every prompt comes with letters; each word of the answer starts with the next
+ *   letter, and the number of letters shrinks every round.
  * context: after Survive the Internet. Everyone answers a question honestly, another player
  *   gets only that quote and writes the headline (or product, or thread) that makes it look
  *   ridiculous, and everyone votes once on the wall of posts. Every round is a wall round.
  */
-export type GameMode = 'classic' | 'custom' | 'doodle' | 'context';
+export type GameMode = 'classic' | 'custom' | 'doodle' | 'context' | 'initials';
+
+/** normal: the standard clocks. relaxed: double time to write and vote. off: no clock, the
+ *  leader moves the room on (reveals and scoreboards keep their timing). */
+export type TimerSpeed = 'normal' | 'relaxed' | 'off';
+
+/** short skips round 2: one matchup round, then the final. */
+export type GameLength = 'full' | 'short';
 
 export interface RoomSettings {
   profanityFilter: boolean;
@@ -35,6 +44,16 @@ export interface RoomSettings {
   packs: string[];
   /** false skips the round 2 roast window, so nobody can cut an opponent to 2 words */
   roasts: boolean;
+  timers: TimerSpeed;
+  /** a one-tap stock answer for a stuck writer, worth half the vote points */
+  bailOuts: boolean;
+  /** late joiners and anyone past maxPlayers watch and vote as the audience */
+  audience: boolean;
+  /** seats in the room; anyone past it joins the audience (or is turned away) */
+  maxPlayers: number;
+  length: GameLength;
+  /** hide who wrote which final answer until the reveal */
+  anonymousFinal: boolean;
 }
 
 export interface CustomPrompt {
@@ -74,9 +93,23 @@ export interface PublicAnswer {
   effectiveLimit: number | null;
   /** Out of Context: the post this answer is the twist for */
   seed: PublicSeed | null;
+  /** a stock Bail Out answer; false until revealed */
+  bailOut: boolean;
+  /** the leader censored it: its text is replaced and votes for it do not count */
+  censored: boolean;
+  /** wall rounds: the id to vote with (a player id, or an opaque id when anonymous) */
+  answerId: string | null;
 }
 
-export type AwardKind = 'votes' | 'silenced' | 'micDrop' | 'greatMinds' | 'steal' | 'stolen';
+export type AwardKind =
+  | 'votes'
+  | 'silenced'
+  | 'micDrop'
+  | 'greatMinds'
+  | 'steal'
+  | 'stolen'
+  /** the audience preferred this answer */
+  | 'crowd';
 
 export interface PlayerAward {
   playerId: string;
@@ -86,6 +119,8 @@ export interface PlayerAward {
 
 export interface MatchupResult {
   voteCounts: [number, number];
+  /** audience votes per answer; they decide only the Crowd Favourite bonus */
+  audienceCounts: [number, number];
   winnerIndex: 0 | 1 | null;
   tie: boolean;
   greatMinds: boolean;
@@ -122,6 +157,8 @@ export interface Roast {
 export interface PublicMatchup {
   promptId: string;
   promptText: string;
+  /** Initials mode: the letters the answers had to start with (shown with the prompt) */
+  letters: string | null;
   /** null until voting opens, and in Classic and Custom */
   seed: PublicSeed | null;
   answers: [PublicAnswer, PublicAnswer];
@@ -141,6 +178,10 @@ export interface FinalTally {
   pity: number;
   /** Out of Context: this player's twist drew the most votes */
   bestBurn: boolean;
+  /** audience votes for this player's answer */
+  crowd: number;
+  /** the audience's favourite answer (its bonus is already in points) */
+  crowdFavourite: boolean;
 }
 
 export interface PublicFinal {
@@ -150,6 +191,7 @@ export interface PublicFinal {
   voting: 'rank' | 'single';
   /** null when word limits are off */
   limit: number | null;
+  letters: string | null;
   answers: PublicAnswer[];
   votes: Record<string, [string, string]> | null;
   result: Record<string, FinalTally> | null;
@@ -172,6 +214,28 @@ export interface Podium {
   superlatives: Superlative[];
 }
 
+/** The most-voted answer of a round, kept for the podium. */
+export interface Highlight {
+  roundIndex: RoundIndex;
+  promptText: string;
+  text: string;
+  playerId: string;
+  votes: number;
+}
+
+export interface PauseState {
+  byName: string;
+  /** time left on the phase clock when it was paused; null for an untimed phase */
+  remainingMs: number | null;
+}
+
+/** Fields that differ per viewer. */
+export interface ViewerState {
+  role: 'player' | 'audience';
+  /** the viewer's own answer on an anonymous final wall, so they cannot vote for it */
+  finalAnswerId: string | null;
+}
+
 export interface PublicRoomState {
   code: string;
   phase: RoomPhase;
@@ -191,6 +255,10 @@ export interface PublicRoomState {
   podium: Podium | null;
   banner: string | null;
   gamesPlayed: number;
+  paused: PauseState | null;
+  audienceCount: number;
+  highlights: Highlight[];
+  viewer: ViewerState;
   /** server clock at broadcast time, so clients can offset their countdown rings */
   serverNow: number;
 }
@@ -203,6 +271,8 @@ export interface YourPrompt {
   seed: PublicSeed | null;
   /** null when word limits are off */
   effectiveLimit: number | null;
+  /** Initials mode: the letters each word must start with, in order */
+  letters: string | null;
   matchupIndex: number | null;
   submittedText: string | null;
 }

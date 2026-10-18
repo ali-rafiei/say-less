@@ -1,8 +1,11 @@
 import type { RoomPhase } from '@say-less/shared';
 import { useEffect } from 'react';
 import { sfx } from './audio/sfx.ts';
+import { Announcer } from './components/Announcer.tsx';
 import { Backdrop, type Palette } from './components/Backdrop.tsx';
+import { PauseOverlay } from './components/PauseOverlay.tsx';
 import { useRoom } from './net/useRoom.ts';
+import { AudienceWait } from './screens/AudienceWait.tsx';
 import { Create } from './screens/Create.tsx';
 import { FinalReveal } from './screens/FinalReveal.tsx';
 import { FinalVoting } from './screens/FinalVoting.tsx';
@@ -62,8 +65,14 @@ export function App() {
   }, [palette]);
 
   let screen;
+  const watching = room?.viewer.role === 'audience';
   if (!room || !me) {
     screen = <Home ctl={ctl} />;
+  } else if (
+    watching &&
+    (room.phase === 'CREATING' || room.phase === 'WRITING' || room.phase === 'FINAL_WRITING')
+  ) {
+    screen = <AudienceWait ctl={ctl} room={room} />;
   } else {
     switch (room.phase) {
       case 'LOBBY':
@@ -109,6 +118,8 @@ export function App() {
         </div>
       )}
       {screen}
+      {room && <PauseOverlay ctl={ctl} room={room} />}
+      <Announcer room={room} />
       {displaced && (
         <div className="overlay" role="dialog" aria-label="Open in another tab">
           <div className="card stack center">

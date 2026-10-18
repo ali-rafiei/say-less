@@ -1,5 +1,5 @@
 /**
- * Out of Context (after Jackbox's Survive the Internet): the fake website a quote gets
+ * Out of Context (after Survive the Internet): the fake website a quote gets
  * posted on. The twister sees only the quote and writes the `twist` for it.
  */
 export type SiteId =

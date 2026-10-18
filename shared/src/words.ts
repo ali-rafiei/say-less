@@ -20,7 +20,7 @@ export function countWords(text: string): number {
   return words(text).length;
 }
 
-export type AnswerError = 'empty' | 'too_long' | 'over_limit';
+export type AnswerError = 'empty' | 'too_long' | 'over_limit' | 'bad_initials';
 
 export interface AnswerValidation {
   ok: boolean;
@@ -29,8 +29,16 @@ export interface AnswerValidation {
   text: string;
 }
 
-/** The authoritative rule set, run identically on client and server. A null limit is no limit. */
-export function validateAnswer(raw: string, limit: number | null): AnswerValidation {
+/**
+ * The authoritative rule set, run identically on client and server. A null limit is no limit.
+ * With `letters` (Initials mode) the answer needs exactly one word per letter, each starting
+ * with its letter in order.
+ */
+export function validateAnswer(
+  raw: string,
+  limit: number | null,
+  letters: string | null = null,
+): AnswerValidation {
   const text = normalizeWhitespace(raw);
   if (text.length > LIMITS.MAX_CHARS) {
     return { ok: false, count: 0, error: 'too_long', text };
@@ -38,7 +46,25 @@ export function validateAnswer(raw: string, limit: number | null): AnswerValidat
   const count = countWords(text);
   if (count === 0) return { ok: false, count, error: 'empty', text };
   if (limit !== null && count > limit) return { ok: false, count, error: 'over_limit', text };
+  if (letters !== null && !initialsMatched(text, letters).every(Boolean)) {
+    return { ok: false, count, error: 'bad_initials', text };
+  }
   return { ok: true, count, error: null, text };
+}
+
+/** Per letter: whether the word in that position starts with it. */
+export function initialsMatched(text: string, letters: string): boolean[] {
+  const tokens = words(text);
+  return Array.from(letters).map((letter, i) => {
+    const token = tokens[i];
+    return token !== undefined && firstLetter(token) === letter.toUpperCase();
+  });
+}
+
+/** The first letter or digit of a word, uppercased without accents ("Élan" -> "E"). */
+function firstLetter(token: string): string {
+  const match = token.normalize('NFD').match(/[\p{L}\p{N}]/u);
+  return match ? match[0].toUpperCase() : '';
 }
 
 /** Used to detect "GREAT MINDS" (identical answers). */

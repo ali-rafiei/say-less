@@ -551,13 +551,15 @@ describe('presence', () => {
     ]);
   });
 
-  it('refuses new joins mid-game and full rooms', () => {
+  it('refuses new joins mid-game and full rooms when the audience is off', () => {
     const h = makeRoom();
+    h.room.settings.audience = false;
     startToWriting(h);
     expect(() => h.room.addPlayer('z', 'Zed')).toThrowError(
       expect.objectContaining({ code: 'bad_phase' }),
     );
     const full = makeRoom(Array.from({ length: LIMITS.MAX_PLAYERS }, (_, i) => String(i + 1)));
+    full.room.settings.audience = false;
     expect(() => full.room.addPlayer('13', 'Thirteen')).toThrowError(
       expect.objectContaining({ code: 'room_full' }),
     );

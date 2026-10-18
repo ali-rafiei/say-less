@@ -14,6 +14,7 @@ import { generateRoomCode } from './roomCode.ts';
 export interface RoomManagerDeps {
   deck: PromptDeck;
   seedBanks?: SeedBanks;
+  bailOuts?: readonly string[];
   send: (playerId: string, message: ServerMessage) => void;
   random?: () => number;
   log?: (message: string, fields?: Record<string, unknown>) => void;
@@ -55,6 +56,7 @@ export class RoomManager {
     const room = new Room(code, {
       deck: this.deps.deck,
       ...(this.deps.seedBanks ? { seedBanks: this.deps.seedBanks } : {}),
+      ...(this.deps.bailOuts ? { bailOuts: this.deps.bailOuts } : {}),
       send: (playerId, message) =>
         crew?.isBot(playerId) ? crew.receive(playerId, message) : this.deps.send(playerId, message),
       onEmpty: (emptied) => this.scheduleExpiry(emptied),

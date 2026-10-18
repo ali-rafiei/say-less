@@ -312,12 +312,14 @@
   font-size: 13px;
   line-height: 1.25;
 }
-.packs {
+.packs,
+.segs {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
-.pack {
+.pack,
+.seg {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -329,10 +331,12 @@
   color: var(--ink);
   font-weight: 700;
 }
-.pack--on {
+.pack--on,
+.seg--on {
   background: var(--accent);
 }
-.pack:disabled {
+.pack:disabled,
+.seg:disabled {
   cursor: default;
 }
 .pack__tag {
@@ -1012,11 +1016,13 @@
   color: var(--ink);
   box-shadow: inset 0 -8px 0 rgba(0, 0, 0, 0.15);
 }
-.fanswer {
+.fanswer,
+.highlight {
   padding: 6px 0;
   border-bottom: 2px dashed rgba(26, 26, 46, 0.2);
 }
-.fanswer__text {
+.fanswer__text,
+.highlight__text {
   font-size: 22px !important;
 }
 .fanswer__pts {
@@ -1374,4 +1380,199 @@
 }
 .reveal .prompt {
   font-size: clamp(18px, 5vw, 26px);
+}
+
+/* ---------- party controls: host buttons, pause, audience, moderation ---------- */
+.host {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: -4px;
+}
+.host__label {
+  margin-right: auto;
+}
+.host__btn {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.host__btn--next {
+  background: var(--accent-2);
+}
+.audience__tag {
+  align-self: center;
+  padding: 4px 12px;
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--ink);
+  font-size: 15px;
+}
+.pslot {
+  position: relative;
+}
+.pslot__kick {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+.pslot__kick.confirm--armed {
+  background: var(--danger);
+  color: var(--paper);
+}
+.vslot,
+.wslot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.vslot .vcard,
+.wslot .wcard {
+  flex: 1;
+}
+.censor {
+  align-self: flex-end;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg-dim);
+  font-size: 13px;
+  font-weight: 700;
+}
+.censor.confirm--armed {
+  border-color: var(--ink);
+  background: var(--danger);
+  color: var(--paper);
+}
+.bailout {
+  align-self: center;
+}
+.bailout.confirm--armed {
+  background: var(--accent-2);
+}
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.stepper__btn {
+  width: 44px;
+  height: 44px;
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+.stepper__btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.stepper__value {
+  min-width: 2ch;
+  font-size: 22px;
+  text-align: center;
+}
+
+/* ---------- stamps without painted art ---------- */
+.stamp--text {
+  background: var(--ok);
+  color: var(--ink);
+  font-weight: 800;
+  white-space: nowrap;
+}
+.stamp--bail {
+  background: var(--paper);
+}
+.fspot__stamps {
+  justify-content: center;
+  gap: 8px;
+}
+.fspot__stamps .stamp {
+  transform: rotate(-4deg);
+  animation: none;
+}
+
+/* ---------- Initials letters ---------- */
+.letters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.letter {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 40px;
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 22px;
+  transition: background-color 0.15s;
+}
+.letter--hit {
+  background: var(--ok);
+}
+.letters--large .letter {
+  width: 52px;
+  height: 58px;
+  font-size: 32px;
+}
+
+/* ---------- hurry-up nudge ---------- */
+.hurry {
+  position: sticky;
+  top: 8px;
+  z-index: 30;
+  align-self: center;
+  padding: 6px 16px;
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  background: var(--danger);
+  color: var(--paper);
+  font-size: 18px;
+  animation: stamp-in 0.4s cubic-bezier(0.2, 1.5, 0.4, 1) backwards;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Calm motion (sound menu): the same as the OS reduced-motion setting, for this game only. */
+:root[data-motion='calm'] *,
+:root[data-motion='calm'] *::before,
+:root[data-motion='calm'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
 }

@@ -57,6 +57,33 @@ const BOT_TWISTS = [
   'Hospital gown',
 ];
 
+/** Initials mode: one silly word per starting letter (no Q, X or Z are dealt). */
+const BOT_INITIAL_WORDS: Record<string, string[]> = {
+  A: ['angry', 'awkward', 'aunts'],
+  B: ['bouncy', 'beans', 'bald'],
+  C: ['cranky', 'cheese', 'clowns'],
+  D: ['damp', 'ducks', 'dancing'],
+  E: ['extra', 'eggs', 'elbows'],
+  F: ['fancy', 'frogs', 'fries'],
+  G: ['grumpy', 'geese', 'gravy'],
+  H: ['haunted', 'hats', 'hamsters'],
+  I: ['itchy', 'igloos', 'icy'],
+  J: ['jolly', 'jelly', 'jazz'],
+  K: ['knitted', 'kazoos', 'kings'],
+  L: ['loud', 'llamas', 'lasagna'],
+  M: ['moist', 'moose', 'muffins'],
+  N: ['nervous', 'noodles', 'naps'],
+  O: ['odd', 'otters', 'onions'],
+  P: ['polite', 'pickles', 'pigeons'],
+  R: ['rusty', 'raccoons', 'rubber'],
+  S: ['soggy', 'socks', 'snails'],
+  T: ['tiny', 'tubas', 'toast'],
+  U: ['unpaid', 'uncles', 'umbrellas'],
+  V: ['very', 'vans', 'vegan'],
+  W: ['wobbly', 'waffles', 'wizards'],
+  Y: ['yelling', 'yaks', 'yogurt'],
+};
+
 /** [min, max] think time before each kind of move, in ms */
 const DELAYS = {
   answer: [3_000, 12_000],
@@ -125,8 +152,9 @@ export class BotCrew {
           this.room.submitAnswer(botId, prompt.promptId, this.pick(BOT_CONFESSIONS)),
         );
       } else {
-        const text =
-          prompt.seed?.kind === 'post'
+        const text = prompt.letters
+          ? this.initials(prompt.letters)
+          : prompt.seed?.kind === 'post'
             ? this.twist(prompt.effectiveLimit)
             : this.answer(prompt.effectiveLimit);
         this.plan(key, DELAYS.answer, () => this.room.submitAnswer(botId, prompt.promptId, text));
@@ -179,6 +207,8 @@ export class BotCrew {
         } catch (error) {
           // The phase moved on (timer ran out, target taken) before the bot got to it.
           if (!(error instanceof RoomError)) throw error;
+          // Paused: forget the move, so the state sent on resume plans it again.
+          if (error.code === 'paused') this.planned.delete(key);
         }
       },
       min + this.random() * (max - min),
@@ -189,6 +219,12 @@ export class BotCrew {
   private twist(limit: number | null): string {
     const twist = words(this.pick(BOT_TWISTS));
     return twist.slice(0, limit ?? twist.length).join(' ');
+  }
+
+  private initials(letters: string): string {
+    return Array.from(letters, (letter) => this.pick(BOT_INITIAL_WORDS[letter] ?? [letter])).join(
+      ' ',
+    );
   }
 
   private answer(limit: number | null): string {
