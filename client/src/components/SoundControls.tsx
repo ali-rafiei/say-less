@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { sfx } from '../audio/sfx.ts';
+import { loadCalmMotion, setCalmMotion } from '../calmMotion.ts';
 import { UIArt } from './UIArt.tsx';
 import './SoundControls.css';
 
@@ -11,6 +12,7 @@ export function SoundControls() {
   const effects = !useSyncExternalStore(sfx.subscribe, effectsMuted, effectsMuted);
   const music = useSyncExternalStore(sfx.subscribe, musicOn, musicOn);
   const [open, setOpen] = useState(false);
+  const [calm, setCalm] = useState(loadCalmMotion);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelId = useId();
@@ -82,6 +84,22 @@ export function SoundControls() {
               }}
             >
               {effects ? 'On' : 'Off'}
+            </button>
+          </div>
+          <div className="row row--between">
+            <span className="sound__label">Calm motion</span>
+            <button
+              className={`toggle ${calm ? 'toggle--on' : ''}`}
+              type="button"
+              aria-label="Calm motion"
+              aria-pressed={calm}
+              onClick={() => {
+                setCalmMotion(!calm);
+                setCalm(!calm);
+                sfx.tap();
+              }}
+            >
+              {calm ? 'On' : 'Off'}
             </button>
           </div>
         </div>

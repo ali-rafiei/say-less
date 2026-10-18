@@ -10,6 +10,7 @@ import { sfx } from '../audio/sfx.ts';
 import { Character } from '../components/Character.tsx';
 import { DrawPad } from '../components/DrawPad.tsx';
 import { Header } from '../components/Header.tsx';
+import { HurryUp } from '../components/HurryUp.tsx';
 import { PlayerChip } from '../components/PlayerChip.tsx';
 import { WordInput } from '../components/WordInput.tsx';
 import type { RoomController } from '../net/useRoom.ts';
@@ -30,7 +31,8 @@ export function Create({ ctl, room, me }: Props) {
 
   return (
     <main className="screen create">
-      <Header room={room} clockOffset={ctl.clockOffset} />
+      <Header ctl={ctl} room={room} />
+      <HurryUp endsAt={room.phaseEndsAt} clockOffset={ctl.clockOffset} active={!!task && !done} />
       {task && !done ? (
         task.kind === 'draw' ? (
           <DrawTask

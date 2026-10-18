@@ -192,6 +192,7 @@ describe('gateway', () => {
     await c.until('welcome');
     const first = (await c.until('room_state')).payload.code;
     const full = rooms.create('other-client');
+    full.settings.audience = false;
     for (let i = 0; i < LIMITS.MAX_PLAYERS; i++) full.addPlayer(`p${i}`, `P${i}`);
     await new Promise((r) => setTimeout(r, 300));
     // Act

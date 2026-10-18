@@ -37,7 +37,7 @@ export function RoundResults({ ctl, room, me }: Props) {
 
   return (
     <main className="screen results">
-      <Header room={room} clockOffset={ctl.clockOffset} />
+      <Header ctl={ctl} room={room} />
       <h2 className="display center">Scoreboard</h2>
       <ol className={`board ${dense ? 'board--dense' : ''}`}>
         {sorted.map((p, i) => {

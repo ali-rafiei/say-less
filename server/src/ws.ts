@@ -245,6 +245,31 @@ export class Gateway {
       case 'rematch':
         room.rematch(playerId);
         return;
+      case 'advance_phase':
+        room.advancePhase(playerId);
+        return;
+      case 'pause_game':
+        room.pauseGame(playerId);
+        return;
+      case 'resume_game':
+        room.resumeGame(playerId);
+        return;
+      case 'bail_out':
+        room.bailOut(playerId, str(message.payload.promptId));
+        return;
+      case 'kick_player':
+        room.kickPlayer(playerId, str(message.payload.playerId));
+        return;
+      case 'censor_answer': {
+        const { matchupIndex, answerIndex } = message.payload;
+        if (answerIndex !== 0 && answerIndex !== 1)
+          throw new RoomError('invalid', 'answerIndex must be 0 or 1');
+        room.censorAnswer(playerId, Number(matchupIndex), answerIndex);
+        return;
+      }
+      case 'censor_final':
+        room.censorFinal(playerId, str(message.payload.answerId));
+        return;
       default:
         throw new RoomError('invalid', `Unexpected message ${message.type}`);
     }

@@ -308,3 +308,83 @@ describe('scorePosts (Out of Context)', () => {
     expect(tallies.c).toMatchObject({ pity: 40 });
   });
 });
+
+describe('Bail Out, censoring and the crowd', () => {
+  it('pays a Bail Out answer half its vote points and no Mic Drop', () => {
+    // Arrange: the stock answer wins 3-1
+    const result = scoreMatchup({
+      answers: [answer({ playerId: 'a', bailOut: true }), answer({ playerId: 'b' })],
+      votes: votesFor([3, 1]),
+      roast: null,
+      multiplier: 1,
+    });
+    // Assert: 3 × 50, no bonus; the loser keeps full vote points
+    expect(result.delta).toEqual({ a: 150, b: 100 });
+    expect(result.awards.map((a) => a.kind)).toEqual(['votes', 'votes']);
+  });
+
+  it('ignores votes for a censored answer and gives no bonus for beating it', () => {
+    // Arrange: two voters picked the answer the leader then censored
+    const result = scoreMatchup({
+      answers: [answer({ playerId: 'a', censored: true }), answer({ playerId: 'b' })],
+      votes: votesFor([2, 2]),
+      roast: null,
+      multiplier: 1,
+    });
+    // Assert: b wins 2-0 on counted votes, votes only
+    expect(result.voteCounts).toEqual([0, 2]);
+    expect(result.winnerIndex).toBe(1);
+    expect(result.delta).toEqual({ a: 0, b: 200 });
+  });
+
+  it('pays the Crowd Favourite bonus to the answer the audience preferred', () => {
+    // Arrange: players split 1-1, the audience prefers b 2-1
+    const result = scoreMatchup({
+      answers: [answer({ playerId: 'a' }), answer({ playerId: 'b' })],
+      votes: votesFor([1, 1]),
+      audienceVotes: { x: 1, y: 1, z: 0 },
+      roast: null,
+      multiplier: 1.5,
+    });
+    // Assert: still a tie among players; the crowd bonus is 100 × 1.5
+    expect(result.tie).toBe(true);
+    expect(result.audienceCounts).toEqual([1, 2]);
+    expect(result.delta).toEqual({ a: 150, b: 300 });
+  });
+
+  it('scores a final with a Bail Out, a censored answer and a crowd favourite', () => {
+    // Arrange
+    const votes: Record<string, [string, string]> = {
+      a: ['b', 'c'],
+      b: ['c', 'a'],
+      c: ['a', 'b'],
+    };
+    // Act: b bailed out, c was censored, the audience loves a
+    const tallies = scoreFinal(votes, ['a', 'b', 'c'], 1, {
+      bailOutIds: new Set(['b']),
+      censoredIds: new Set(['c']),
+      audienceVotes: { x: 'a', y: 'a', z: 'c' },
+    });
+    // Assert
+    expect(tallies.a).toMatchObject({ first: 1, second: 1, crowd: 2, crowdFavourite: true });
+    expect(tallies.a!.points).toBe(200 + 100 + 100);
+    expect(tallies.b!.points).toBe(100 + 50);
+    expect(tallies.c).toMatchObject({ first: 0, second: 0, points: 0, crowd: 0 });
+  });
+
+  it('gives no Crowd Favourite on an audience tie', () => {
+    const tallies = scorePosts(
+      {},
+      [
+        { id: 'p1', victimId: 'a', twisterId: 'b' },
+        { id: 'p2', victimId: 'b', twisterId: 'a' },
+      ],
+      ['a', 'b'],
+      1,
+      { audienceVotes: { x: 'p1', y: 'p2' } },
+    );
+    expect(tallies.a!.crowdFavourite).toBe(false);
+    expect(tallies.b!.crowdFavourite).toBe(false);
+    expect(tallies.a!.crowd + tallies.b!.crowd).toBe(2);
+  });
+});

@@ -1,10 +1,12 @@
 import {
   AUTO_SUBMIT_TEXT,
+  CENSORED_TEXT,
   CHARACTER_IDS,
   DEFAULT_PACKS,
   DrawingError,
   DISCONNECT_GRACE_MS,
   FINAL_ROUND,
+  INITIALS_LENGTHS,
   LEFT_TEXT,
   LIMITS,
   LOBBY_HOLD_MS,
@@ -16,10 +18,13 @@ import {
   TIMERS,
   computePlacements,
   computeSuperlatives,
+  countWords,
   decodeDrawing,
   finalRevealSchedule,
   isBlankDrawing,
   normalizeWhitespace,
+  phaseClock,
+  roastWindowMs,
   roundSpec,
   scoreFinal,
   scoreMatchup,
@@ -28,7 +33,9 @@ import {
   type CustomPrompt,
   type ErrorCode,
   type FinalTally,
+  type GameLength,
   type GameMode,
+  type Highlight,
   type MatchupResult,
   type PlayerStats,
   type Prompt,
@@ -43,6 +50,8 @@ import {
   type RoundIndex,
   type SiteId,
   type ServerMessage,
+  type TimerSpeed,
+  type ViewerState,
   type YourPrompt,
 } from './shared.ts';
 import type { PromptDeck, SeedBanks } from './prompts.ts';
@@ -76,6 +85,16 @@ interface Player {
   /** until then a disconnected player still counts as playing */
   graceEndsAt: number;
   graceTimer: ReturnType<typeof setTimeout> | null;
+  /** removed by the leader mid-game: the seat stays for the matchups, the phone is shut out */
+  kicked: boolean;
+}
+
+/** Watches and votes; never writes, never scores. */
+interface AudienceMember {
+  id: string;
+  name: string;
+  connected: boolean;
+  removalTimer: ReturnType<typeof setTimeout> | null;
 }
 
 interface Answer {
@@ -84,6 +103,15 @@ interface Answer {
   wordCount: number;
   autoSubmitted: boolean;
   effectiveLimit: number | null;
+  bailOut: boolean;
+  censored: boolean;
+}
+
+interface PauseInfo {
+  byName: string;
+  at: number;
+  remainingMs: number | null;
+  roastRemainingMs: number | null;
 }
 
 /** A Doodle drawing or an Out of Context honest answer (the quote someone else twists). */
@@ -102,6 +130,8 @@ interface DealtPrompt extends Prompt {
   seed?: Seed;
   /** Out of Context: the post this prompt asks its twister to write the context for */
   post?: Post;
+  /** Initials mode: each word of an answer starts with the next of these letters */
+  letters?: string;
 }
 
 /** Out of Context: the victim's quote on a fake site; the twister writes what it is under. */
@@ -125,6 +155,7 @@ interface Matchup {
   playerIds: [string, string];
   answers: [Answer | null, Answer | null];
   votes: Record<string, 0 | 1>;
+  audienceVotes: Record<string, 0 | 1>;
   roast: Roast | null;
   result: MatchupResult | null;
   revealed: boolean;
@@ -144,6 +175,10 @@ interface FinalRound {
   answers: Map<string, Answer>;
   /** rank: [first, second] player ids. Out of Context: [post id, ''] */
   votes: Record<string, [string, string]>;
+  /** audience id -> player id (rank) or post id (Out of Context) */
+  audienceVotes: Record<string, string>;
+  /** anonymous rank finals: player id -> the opaque id the wall shows instead */
+  anonIds: Map<string, string> | null;
   result: Record<string, FinalTally> | null;
 }
 
@@ -157,9 +192,16 @@ const FALLBACK_SEEDS: SeedBanks = {
 
 const DRAWING_PROMPT_TEXT = 'Caption this masterpiece.';
 
+const FALLBACK_BAIL_OUTS = ['Pass', 'No comment', 'Big if true', 'Ask my lawyer'];
+
+/** Initials letters, weighted toward common first letters; no Q, X or Z. */
+const INITIAL_POOL = 'AAABBBBCCCCDDDEEFFFGGGHHHIIJJKLLLMMMMNNOOPPPPRRRSSSSSTTTTTUVWWWY';
+
 export interface RoomDeps {
   deck: PromptDeck;
   seedBanks?: SeedBanks;
+  /** stock answers for Bail Out */
+  bailOuts?: readonly string[];
   send: (playerId: string, message: ServerMessage) => void;
   random?: () => number;
   onEmpty?: (room: Room) => void;
@@ -196,11 +238,21 @@ export class Room {
     mode: 'classic',
     packs: [...DEFAULT_PACKS],
     roasts: false,
+    timers: 'normal',
+    bailOuts: true,
+    audience: true,
+    maxPlayers: LIMITS.MAX_PLAYERS,
+    length: 'full',
+    anonymousFinal: false,
   };
   gamesPlayed = 0;
   banner: string | null = null;
 
   readonly players: Player[] = [];
+  private readonly audience = new Map<string, AudienceMember>();
+  private pause: PauseInfo | null = null;
+  private highlights: Highlight[] = [];
+  private readonly usedBailOuts = new Set<string>();
   private customPrompts: CustomPrompt[] = [];
   private customPromptSeq = 0;
   private matchups: Matchup[] = [];
@@ -246,8 +298,13 @@ export class Room {
     return this.closed;
   }
 
+  /** Anyone who may hold this room's seat or audience spot (a kicked player may not). */
   hasPlayer(playerId: string): boolean {
-    return this.players.some((p) => p.id === playerId);
+    return this.players.some((p) => p.id === playerId && !p.kicked) || this.audience.has(playerId);
+  }
+
+  get isPaused(): boolean {
+    return this.pause !== null;
   }
 
   close(): void {
@@ -258,17 +315,36 @@ export class Room {
       if (player.removalTimer) clearTimeout(player.removalTimer);
       if (player.graceTimer) clearTimeout(player.graceTimer);
     }
+    for (const member of this.audience.values()) {
+      if (member.removalTimer) clearTimeout(member.removalTimer);
+    }
   }
 
   // ------------------------------------------------------------- join / leave
 
-  addPlayer(playerId: string, rawName: string, bot = false): void {
-    if (this.phase !== 'LOBBY')
-      throw new RoomError('bad_phase', 'That game is already in progress');
-    if (this.players.length >= LIMITS.MAX_PLAYERS) throw new RoomError('room_full', 'Room is full');
+  /** Seats a player in the lobby; a game in progress or a full room puts them in the audience. */
+  addPlayer(playerId: string, rawName: string, bot = false): 'player' | 'audience' {
+    const seated = this.phase === 'LOBBY' && this.players.length < this.settings.maxPlayers;
+    if (!seated && (bot || !this.settings.audience)) {
+      if (this.phase !== 'LOBBY')
+        throw new RoomError('bad_phase', 'That game is already in progress');
+      throw new RoomError('room_full', 'Room is full');
+    }
+    if (!seated && this.audience.size >= LIMITS.MAX_AUDIENCE)
+      throw new RoomError('room_full', 'The audience is full');
     const name = this.uniqueName(sanitizeName(rawName));
     if (name.length === 0)
       throw new RoomError('bad_name', 'Pick a name between 1 and 12 characters');
+    if (!seated) {
+      this.audience.set(playerId, { id: playerId, name, connected: true, removalTimer: null });
+      this.broadcast();
+      return 'audience';
+    }
+    this.seat(playerId, name, bot);
+    return 'player';
+  }
+
+  private seat(playerId: string, name: string, bot: boolean): void {
     const now = Date.now();
     this.players.push({
       id: playerId,
@@ -287,13 +363,37 @@ export class Room {
       removalTimer: null,
       graceEndsAt: 0,
       graceTimer: null,
+      kicked: false,
     });
     if (!this.leaderId && !bot) this.leaderId = playerId;
     this.broadcast();
   }
 
+  /** In the lobby, waiting audience members take any free seats, first come first served. */
+  private fillSeatsFromAudience(): void {
+    if (this.phase !== 'LOBBY') return;
+    for (const member of [...this.audience.values()]) {
+      if (this.players.length >= this.settings.maxPlayers) return;
+      if (!member.connected) continue;
+      this.audience.delete(member.id);
+      if (member.removalTimer) clearTimeout(member.removalTimer);
+      this.seat(member.id, member.name, false);
+      if (!this.players.some((p) => p.id === this.leaderId && p.connected))
+        this.leaderId = member.id;
+    }
+  }
+
   /** Re-attach a returning player (their id was proven by a session token). */
   reconnect(playerId: string): void {
+    const member = this.audience.get(playerId);
+    if (member) {
+      if (member.removalTimer) clearTimeout(member.removalTimer);
+      member.removalTimer = null;
+      member.connected = true;
+      this.sentDrawings.delete(playerId);
+      this.broadcast();
+      return;
+    }
     const player = this.requirePlayer(playerId);
     if (player.removalTimer) {
       clearTimeout(player.removalTimer);
@@ -320,6 +420,17 @@ export class Room {
   }
 
   disconnect(playerId: string, withGrace = true): void {
+    const member = this.audience.get(playerId);
+    if (member) {
+      if (!member.connected) return;
+      member.connected = false;
+      member.removalTimer = setTimeout(() => {
+        this.audience.delete(playerId);
+        this.broadcast();
+      }, RECONNECT_HOLD_MS);
+      this.broadcast();
+      return;
+    }
     const player = this.players.find((p) => p.id === playerId);
     if (!player || !player.connected) return;
     player.connected = false;
@@ -345,6 +456,13 @@ export class Room {
   }
 
   leave(playerId: string): void {
+    const member = this.audience.get(playerId);
+    if (member) {
+      if (member.removalTimer) clearTimeout(member.removalTimer);
+      this.audience.delete(playerId);
+      this.broadcast();
+      return;
+    }
     const player = this.players.find((p) => p.id === playerId);
     if (!player) return;
     if (this.phase === 'LOBBY' || this.phase === 'PODIUM') {
@@ -384,6 +502,7 @@ export class Room {
     if (player?.removalTimer) clearTimeout(player.removalTimer);
     if (player?.graceTimer) clearTimeout(player.graceTimer);
     if (this.leaderId === playerId) this.passLeadership();
+    this.fillSeatsFromAudience();
     this.broadcast();
   }
 
@@ -403,7 +522,9 @@ export class Room {
 
   private uniqueName(base: string): string {
     if (base.length === 0) return base;
-    const taken = new Set(this.players.map((p) => p.name.toLowerCase()));
+    const taken = new Set(
+      [...this.players, ...this.audience.values()].map((p) => p.name.toLowerCase()),
+    );
     if (!taken.has(base.toLowerCase())) return base;
     for (let n = 2; n < 100; n++) {
       const suffix = ` (${n})`;
@@ -427,6 +548,23 @@ export class Room {
     if (typeof patch.wordLimits === 'boolean') this.settings.wordLimits = patch.wordLimits;
     if (typeof patch.roasts === 'boolean') this.settings.roasts = patch.roasts;
     if (isGameMode(patch.mode)) this.settings.mode = patch.mode;
+    if (isTimerSpeed(patch.timers)) this.settings.timers = patch.timers;
+    if (typeof patch.bailOuts === 'boolean') this.settings.bailOuts = patch.bailOuts;
+    if (typeof patch.audience === 'boolean') this.settings.audience = patch.audience;
+    if (typeof patch.anonymousFinal === 'boolean')
+      this.settings.anonymousFinal = patch.anonymousFinal;
+    if (isGameLength(patch.length)) this.settings.length = patch.length;
+    if (patch.maxPlayers !== undefined) {
+      const max = Number(patch.maxPlayers);
+      if (!Number.isInteger(max) || max < LIMITS.MIN_PLAYERS || max > LIMITS.MAX_PLAYERS)
+        throw new RoomError(
+          'invalid',
+          `Seats go from ${LIMITS.MIN_PLAYERS} to ${LIMITS.MAX_PLAYERS}`,
+        );
+      // Lowering it never unseats anyone; it only stops new players taking seats.
+      this.settings.maxPlayers = max;
+      this.fillSeatsFromAudience();
+    }
     if (Array.isArray(patch.packs)) {
       const packs = PACKS.map((p) => p.id).filter((id) => (patch.packs as unknown[]).includes(id));
       if (packs.length === 0) throw new RoomError('invalid', 'Pick at least one pack');
@@ -438,7 +576,7 @@ export class Room {
   /** Any player may add prompts in the lobby; they are dealt first in custom mode. */
   addPrompt(playerId: string, rawText: string): void {
     this.requirePhase('LOBBY');
-    this.requirePlayer(playerId);
+    this.requireActor(playerId);
     const text = cleanText(rawText);
     if (text.length < 3) throw new RoomError('empty', 'Write a prompt first');
     if (text.length > LIMITS.PROMPT_MAX_CHARS) {
@@ -458,7 +596,7 @@ export class Room {
   /** Authors remove their own prompts; the leader can remove any. */
   removePrompt(playerId: string, promptId: string): void {
     this.requirePhase('LOBBY');
-    this.requirePlayer(playerId);
+    this.requireActor(playerId);
     const prompt = this.customPrompts.find((p) => p.id === promptId);
     if (!prompt) throw new RoomError('not_found', 'That prompt is gone');
     if (prompt.authorId !== playerId && this.leaderId !== playerId) {
@@ -489,6 +627,7 @@ export class Room {
     this.final = null;
     this.matchups = [];
     this.encore = [];
+    this.highlights = [];
     // Characters are picked in the lobby; anyone who did not pick gets a random leftover.
     this.assignMissingCharacters();
     this.beginRound(0);
@@ -497,7 +636,7 @@ export class Room {
   /** Lobby pick, first come first served; picking again swaps to the new character. */
   pickCharacter(playerId: string, characterId: string): void {
     this.requirePhase('LOBBY');
-    const player = this.requirePlayer(playerId);
+    const player = this.requireActor(playerId);
     if (!CHARACTER_IDS.includes(characterId)) throw new RoomError('invalid', 'Unknown character');
     const owner = this.players.find((p) => p.characterId === characterId);
     if (owner && owner.id !== playerId)
@@ -508,7 +647,8 @@ export class Room {
 
   spendRoast(playerId: string, targetId: string): void {
     this.requirePhase('WRITING');
-    const spender = this.requirePlayer(playerId);
+    this.requireUnpaused();
+    const spender = this.requireActor(playerId);
     if (this.roundIndex < LIMITS.ROAST_FROM_ROUND)
       throw new RoomError('bad_phase', 'Roasts unlock in round 2');
     if (this.roastWindowEndsAt === null || Date.now() >= this.roastWindowEndsAt) {
@@ -534,7 +674,8 @@ export class Room {
   }
 
   submitAnswer(playerId: string, promptId: string, rawText: string): void {
-    const player = this.requirePlayer(playerId);
+    this.requireUnpaused();
+    const player = this.requireActor(playerId);
     if (this.phase === 'CREATING') {
       const task = this.requireTask(playerId, promptId, 'confess');
       const validation = validateAnswer(cleanText(rawText), LIMITS.CONFESSION_WORDS);
@@ -549,6 +690,32 @@ export class Room {
       this.addSeed(player, task, 'quote', validation.text);
       return;
     }
+    this.acceptAnswer(player, promptId, (limit, letters) =>
+      this.buildAnswer(player, rawText, limit, letters),
+    );
+  }
+
+  /** Answers with a stock phrase that fits the prompt's limit, worth half the vote points. */
+  bailOut(playerId: string, promptId: string): void {
+    this.requireUnpaused();
+    const player = this.requireActor(playerId);
+    if (!this.settings.bailOuts) throw new RoomError('invalid', 'Bail Outs are off in this room');
+    if (this.settings.mode === 'initials')
+      throw new RoomError('invalid', 'No Bail Outs in Initials: the letters are the challenge');
+    this.acceptAnswer(player, promptId, (limit) => {
+      const answer = this.buildAnswer(player, this.pickBailOut(limit), limit, null);
+      answer.bailOut = true;
+      return answer;
+    });
+  }
+
+  /** Writing and final writing: files a player's answer to one of their prompts. */
+  private acceptAnswer(
+    player: Player,
+    promptId: string,
+    build: (limit: number | null, letters: string | null) => Answer,
+  ): void {
+    const playerId = player.id;
     if (this.phase === 'WRITING') {
       if (!this.promptsDealt) throw new RoomError('bad_phase', 'Prompts have not been dealt yet');
       const index = this.matchups.findIndex(
@@ -559,20 +726,12 @@ export class Room {
       const slot = matchup.playerIds[0] === playerId ? 0 : 1;
       if (matchup.answers[slot])
         throw new RoomError('already_submitted', 'You already answered that one');
-      matchup.answers[slot] = this.buildAnswer(
-        player,
-        rawText,
+      matchup.answers[slot] = build(
         this.answerLimit(matchup, playerId),
+        this.answerLetters(matchup, playerId),
       );
       this.recordSubmission(player, matchup.answers[slot]);
-      if (this.allWritingDone()) this.endWriting();
-      else {
-        this.broadcast();
-        this.sendPrivateState(playerId);
-      }
-      return;
-    }
-    if (this.phase === 'FINAL_WRITING' && this.final) {
+    } else if (this.phase === 'FINAL_WRITING' && this.final) {
       if (
         !this.final.playerIds.includes(playerId) ||
         this.wallPrompt(this.final, playerId).id !== promptId
@@ -580,17 +739,139 @@ export class Room {
         throw new RoomError('invalid', 'That prompt is not yours');
       if (this.final.answers.has(playerId))
         throw new RoomError('already_submitted', 'You already answered');
-      const answer = this.buildAnswer(player, rawText, this.final.limit);
+      const answer = build(this.final.limit, this.final.prompt.letters ?? null);
       this.final.answers.set(playerId, answer);
       this.recordSubmission(player, answer);
-      if (this.allWritingDone()) this.endWriting();
-      else {
-        this.broadcast();
-        this.sendPrivateState(playerId);
-      }
-      return;
+    } else {
+      throw new RoomError('bad_phase', 'Nobody is writing right now');
     }
-    throw new RoomError('bad_phase', 'Nobody is writing right now');
+    if (this.allWritingDone()) this.endWriting();
+    else {
+      this.broadcast();
+      this.sendPrivateState(playerId);
+    }
+  }
+
+  /** An unused stock answer that fits; reused only once every fitting one has been dealt. */
+  private pickBailOut(limit: number | null): string {
+    const bank = this.deps.bailOuts ?? FALLBACK_BAIL_OUTS;
+    const fits = bank.filter((text) => limit === null || countWords(text) <= limit);
+    const fresh = fits.filter((text) => !this.usedBailOuts.has(text));
+    const pool = fresh.length > 0 ? fresh : fits;
+    const pick = pool[Math.floor(this.random() * pool.length)];
+    if (pick === undefined) throw new RoomError('invalid', 'No Bail Out fits that limit');
+    this.usedBailOuts.add(pick);
+    return pick;
+  }
+
+  /** Freezes every clock; nothing can be submitted until the leader resumes. */
+  pauseGame(playerId: string): void {
+    this.requireLeader(playerId);
+    if (this.phase === 'LOBBY' || this.phase === 'PODIUM')
+      throw new RoomError('bad_phase', 'There is nothing to pause');
+    if (this.pause) throw new RoomError('paused', 'The game is already paused');
+    const now = Date.now();
+    this.clearTimer();
+    const roastOpen = this.roastTimer !== null && this.roastWindowEndsAt !== null;
+    if (this.roastTimer) clearTimeout(this.roastTimer);
+    this.roastTimer = null;
+    this.pause = {
+      byName: this.requirePlayer(playerId).name,
+      at: now,
+      remainingMs: this.phaseEndsAt === null ? null : Math.max(this.phaseEndsAt - now, 0),
+      roastRemainingMs: roastOpen ? Math.max(this.roastWindowEndsAt! - now, 0) : null,
+    };
+    this.phaseEndsAt = null;
+    this.broadcast();
+  }
+
+  resumeGame(playerId: string): void {
+    this.requireLeader(playerId);
+    const pause = this.pause;
+    if (!pause) throw new RoomError('bad_phase', 'The game is not paused');
+    const now = Date.now();
+    this.pause = null;
+    // Shifting the start keeps every client's ring and reveal schedule where it stopped.
+    this.phaseStartedAt += now - pause.at;
+    if (pause.remainingMs !== null) {
+      this.phaseEndsAt = now + pause.remainingMs;
+      this.schedulePhaseTimer(pause.remainingMs);
+    }
+    if (pause.roastRemainingMs !== null) {
+      this.roastWindowEndsAt = now + pause.roastRemainingMs;
+      this.roastTimer = setTimeout(() => this.closeRoastWindow(), pause.roastRemainingMs);
+    }
+    this.broadcast();
+    for (const player of this.players) {
+      if (player.connected) this.sendPrivateState(player.id);
+    }
+    this.afterPresenceChange();
+  }
+
+  /** Timers off: the leader closes a writing or voting phase; stragglers are auto-submitted. */
+  advancePhase(playerId: string): void {
+    this.requireLeader(playerId);
+    this.requireUnpaused();
+    if (this.settings.timers !== 'off')
+      throw new RoomError('invalid', 'The clock moves the game on in this room');
+    const movable =
+      this.phase === 'CREATING' ||
+      (this.phase === 'WRITING' && this.promptsDealt) ||
+      this.phase === 'FINAL_WRITING' ||
+      this.phase === 'VOTING' ||
+      this.phase === 'FINAL_VOTING';
+    if (!movable) throw new RoomError('bad_phase', 'Nothing to move on from right now');
+    this.onPhaseTimeout();
+  }
+
+  /** Lobby and podium: the player is removed. Mid-game: their seat is closed to them. */
+  kickPlayer(leaderId: string, targetId: string): void {
+    this.requireLeader(leaderId);
+    if (targetId === leaderId) throw new RoomError('self_target', 'You cannot remove yourself');
+    const member = this.audience.get(targetId);
+    const target = this.players.find((p) => p.id === targetId && !p.kicked);
+    if (!member && !target) throw new RoomError('not_found', 'That player is not here');
+    this.deps.send(targetId, { type: 'left', payload: {} });
+    const name = member?.name ?? target!.name;
+    if (member || this.phase === 'LOBBY' || this.phase === 'PODIUM') {
+      this.leave(targetId);
+    } else {
+      target!.kicked = true;
+      target!.slotExpired = true;
+      this.disconnect(targetId, false);
+    }
+    this.banner = `${name} was removed by the leader`;
+    this.broadcast();
+  }
+
+  /** The leader hides an answer on the open matchup (never one in their own matchup). */
+  censorAnswer(leaderId: string, matchupIndex: number, answerIndex: 0 | 1): void {
+    this.requireLeader(leaderId);
+    this.requirePhase('VOTING');
+    if (matchupIndex !== this.currentMatchupIndex)
+      throw new RoomError('bad_phase', 'That matchup is not open');
+    const matchup = this.currentMatchup();
+    if (matchup.playerIds.includes(leaderId))
+      throw new RoomError('invalid', 'You cannot censor your own matchup');
+    const answer = matchup.answers[answerIndex];
+    if (!answer) throw new RoomError('invalid', 'Pick one of the two answers');
+    answer.censored = true;
+    this.broadcast();
+  }
+
+  /** Wall rounds: the leader hides an answer by the id it is voted with. */
+  censorFinal(leaderId: string, answerId: string): void {
+    this.requireLeader(leaderId);
+    this.requirePhase('FINAL_VOTING');
+    const final = this.final;
+    if (!final) throw new RoomError('bad_phase', 'No final round');
+    const authorId = this.wallAuthor(final, answerId);
+    if (authorId === null) throw new RoomError('invalid', 'Unknown answer');
+    if (authorId === leaderId) throw new RoomError('invalid', 'You cannot censor your own answer');
+    const answer = final.answers.get(authorId);
+    if (!answer) throw new RoomError('invalid', 'Unknown answer');
+    answer.censored = true;
+    this.broadcast();
   }
 
   submitDrawing(playerId: string, promptId: string, encoded: string): void {
@@ -610,42 +891,72 @@ export class Room {
 
   castVote(playerId: string, matchupIndex: number, answerIndex: 0 | 1): void {
     this.requirePhase('VOTING');
-    this.requirePlayer(playerId);
+    this.requireUnpaused();
     if (matchupIndex !== this.currentMatchupIndex)
       throw new RoomError('bad_phase', 'That matchup is not open');
     const matchup = this.currentMatchup();
-    if (matchup.playerIds.includes(playerId))
-      throw new RoomError('invalid', 'You cannot vote on your own matchup');
     if (answerIndex !== 0 && answerIndex !== 1)
       throw new RoomError('invalid', 'Pick one of the two answers');
+    if (matchup.answers[answerIndex]?.censored)
+      throw new RoomError('invalid', 'That answer was censored');
+    if (this.audience.has(playerId)) {
+      // The audience never holds up the room: their votes only decide the Crowd Favourite.
+      if (playerId in matchup.audienceVotes)
+        throw new RoomError('already_submitted', 'You already voted');
+      matchup.audienceVotes[playerId] = answerIndex;
+      this.broadcast();
+      return;
+    }
+    this.requireActor(playerId);
+    if (matchup.playerIds.includes(playerId))
+      throw new RoomError('invalid', 'You cannot vote on your own matchup');
     if (playerId in matchup.votes) throw new RoomError('already_submitted', 'You already voted');
     matchup.votes[playerId] = answerIndex;
     if (this.allVotesIn()) this.revealMatchup();
     else this.broadcast();
   }
 
-  castFinalVotes(playerId: string, first: string, second: string): void {
+  castFinalVotes(playerId: string, rawFirst: string, rawSecond: string): void {
     this.requirePhase('FINAL_VOTING');
-    this.requirePlayer(playerId);
+    this.requireUnpaused();
     const final = this.final;
     if (!final) throw new RoomError('bad_phase', 'No final round');
+    if (this.audience.has(playerId)) {
+      // One pick for the audience, in every wall round.
+      if (playerId in final.audienceVotes)
+        throw new RoomError('already_submitted', 'You already voted');
+      const authorId = this.wallAuthor(final, rawFirst);
+      if (authorId === null || !final.answers.has(authorId))
+        throw new RoomError('invalid', 'Pick one answer');
+      if (final.answers.get(authorId)!.censored)
+        throw new RoomError('invalid', 'That answer was censored');
+      final.audienceVotes[playerId] = final.posts ? rawFirst : authorId;
+      this.broadcast();
+      return;
+    }
+    this.requireActor(playerId);
     if (playerId in final.votes) throw new RoomError('already_submitted', 'You already voted');
     if (final.posts) {
-      const post = final.posts.find((p) => p.id === first);
-      if (!post || second !== '') throw new RoomError('invalid', 'Pick one post');
+      const post = final.posts.find((p) => p.id === rawFirst);
+      if (!post || rawSecond !== '') throw new RoomError('invalid', 'Pick one post');
       if (post.twisterId === playerId)
         throw new RoomError('invalid', 'You cannot vote for your own twist');
-      final.votes[playerId] = [first, ''];
+      if (final.answers.get(post.twisterId)?.censored)
+        throw new RoomError('invalid', 'That post was censored');
+      final.votes[playerId] = [rawFirst, ''];
       if (this.allFinalVotesIn()) this.finishFinal();
       else this.broadcast();
       return;
     }
+    const first = this.wallAuthor(final, rawFirst) ?? '';
+    const second = this.wallAuthor(final, rawSecond) ?? '';
     if (first === second) throw new RoomError('invalid', 'Pick two different answers');
     if (first === playerId || second === playerId)
       throw new RoomError('invalid', 'You cannot vote for yourself');
     if (!final.answers.has(first) || !final.answers.has(second))
       throw new RoomError('invalid', 'Unknown answer');
-    if (playerId in final.votes) throw new RoomError('already_submitted', 'You already voted');
+    if (final.answers.get(first)!.censored || final.answers.get(second)!.censored)
+      throw new RoomError('invalid', 'That answer was censored');
     final.votes[playerId] = [first, second];
     if (this.allFinalVotesIn()) this.finishFinal();
     else this.broadcast();
@@ -665,9 +976,13 @@ export class Room {
     this.currentMatchupIndex = 0;
     this.promptsDealt = false;
     this.encore = [];
+    this.highlights = [];
     this.customPrompts = this.customPrompts.filter((p) => !this.usedPromptIds.has(p.id));
     this.banner = null;
     this.enterPhase('LOBBY', null);
+    // The audience waited a whole game; free seats are theirs first.
+    this.fillSeatsFromAudience();
+    this.broadcast();
   }
 
   // ------------------------------------------------------------ state machine
@@ -681,7 +996,7 @@ export class Room {
     this.seeds = new Map();
     this.final = null;
     if (index === FINAL_ROUND && this.settings.mode !== 'context') {
-      const prompt = this.withPlayerName(this.finalPrompt(), this.dealtPlayers());
+      const prompt = this.withLetters(this.withPlayerName(this.finalPrompt(), this.dealtPlayers()));
       this.final = {
         prompt,
         posts: null,
@@ -689,6 +1004,8 @@ export class Room {
         limit: this.roundLimit(),
         answers: new Map(),
         votes: {},
+        audienceVotes: {},
+        anonIds: null,
         result: null,
       };
       this.matchups = [];
@@ -751,7 +1068,7 @@ export class Room {
         text: pool[i % pool.length]!,
       });
     });
-    this.enterPhase('CREATING', kind === 'draw' ? TIMERS.DRAWING : TIMERS.CONFESSING);
+    this.enterPhase('CREATING', this.clock(kind === 'draw' ? TIMERS.DRAWING : TIMERS.CONFESSING));
     for (const player of this.players) {
       if (player.connected) this.sendPrivateState(player.id);
     }
@@ -819,6 +1136,8 @@ export class Room {
       limit: this.roundLimit(),
       answers: new Map(),
       votes: {},
+      audienceVotes: {},
+      anonIds: null,
       result: null,
     };
   }
@@ -844,6 +1163,17 @@ export class Room {
     return { ...prompt, text: prompt.text.split(PLAYER_TOKEN).join(named?.name ?? 'someone') };
   }
 
+  /** Initials mode: the same fresh letters for everyone answering this prompt. */
+  private withLetters(prompt: DealtPrompt): DealtPrompt {
+    if (this.settings.mode !== 'initials') return prompt;
+    const count = INITIALS_LENGTHS[this.roundIndex];
+    const letters = Array.from(
+      { length: count },
+      () => INITIAL_POOL[Math.floor(this.random() * INITIAL_POOL.length)]!,
+    ).join('');
+    return { ...prompt, letters };
+  }
+
   /** Ring pairing: player i vs player i+1 (mod N); N matchups. */
   private generateMatchups(round: RoundIndex, authored: DealtPrompt[]): Matchup[] {
     const dealt = this.dealtPlayers();
@@ -852,9 +1182,11 @@ export class Room {
       (playerId, i) => [playerId, order[(i + 1) % order.length]!] as [string, string],
     );
     const prompts = this.promptsForPairs(round, pairs, authored).map((prompt, i) =>
-      this.withPlayerName(
-        prompt,
-        dealt.filter((p) => !pairs[i]!.includes(p.id)),
+      this.withLetters(
+        this.withPlayerName(
+          prompt,
+          dealt.filter((p) => !pairs[i]!.includes(p.id)),
+        ),
       ),
     );
     // Public slot order and matchup order must not follow the ring, or a revealed
@@ -867,6 +1199,7 @@ export class Room {
         playerIds,
         answers: [null, null],
         votes: {},
+        audienceVotes: {},
         roast: null,
         result: null,
         revealed: false,
@@ -913,18 +1246,15 @@ export class Room {
   private startWriting(): void {
     const spec = roundSpec(this.roundIndex);
     if (this.final) {
-      this.enterPhase('FINAL_WRITING', spec.writingMs);
+      this.enterPhase('FINAL_WRITING', this.clock(spec.writingMs));
       this.dealPrompts();
       return;
     }
-    this.enterPhase('WRITING', spec.writingMs);
+    this.enterPhase('WRITING', this.clock(spec.writingMs));
     if (this.settings.roasts && this.roundIndex >= LIMITS.ROAST_FROM_ROUND) {
-      this.roastWindowEndsAt = Date.now() + TIMERS.ROAST_WINDOW;
-      this.roastTimer = setTimeout(() => {
-        this.roastTimer = null;
-        this.roastWindowEndsAt = null;
-        this.dealPrompts();
-      }, TIMERS.ROAST_WINDOW);
+      const window = roastWindowMs(this.settings.timers);
+      this.roastWindowEndsAt = Date.now() + window;
+      this.roastTimer = setTimeout(() => this.closeRoastWindow(), window);
       this.broadcast();
       for (const player of this.players) {
         if (player.connected) this.sendPrivateState(player.id);
@@ -932,6 +1262,12 @@ export class Room {
     } else {
       this.dealPrompts();
     }
+  }
+
+  private closeRoastWindow(): void {
+    this.roastTimer = null;
+    this.roastWindowEndsAt = null;
+    this.dealPrompts();
   }
 
   private dealPrompts(): void {
@@ -959,7 +1295,12 @@ export class Room {
           this.final.answers.set(player.id, this.fallbackAnswer(player, this.final.limit));
         }
       }
-      this.enterPhase('FINAL_VOTING', TIMERS.FINAL_VOTING);
+      if (this.settings.anonymousFinal && !this.final.posts) {
+        this.final.anonIds = new Map(
+          [...this.final.answers.keys()].map((id) => [id, this.opaqueId()]),
+        );
+      }
+      this.enterPhase('FINAL_VOTING', this.clock(TIMERS.FINAL_VOTING));
       if (this.allFinalVotesIn()) this.finishFinal();
       return;
     }
@@ -978,7 +1319,7 @@ export class Room {
   }
 
   private startVoting(): void {
-    this.enterPhase('VOTING', TIMERS.VOTING);
+    this.enterPhase('VOTING', this.clock(TIMERS.VOTING));
     if (this.allVotesIn()) this.revealMatchup();
   }
 
@@ -989,6 +1330,7 @@ export class Room {
     const result = scoreMatchup({
       answers: [a, b],
       votes: matchup.votes,
+      audienceVotes: matchup.audienceVotes,
       roast: matchup.roast,
       multiplier: roundSpec(this.roundIndex).multiplier,
     });
@@ -1025,6 +1367,7 @@ export class Room {
         if (m.prompt.seed)
           this.encore.push({ prompt: m.prompt, votes: Object.keys(m.votes).length });
       }
+      this.recordMatchupHighlight();
       this.publishStats();
       this.enterPhase('ROUND_RESULTS', TIMERS.ROUND_RESULTS);
     }
@@ -1036,9 +1379,16 @@ export class Room {
     if (!final) throw new Error('finishFinal without a final round');
     const ids = this.players.map((p) => p.id);
     const multiplier = roundSpec(this.roundIndex).multiplier;
+    const answers = [...final.answers.values()];
+    const options = {
+      bailOutIds: new Set(answers.filter((a) => a.bailOut).map((a) => a.playerId)),
+      censoredIds: new Set(answers.filter((a) => a.censored).map((a) => a.playerId)),
+      audienceVotes: final.audienceVotes,
+    };
     final.result = final.posts
-      ? scorePosts(final.votes, final.posts, ids, multiplier)
-      : scoreFinal(final.votes, ids, multiplier);
+      ? scorePosts(final.votes, final.posts, ids, multiplier, options)
+      : scoreFinal(final.votes, ids, multiplier, options);
+    this.recordWallHighlight(final);
     this.enterPhase('FINAL_REVEAL', finalRevealSchedule(final.answers.size).totalMs);
   }
 
@@ -1090,7 +1440,7 @@ export class Room {
         this.afterReveal();
         return;
       case 'ROUND_RESULTS':
-        this.beginRound((this.roundIndex + 1) as RoundIndex);
+        this.beginRound(nextRound(this.roundIndex, this.settings.length));
         return;
       case 'FINAL_VOTING':
         this.finishFinal();
@@ -1108,13 +1458,20 @@ export class Room {
     this.phase = phase;
     this.phaseStartedAt = Date.now();
     this.phaseEndsAt = durationMs === null ? null : Date.now() + durationMs;
-    if (durationMs !== null) {
-      this.phaseTimer = setTimeout(() => {
-        this.phaseTimer = null;
-        this.onPhaseTimeout();
-      }, durationMs);
-    }
+    if (durationMs !== null) this.schedulePhaseTimer(durationMs);
     this.broadcast();
+  }
+
+  private schedulePhaseTimer(durationMs: number): void {
+    this.phaseTimer = setTimeout(() => {
+      this.phaseTimer = null;
+      this.onPhaseTimeout();
+    }, durationMs);
+  }
+
+  /** A writing, drawing or voting clock under the room's timer speed. */
+  private clock(ms: number): number | null {
+    return phaseClock(ms, this.settings.timers);
   }
 
   private clearTimer(): void {
@@ -1126,6 +1483,8 @@ export class Room {
 
   /** A disconnect can be the last thing a phase was waiting on. */
   private afterPresenceChange(): void {
+    // A paused room only moves on when the leader resumes (which re-runs this check).
+    if (this.pause) return;
     if (this.phase === 'CREATING') {
       if (this.allCreatingDone()) this.endCreating();
     } else if ((this.phase === 'WRITING' && this.promptsDealt) || this.phase === 'FINAL_WRITING') {
@@ -1156,8 +1515,10 @@ export class Room {
     }
   }
 
-  /** The round's word limit, or null when the leader switched limits off. */
+  /** The round's word limit, or null when the leader switched limits off. Initials mode
+   *  always has one word per letter. */
   private roundLimit(): number | null {
+    if (this.settings.mode === 'initials') return INITIALS_LENGTHS[this.roundIndex];
     return this.settings.wordLimits ? roundSpec(this.roundIndex).limit : null;
   }
 
@@ -1165,13 +1526,26 @@ export class Room {
     return matchup.roast?.targetId === playerId ? LIMITS.ROASTED_LIMIT : this.roundLimit();
   }
 
-  private buildAnswer(player: Player, rawText: string, limit: number | null): Answer {
-    const validation = validateAnswer(rawText, limit);
+  /** A roast in Initials keeps only the first two letters. */
+  private answerLetters(matchup: Matchup, playerId: string): string | null {
+    const letters = matchup.prompt.letters;
+    if (!letters) return null;
+    return matchup.roast?.targetId === playerId ? letters.slice(0, LIMITS.ROASTED_LIMIT) : letters;
+  }
+
+  private buildAnswer(
+    player: Player,
+    rawText: string,
+    limit: number | null,
+    letters: string | null,
+  ): Answer {
+    const validation = validateAnswer(rawText, limit, letters);
     if (!validation.ok) {
       const messages: Record<string, string> = {
         over_limit: `That's over the ${limit}-word limit`,
         too_long: `Keep it under ${LIMITS.MAX_CHARS} characters`,
         empty: 'Say something. Anything.',
+        bad_initials: `One word per letter: ${Array.from(letters ?? '').join(' · ')}`,
       };
       const code = validation.error ?? 'invalid';
       throw new RoomError(code, messages[code] ?? 'Invalid answer');
@@ -1182,6 +1556,8 @@ export class Room {
       wordCount: validation.count,
       autoSubmitted: false,
       effectiveLimit: limit,
+      bailOut: false,
+      censored: false,
     };
   }
 
@@ -1192,6 +1568,8 @@ export class Room {
       wordCount: 0,
       autoSubmitted: true,
       effectiveLimit: limit,
+      bailOut: false,
+      censored: false,
     };
   }
 
@@ -1260,6 +1638,78 @@ export class Room {
     return player.connected || Date.now() < player.graceEndsAt;
   }
 
+  /** The player behind an intent: a kicked player's phone no longer counts. */
+  private requireActor(playerId: string): Player {
+    const player = this.requirePlayer(playerId);
+    if (player.kicked) throw new RoomError('not_found', 'You are not in this room');
+    return player;
+  }
+
+  private requireUnpaused(): void {
+    if (this.pause) throw new RoomError('paused', 'The game is paused');
+  }
+
+  /** The author behind a wall vote id: a post id, an anonymous id, or a player id. */
+  private wallAuthor(final: FinalRound, answerId: string): string | null {
+    if (final.posts) return final.posts.find((p) => p.id === answerId)?.twisterId ?? null;
+    if (final.anonIds) {
+      for (const [playerId, anon] of final.anonIds) if (anon === answerId) return playerId;
+      return null;
+    }
+    return final.answers.has(answerId) ? answerId : null;
+  }
+
+  /** The id an answer is voted with on the wall, as this room shows it right now. */
+  private wallAnswerId(final: FinalRound, playerId: string): string {
+    const post = final.posts?.find((p) => p.twisterId === playerId);
+    if (post) return post.id;
+    const revealed = this.phase === 'FINAL_REVEAL' || this.phase === 'PODIUM';
+    return (!revealed && final.anonIds?.get(playerId)) || playerId;
+  }
+
+  private opaqueId(): string {
+    return `a${Math.floor(this.random() * 36 ** 8).toString(36)}`;
+  }
+
+  /** The round's most-voted real answer, for the podium. */
+  private recordMatchupHighlight(): void {
+    let best: Highlight | null = null;
+    for (const m of this.matchups) {
+      m.answers.forEach((answer, slot) => {
+        const votes = m.result?.voteCounts[slot] ?? 0;
+        if (!answer || answer.autoSubmitted || answer.censored || votes === 0) return;
+        if (best && votes <= best.votes) return;
+        best = {
+          roundIndex: this.roundIndex,
+          promptText: m.prompt.text,
+          text: answer.text,
+          playerId: answer.playerId,
+          votes,
+        };
+      });
+    }
+    if (best) this.highlights.push(best);
+  }
+
+  private recordWallHighlight(final: FinalRound): void {
+    let best: Highlight | null = null;
+    for (const [playerId, tally] of Object.entries(final.result ?? {})) {
+      const answer = final.answers.get(playerId);
+      const votes = tally.first + tally.second;
+      if (!answer || answer.autoSubmitted || answer.censored || votes === 0) continue;
+      if (best && votes <= best.votes) continue;
+      const post = final.posts?.find((p) => p.twisterId === playerId);
+      best = {
+        roundIndex: this.roundIndex,
+        promptText: post ? `"${post.quote}"` : final.prompt.text,
+        text: answer.text,
+        playerId,
+        votes,
+      };
+    }
+    if (best) this.highlights.push(best);
+  }
+
   private requirePlayer(playerId: string): Player {
     const player = this.players.find((p) => p.id === playerId);
     if (!player) throw new RoomError('not_found', 'You are not in this room');
@@ -1307,7 +1757,22 @@ export class Room {
       podium: this.podium,
       banner: this.banner,
       gamesPlayed: this.gamesPlayed,
+      paused: this.pause
+        ? { byName: this.pause.byName, remainingMs: this.pause.remainingMs }
+        : null,
+      audienceCount: [...this.audience.values()].filter((m) => m.connected).length,
+      highlights: this.phase === 'PODIUM' ? [...this.highlights] : [],
+      viewer: { role: 'player', finalAnswerId: null },
       serverNow: now,
+    };
+  }
+
+  private viewerState(viewerId: string): ViewerState {
+    const final = this.final;
+    const wrote = final?.answers.has(viewerId) || final?.playerIds.includes(viewerId);
+    return {
+      role: this.audience.has(viewerId) ? 'audience' : 'player',
+      finalAnswerId: final && wrote ? this.wallAnswerId(final, viewerId) : null,
     };
   }
 
@@ -1330,6 +1795,7 @@ export class Room {
           text: m.prompt.text,
           seed: publicSeed(m.prompt, false),
           effectiveLimit: this.answerLimit(m, playerId),
+          letters: this.answerLetters(m, playerId),
           matchupIndex,
           submittedText: m.answers[slot as 0 | 1]?.text ?? null,
         });
@@ -1345,6 +1811,7 @@ export class Room {
           text: prompt.text,
           seed: publicSeed(prompt, false),
           effectiveLimit: this.final.limit,
+          letters: prompt.letters ?? null,
           matchupIndex: null,
           submittedText: this.final.answers.get(playerId)?.text ?? null,
         },
@@ -1360,6 +1827,7 @@ export class Room {
           text: task.text,
           seed: null,
           effectiveLimit: task.kind === 'confess' ? LIMITS.CONFESSION_WORDS : null,
+          letters: null,
           matchupIndex: null,
           submittedText: seed ? (seed.kind === 'quote' ? seed.content : '') : null,
         },
@@ -1443,15 +1911,19 @@ export class Room {
       m.revealed || (this.phase === 'VOTING' && index === this.currentMatchupIndex);
     const toPublic = (answer: Answer | null): PublicAnswer => ({
       playerId: m.revealed ? (answer?.playerId ?? null) : null,
-      text: votingOpen ? (answer?.text ?? null) : null,
+      text: votingOpen ? publicText(answer) : null,
       wordCount: m.revealed ? (answer?.wordCount ?? null) : null,
       autoSubmitted: votingOpen ? (answer?.autoSubmitted ?? false) : false,
       effectiveLimit: m.revealed ? (answer?.effectiveLimit ?? null) : null,
       seed: null,
+      bailOut: m.revealed ? (answer?.bailOut ?? false) : false,
+      censored: votingOpen ? (answer?.censored ?? false) : false,
+      answerId: null,
     });
     return {
       promptId: votingOpen ? m.prompt.id : '',
       promptText: votingOpen ? m.prompt.text : '',
+      letters: votingOpen ? (m.prompt.letters ?? null) : null,
       seed: votingOpen ? publicSeed(m.prompt, m.revealed) : null,
       answers: [toPublic(m.answers[0]), toPublic(m.answers[1])],
       votes: m.revealed ? { ...m.votes } : null,
@@ -1470,12 +1942,15 @@ export class Room {
     // Out of Context votes by post id and keeps the twister hidden until the reveal.
     const answers: PublicAnswer[] = votingOpen
       ? this.shuffledStable([...final.answers.values()]).map((answer) => ({
-          playerId: final.posts && !revealed ? null : answer.playerId,
-          text: answer.text,
+          playerId: (final.posts || final.anonIds) && !revealed ? null : answer.playerId,
+          text: publicText(answer),
           wordCount: revealed ? answer.wordCount : null,
           autoSubmitted: answer.autoSubmitted,
           effectiveLimit: revealed ? answer.effectiveLimit : null,
           seed: final.posts ? publicSeed(this.wallPrompt(final, answer.playerId), revealed) : null,
+          bailOut: revealed && answer.bailOut,
+          censored: answer.censored,
+          answerId: this.wallAnswerId(final, answer.playerId),
         }))
       : [];
     return {
@@ -1483,15 +1958,19 @@ export class Room {
       seed: final.posts ? null : publicSeed(final.prompt, revealed),
       voting: final.posts ? 'single' : 'rank',
       limit: final.limit,
+      letters: final.prompt.letters ?? null,
       answers,
       votes: revealed ? { ...final.votes } : null,
       result: final.result,
     };
   }
 
-  /** Deterministic order per room so every client sees the same card wall. */
+  /** Deterministic order per room so every client sees the same card wall. Anonymous walls
+   *  sort by the opaque ids, so the order cannot be recomputed from the player ids. */
   private shuffledStable<T extends { playerId: string }>(items: T[]): T[] {
-    return [...items].sort((a, b) => hash(a.playerId + this.code) - hash(b.playerId + this.code));
+    const key = (item: T) =>
+      hash((this.final?.anonIds?.get(item.playerId) ?? item.playerId) + this.code);
+    return [...items].sort((a, b) => key(a) - key(b));
   }
 
   private submittedIds(): string[] {
@@ -1522,34 +2001,67 @@ export class Room {
   /** Matchup voters are private: whoever is missing from the list would name the authors. */
   private votedIds(viewerId?: string): string[] {
     if (this.phase === 'VOTING') {
-      return viewerId !== undefined && viewerId in this.currentMatchup().votes ? [viewerId] : [];
+      const { votes, audienceVotes } = this.currentMatchup();
+      return viewerId !== undefined && (viewerId in votes || viewerId in audienceVotes)
+        ? [viewerId]
+        : [];
     }
-    if (this.phase === 'FINAL_VOTING' && this.final) return Object.keys(this.final.votes);
+    if (this.phase === 'FINAL_VOTING' && this.final) {
+      const ids = Object.keys(this.final.votes);
+      if (viewerId !== undefined && viewerId in this.final.audienceVotes) ids.push(viewerId);
+      return ids;
+    }
     return [];
   }
 
   private broadcast(): void {
     if (this.closed) return;
     const state = this.publicState();
-    for (const player of this.players) {
-      if (!player.connected) continue;
-      if (this.drawings.size > 0) this.pushDrawings(player.id);
-      const payload = { ...state, votedIds: this.votedIds(player.id) };
-      this.deps.send(player.id, { type: 'room_state', payload });
+    for (const id of this.connectedViewerIds()) {
+      if (this.drawings.size > 0) this.pushDrawings(id);
+      const payload = { ...state, votedIds: this.votedIds(id), viewer: this.viewerState(id) };
+      this.deps.send(id, { type: 'room_state', payload });
     }
   }
 
   private broadcastAll(message: ServerMessage): void {
-    for (const player of this.players) {
-      if (player.connected) this.deps.send(player.id, message);
-    }
+    for (const id of this.connectedViewerIds()) this.deps.send(id, message);
+  }
+
+  private connectedViewerIds(): string[] {
+    return [
+      ...this.players.filter((p) => p.connected).map((p) => p.id),
+      ...[...this.audience.values()].filter((m) => m.connected).map((m) => m.id),
+    ];
   }
 }
 
-const GAME_MODES: readonly GameMode[] = ['classic', 'custom', 'doodle', 'context'];
+const GAME_MODES: readonly GameMode[] = ['classic', 'custom', 'doodle', 'context', 'initials'];
+const TIMER_SPEEDS: readonly TimerSpeed[] = ['normal', 'relaxed', 'off'];
+const GAME_LENGTHS: readonly GameLength[] = ['full', 'short'];
 
 function isGameMode(value: unknown): value is GameMode {
   return GAME_MODES.includes(value as GameMode);
+}
+
+function isTimerSpeed(value: unknown): value is TimerSpeed {
+  return TIMER_SPEEDS.includes(value as TimerSpeed);
+}
+
+function isGameLength(value: unknown): value is GameLength {
+  return GAME_LENGTHS.includes(value as GameLength);
+}
+
+/** A short game goes from round 1 straight to the final. */
+function nextRound(current: RoundIndex, length: GameLength): RoundIndex {
+  if (current === 0 && length === 'short') return FINAL_ROUND;
+  return (current + 1) as RoundIndex;
+}
+
+/** Censored text is replaced for everyone, its author included. */
+function publicText(answer: Answer | null | undefined): string | null {
+  if (!answer) return null;
+  return answer.censored ? CENSORED_TEXT : answer.text;
 }
 
 /** Artists and twisters stay anonymous until the reveal; a post's victim is the point of it. */

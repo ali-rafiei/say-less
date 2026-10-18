@@ -2,7 +2,9 @@ import type { PublicRoomState } from '@say-less/shared';
 import { useEffect, useState } from 'react';
 import { sfx } from '../audio/sfx.ts';
 import { AnswerText } from '../components/AnswerText.tsx';
+import { ConfirmButton } from '../components/ConfirmButton.tsx';
 import { Header } from '../components/Header.tsx';
+import { LetterTiles } from '../components/LetterTiles.tsx';
 import { PostView, SeedView } from '../components/SeedView.tsx';
 import type { RoomController } from '../net/useRoom.ts';
 
@@ -19,14 +21,17 @@ export function FinalVoting({ ctl, room, me }: Props) {
   const promptId = final?.prompt.id;
   useEffect(() => setPicks([]), [promptId]);
   if (!final) return null;
-  // Out of Context votes once, by post id (twisters stay hidden); the final ranks two players.
-  const single = final.voting === 'single';
+  // Out of Context and the audience vote once; players rank two in the final. Every wall
+  // answer carries the id it is voted with (a post id, a player id, or an anonymous id).
+  const watching = room.viewer.role === 'audience';
+  const posts = final.voting === 'single';
+  const single = posts || watching;
   const need = single ? 1 : 2;
-  const idOf = (answer: (typeof final.answers)[number]) =>
-    single ? (answer.seed?.kind === 'post' ? answer.seed.postId : null) : answer.playerId;
+  const isLeader = room.leaderId === me;
+  const idOf = (answer: (typeof final.answers)[number]) => answer.answerId;
   const isMine = (answer: (typeof final.answers)[number]) =>
-    single ? (idOf(answer) ?? '') in ctl.myPrompts : answer.playerId === me;
-  const canVoteAtAll = final.answers.filter((a) => !isMine(a)).length >= need;
+    answer.answerId !== null && answer.answerId === room.viewer.finalAnswerId;
+  const canVoteAtAll = final.answers.filter((a) => !isMine(a) && !a.censored).length >= need;
 
   function toggle(id: string) {
     if (voted) return;
@@ -44,42 +49,57 @@ export function FinalVoting({ ctl, room, me }: Props) {
 
   return (
     <main className="screen screen--wide final">
-      <Header room={room} clockOffset={ctl.clockOffset} />
+      <Header ctl={ctl} room={room} />
       {final.seed && <SeedView seed={final.seed} room={room} drawings={ctl.drawings} me={me} />}
-      {single ? (
+      {posts ? (
         <h2 className="prompt display center">Which post looks the most ridiculous?</h2>
       ) : (
         <h2 className="prompt display center">{final.prompt.text}</h2>
       )}
+      {final.letters && <LetterTiles letters={final.letters} />}
       <p className="center dim">
-        {single
-          ? 'One vote. Not the one you twisted.'
-          : 'Pick your top two, in order. Not yourself.'}
+        {watching
+          ? 'Audience vote: pick your favourite. It wins the Crowd Favourite bonus.'
+          : single
+            ? 'One vote. Not the one you twisted.'
+            : 'Pick your top two, in order. Not yourself.'}
       </p>
-      <div className={`wall ${single ? 'wall--posts' : ''}`}>
+      <div className={`wall ${posts ? 'wall--posts' : ''}`}>
         {final.answers.map((answer) => {
           const id = idOf(answer);
           const mine = isMine(answer);
           const rank = picks.indexOf(id ?? '');
           return (
-            <button
-              key={id ?? answer.text}
-              type="button"
-              className={`card wcard ${mine ? 'wcard--mine' : ''} ${rank >= 0 ? 'wcard--picked' : ''}`}
-              disabled={mine || voted}
-              onClick={() => id && toggle(id)}
-            >
-              {rank >= 0 && !single && <span className="wcard__rank display">{rank + 1}</span>}
-              {answer.seed?.kind === 'post' ? (
-                <PostView seed={answer.seed} room={room} me={me} twist={answer.text ?? '…'} />
-              ) : (
-                <AnswerText
-                  text={answer.text ?? '…'}
-                  compact
-                  filter={room.settings.profanityFilter && !mine}
+            <div key={id ?? answer.text} className="wslot">
+              <button
+                type="button"
+                className={`card wcard ${mine ? 'wcard--mine' : ''} ${rank >= 0 ? 'wcard--picked' : ''}`}
+                disabled={mine || voted || answer.censored}
+                onClick={() => id && toggle(id)}
+              >
+                {rank >= 0 && !single && <span className="wcard__rank display">{rank + 1}</span>}
+                {answer.seed?.kind === 'post' ? (
+                  <PostView seed={answer.seed} room={room} me={me} twist={answer.text ?? '…'} />
+                ) : (
+                  <AnswerText
+                    text={answer.text ?? '…'}
+                    compact
+                    filter={room.settings.profanityFilter && !mine}
+                  />
+                )}
+              </button>
+              {isLeader && !mine && !answer.censored && id && (
+                <ConfirmButton
+                  label="Censor"
+                  confirmLabel="Censor it?"
+                  className="censor"
+                  onConfirm={() => {
+                    setPicks((current) => current.filter((x) => x !== id));
+                    ctl.censorFinal(id);
+                  }}
                 />
               )}
-            </button>
+            </div>
           );
         })}
       </div>

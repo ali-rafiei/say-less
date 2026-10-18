@@ -8,6 +8,7 @@ import './styles/art.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App.tsx';
+import { loadCalmMotion, setCalmMotion } from './calmMotion.ts';
 
 // Displayed text is game content: block copy, long-press menus and drag on everything but inputs.
 document.addEventListener('contextmenu', (event) => {
@@ -22,6 +23,7 @@ document.addEventListener('copy', (event) => {
   }
 });
 document.addEventListener('dragstart', (event) => event.preventDefault());
+if (loadCalmMotion()) setCalmMotion(true);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

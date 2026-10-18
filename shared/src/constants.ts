@@ -1,4 +1,4 @@
-import type { RoundIndex } from './types.ts';
+import type { RoundIndex, TimerSpeed } from './types.ts';
 
 export interface RoundSpec {
   index: RoundIndex;
@@ -34,11 +34,16 @@ export const TIMERS = {
   FINAL_REVEAL_STEP: 3_500,
   /** extra time on the winning answer before moving on */
   FINAL_REVEAL_HOLD: 2_500,
+  /** relaxed timers multiply every writing, drawing and voting clock by this */
+  RELAXED_FACTOR: 2,
+  /** the hurry-up warning shows to anyone still writing when this much time is left */
+  HURRY_UP_MS: 15_000,
 } as const;
 
 export const LIMITS = {
   MIN_PLAYERS: 3,
   MAX_PLAYERS: 12,
+  MAX_AUDIENCE: 50,
   NAME_MAX: 12,
   MAX_CHARS: 120,
   ROASTED_LIMIT: 2,
@@ -71,10 +76,18 @@ export const POINTS = {
   PITY_PER_VOTE: 20,
   BEST_BURN: 150,
   BEST_BURN_PITY: 30,
+  /** the answer the audience preferred, × the round multiplier */
+  CROWD_FAVOURITE: 100,
+  /** a Bail Out answer earns this share of its vote points and no bonuses */
+  BAIL_OUT_SHARE: 0.5,
 } as const;
+
+/** Initials mode: letters per prompt, by round (the final has the fewest). */
+export const INITIALS_LENGTHS: readonly [number, number, number] = [5, 4, 3];
 
 export const AUTO_SUBMIT_TEXT = '…';
 export const LEFT_TEXT = '[left the chat]';
+export const CENSORED_TEXT = '[censored]';
 
 export const RECONNECT_HOLD_MS = 3 * 60_000;
 /** A player dropped for less than this still counts as playing (an app switch, not a dead phone). */
@@ -97,6 +110,18 @@ export function finalRevealSchedule(count: number): { starts: number[]; totalMs:
     starts,
     totalMs: TIMERS.FINAL_REVEAL_LEAD + count * TIMERS.FINAL_REVEAL_STEP + TIMERS.FINAL_REVEAL_HOLD,
   };
+}
+
+/** A writing, drawing or voting clock under the room's timer speed; null means no clock. */
+export function phaseClock(ms: number, timers: TimerSpeed): number | null {
+  if (timers === 'off') return null;
+  return timers === 'relaxed' ? ms * TIMERS.RELAXED_FACTOR : ms;
+}
+
+/** The roast window always has a clock (prompts are dealt when it closes); relaxed and off
+ *  both get the longer one. */
+export function roastWindowMs(timers: TimerSpeed): number {
+  return timers === 'normal' ? TIMERS.ROAST_WINDOW : TIMERS.ROAST_WINDOW * TIMERS.RELAXED_FACTOR;
 }
 
 export function roundSpec(index: RoundIndex): RoundSpec {

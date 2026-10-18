@@ -1,6 +1,7 @@
 import { LIMITS, countWords, validateAnswer } from '@say-less/shared';
 import { useEffect, useState, type FormEvent } from 'react';
 import { sfx } from '../audio/sfx.ts';
+import { LetterTiles } from './LetterTiles.tsx';
 
 interface Props {
   /** Drafts are kept in sessionStorage under this key so a refresh mid-sentence loses nothing. */
@@ -13,6 +14,8 @@ interface Props {
   disabled?: boolean;
   autoFocus?: boolean;
   placeholder?: string;
+  /** Initials mode: each word must start with the next letter */
+  letters?: string | null;
 }
 
 /** Live counter, soft-blocks typing past the limit, validates like the server. */
@@ -43,6 +46,7 @@ export function WordInput({
   disabled,
   autoFocus,
   placeholder,
+  letters = null,
 }: Props) {
   const [pending, setPending] = useState(false);
   useEffect(() => setPending(false), [resetToken]);
@@ -52,7 +56,7 @@ export function WordInput({
     storeDraft(draftKey, next);
   };
   const count = countWords(value);
-  const validation = validateAnswer(value, limit);
+  const validation = validateAnswer(value, limit, letters);
   const atLimit = limit !== null && count >= limit;
 
   function handleChange(next: string) {
@@ -76,6 +80,7 @@ export function WordInput({
 
   return (
     <form className="winput" onSubmit={handleSubmit}>
+      {letters && <LetterTiles letters={letters} text={value} />}
       <textarea
         className={`winput__field ${atLimit ? 'winput__field--limit' : ''}`}
         value={value}
@@ -97,7 +102,9 @@ export function WordInput({
         autoCorrect="on"
         spellCheck
         enterKeyHint="send"
-        placeholder={placeholder ?? 'Say it in fewer words…'}
+        placeholder={
+          placeholder ?? (letters ? `${Array.from(letters).join('… ')}…` : 'Say it in fewer words…')
+        }
         disabled={disabled || pending}
         aria-label="Your answer"
       />
