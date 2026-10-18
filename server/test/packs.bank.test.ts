@@ -25,6 +25,11 @@ const EXPECTED_PACKS: Record<string, string> = {
   online: 'Extremely Online',
   movies: 'Movie Night',
   family: 'Family Friendly',
+  travel: 'Road Trip',
+  school: 'School Daze',
+  fantasy: 'Out of This World',
+  home: 'Home Sweet Home',
+  love: 'Love Life',
   afterdark: 'After Dark',
 };
 const MIN_PROMPTS_PER_PACK = 50;
@@ -116,7 +121,7 @@ const burns = readJson<{ questions: { id: string; text: string }[] }>(
 ).questions;
 
 describe('pack files', () => {
-  it('ships exactly the seven catalog packs, named as the catalog names them', () => {
+  it('ships exactly the twelve catalog packs, named as the catalog names them', () => {
     // Given the packs found on disk
     const found = Object.fromEntries(packFiles.map(({ pack }) => [pack.id, pack.name]));
 

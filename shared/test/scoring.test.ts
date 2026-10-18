@@ -309,7 +309,7 @@ describe('scorePosts (Out of Context)', () => {
   });
 });
 
-describe('Bail Out, censoring and the crowd', () => {
+describe('Bail Out and the crowd', () => {
   it('pays a Bail Out answer half its vote points and no Mic Drop', () => {
     // Arrange: the stock answer wins 3-1
     const result = scoreMatchup({
@@ -321,20 +321,6 @@ describe('Bail Out, censoring and the crowd', () => {
     // Assert: 3 × 50, no bonus; the loser keeps full vote points
     expect(result.delta).toEqual({ a: 150, b: 100 });
     expect(result.awards.map((a) => a.kind)).toEqual(['votes', 'votes']);
-  });
-
-  it('ignores votes for a censored answer and gives no bonus for beating it', () => {
-    // Arrange: two voters picked the answer the leader then censored
-    const result = scoreMatchup({
-      answers: [answer({ playerId: 'a', censored: true }), answer({ playerId: 'b' })],
-      votes: votesFor([2, 2]),
-      roast: null,
-      multiplier: 1,
-    });
-    // Assert: b wins 2-0 on counted votes, votes only
-    expect(result.voteCounts).toEqual([0, 2]);
-    expect(result.winnerIndex).toBe(1);
-    expect(result.delta).toEqual({ a: 0, b: 200 });
   });
 
   it('pays the Crowd Favourite bonus to the answer the audience preferred', () => {
@@ -352,24 +338,23 @@ describe('Bail Out, censoring and the crowd', () => {
     expect(result.delta).toEqual({ a: 150, b: 300 });
   });
 
-  it('scores a final with a Bail Out, a censored answer and a crowd favourite', () => {
+  it('scores a final with a Bail Out and a crowd favourite', () => {
     // Arrange
     const votes: Record<string, [string, string]> = {
       a: ['b', 'c'],
       b: ['c', 'a'],
       c: ['a', 'b'],
     };
-    // Act: b bailed out, c was censored, the audience loves a
+    // Act: b bailed out, the audience prefers a 2-1
     const tallies = scoreFinal(votes, ['a', 'b', 'c'], 1, {
       bailOutIds: new Set(['b']),
-      censoredIds: new Set(['c']),
       audienceVotes: { x: 'a', y: 'a', z: 'c' },
     });
-    // Assert
+    // Assert: a 200 + 100 + crowd 100; b's 100 + 50 halved; c 200 + 100 and 1 crowd vote
     expect(tallies.a).toMatchObject({ first: 1, second: 1, crowd: 2, crowdFavourite: true });
     expect(tallies.a!.points).toBe(200 + 100 + 100);
     expect(tallies.b!.points).toBe(100 + 50);
-    expect(tallies.c).toMatchObject({ first: 0, second: 0, points: 0, crowd: 0 });
+    expect(tallies.c).toMatchObject({ first: 1, second: 1, points: 300, crowd: 1 });
   });
 
   it('gives no Crowd Favourite on an audience tie', () => {

@@ -14,6 +14,11 @@ export const PACKS: readonly PackInfo[] = [
   { id: 'online', name: 'Extremely Online', blurb: 'Phones, apps and group chats' },
   { id: 'movies', name: 'Movie Night', blurb: 'Tropes, sequels and plot holes' },
   { id: 'family', name: 'Family Friendly', blurb: 'Clean enough for grandma' },
+  { id: 'travel', name: 'Road Trip', blurb: 'Airports, hotels and wrong turns' },
+  { id: 'school', name: 'School Daze', blurb: 'Teachers, homework and the cafeteria' },
+  { id: 'fantasy', name: 'Out of This World', blurb: 'Wizards, aliens and dragons' },
+  { id: 'home', name: 'Home Sweet Home', blurb: 'Chores, roommates and nosy neighbours' },
+  { id: 'love', name: 'Love Life', blurb: 'Dates, crushes and weddings' },
   { id: 'afterdark', name: 'After Dark', blurb: 'Cheeky. Adults only.', mature: true },
 ];
 

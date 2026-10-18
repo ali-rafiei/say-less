@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AUTO_SUBMIT_TEXT, CENSORED_TEXT, countWords } from '../src/shared.ts';
+import { AUTO_SUBMIT_TEXT, countWords } from '../src/shared.ts';
 import { advanceToPhaseEnd, answerAll, makeRoom, startToWriting, type Harness } from './helpers.ts';
 
 /** Players who wrote the open matchup (from their own prompts; the public state hides them). */
@@ -73,6 +73,21 @@ describe('pause', () => {
     expect(h.room.phaseEndsAt! - Date.now()).toBe(90_000);
     vi.advanceTimersByTime(90_000);
     expect(h.room.phase).toBe('VOTING');
+  });
+
+  it('refuses a Doodle drawing while paused', () => {
+    // Arrange: drawing phase of a Doodle game
+    const h = makeRoom();
+    h.room.updateSettings('a', { mode: 'doodle' });
+    startToWriting(h);
+    const task = h.room.yourPrompts('a')[0]!;
+    expect(task.kind).toBe('draw');
+    // Act
+    h.room.pauseGame('a');
+    // Assert
+    expect(() => h.room.submitDrawing('a', task.promptId, 'anything')).toThrowError(
+      expect.objectContaining({ code: 'paused' }),
+    );
   });
 
   it('does not let a disconnect end the phase while paused', () => {
@@ -182,31 +197,6 @@ describe('leader moderation', () => {
     expect(() => h.room.kickPlayer('b', 'c')).toThrowError(
       expect.objectContaining({ code: 'not_leader' }),
     );
-  });
-
-  it('censors an answer for everyone and refuses votes for it', () => {
-    // Arrange: get to a matchup the leader did not write
-    const h = makeRoom(['a', 'b', 'c', 'd']);
-    startToWriting(h);
-    fillAnswers(h);
-    while (authorsOf(h, h.state().currentMatchupIndex).includes('a')) {
-      expect(() => h.room.censorAnswer('a', h.state().currentMatchupIndex, 0)).toThrowError(
-        expect.objectContaining({ code: 'invalid' }),
-      );
-      vi.advanceTimersByTime(20_000);
-      advanceToPhaseEnd(h);
-    }
-    const index = h.state().currentMatchupIndex;
-    const voter = h.room.players.find((p) => p.id !== 'a' && !authorsOf(h, index).includes(p.id))!;
-    // Act
-    h.room.censorAnswer('a', index, 0);
-    // Assert
-    const answer = h.state().matchups[index]!.answers[0];
-    expect(answer).toMatchObject({ text: CENSORED_TEXT, censored: true });
-    expect(() => h.room.castVote(voter.id, index, 0)).toThrowError(
-      expect.objectContaining({ code: 'invalid' }),
-    );
-    h.room.castVote(voter.id, index, 1);
   });
 });
 

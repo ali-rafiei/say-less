@@ -41,9 +41,6 @@ export type ClientMessage =
   /** answer with a stock phrase picked by the server */
   | { type: 'bail_out'; payload: { promptId: string } }
   | { type: 'kick_player'; payload: { playerId: string } }
-  | { type: 'censor_answer'; payload: { matchupIndex: number; answerIndex: 0 | 1 } }
-  /** wall rounds: the id the answer is voted with */
-  | { type: 'censor_final'; payload: { answerId: string } }
   | { type: 'leave_room'; payload: Record<string, never> }
   | { type: 'ping'; payload: Record<string, never> };
 
@@ -84,8 +81,6 @@ export const CLIENT_MESSAGE_TYPES: readonly ClientMessageType[] = [
   'resume_game',
   'bail_out',
   'kick_player',
-  'censor_answer',
-  'censor_final',
   'leave_room',
   'ping',
 ];

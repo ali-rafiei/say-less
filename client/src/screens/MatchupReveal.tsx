@@ -50,11 +50,12 @@ export function MatchupReveal({ ctl, room, me }: Props) {
     if (!result) return;
     const t = setTimeout(() => {
       if (iLost) sfx.lose();
+      else if (crushingWin?.kind === 'silenced') sfx.silenced();
       else if (micDropper) sfx.micDrop();
       else if (result.winnerIndex !== null) sfx.win();
     }, 1200);
     return () => clearTimeout(t);
-  }, [result, micDropper, iLost]);
+  }, [result, micDropper, iLost, crushingWin?.kind]);
 
   if (!matchup || !result) return null;
   const total = result.voteCounts[0] + result.voteCounts[1];

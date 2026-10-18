@@ -30,9 +30,8 @@ export function FinalReveal({ ctl, room, me }: Props) {
 
   useEffect(() => {
     if (shown === 0) return;
-    if (shown === order.length) sfx.micDrop();
-    else if (pointsOf(order[shown - 1]?.playerId ?? null) === 0) sfx.lose();
-    else sfx.win();
+    if (shown === order.length) sfx.fanfare();
+    else sfx.reveal(shown - 1);
     // Keyed on the count alone: only a newly revealed answer plays a sound.
   }, [shown]);
 

@@ -260,16 +260,6 @@ export class Gateway {
       case 'kick_player':
         room.kickPlayer(playerId, str(message.payload.playerId));
         return;
-      case 'censor_answer': {
-        const { matchupIndex, answerIndex } = message.payload;
-        if (answerIndex !== 0 && answerIndex !== 1)
-          throw new RoomError('invalid', 'answerIndex must be 0 or 1');
-        room.censorAnswer(playerId, Number(matchupIndex), answerIndex);
-        return;
-      }
-      case 'censor_final':
-        room.censorFinal(playerId, str(message.payload.answerId));
-        return;
       default:
         throw new RoomError('invalid', `Unexpected message ${message.type}`);
     }

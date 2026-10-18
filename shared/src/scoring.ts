@@ -8,8 +8,6 @@ export interface ScorableAnswer {
   autoSubmitted: boolean;
   /** a stock Bail Out answer: half vote points, no bonuses */
   bailOut?: boolean;
-  /** censored by the leader: votes for it do not count */
-  censored?: boolean;
 }
 
 export interface MatchupScoringInput {
@@ -24,7 +22,6 @@ export interface MatchupScoringInput {
 /** Wall-round modifiers, all keyed by player id (the twister's, for posts). */
 export interface WallScoringOptions {
   bailOutIds?: ReadonlySet<string>;
-  censoredIds?: ReadonlySet<string>;
   /** audience voter id -> the id they voted for (player id, or post id for posts) */
   audienceVotes?: Record<string, string>;
 }
@@ -60,12 +57,10 @@ export function scoreMatchup(input: MatchupScoringInput): MatchupResult {
   const awards: PlayerAward[] = [];
   const delta: Record<string, number> = { [answers[0].playerId]: 0, [answers[1].playerId]: 0 };
   const audienceCounts: [number, number] = [0, 0];
-  for (const choice of Object.values(input.audienceVotes ?? {})) {
-    if (!answers[choice].censored) audienceCounts[choice] += 1;
-  }
+  for (const choice of Object.values(input.audienceVotes ?? {})) audienceCounts[choice] += 1;
 
   const greatMinds =
-    answers.every((a) => !a.autoSubmitted && !a.bailOut && !a.censored) &&
+    answers.every((a) => !a.autoSubmitted && !a.bailOut) &&
     normalizeForComparison(answers[0].text) === normalizeForComparison(answers[1].text);
   if (greatMinds) {
     for (const answer of answers) {
@@ -87,9 +82,7 @@ export function scoreMatchup(input: MatchupScoringInput): MatchupResult {
   }
 
   const voteCounts: [number, number] = [0, 0];
-  for (const choice of Object.values(votes)) {
-    if (!answers[choice].censored) voteCounts[choice] += 1;
-  }
+  for (const choice of Object.values(votes)) voteCounts[choice] += 1;
   const totalVotes = voteCounts[0] + voteCounts[1];
 
   answers.forEach((answer, index) => {
@@ -106,10 +99,9 @@ export function scoreMatchup(input: MatchupScoringInput): MatchupResult {
   if (winnerIndex !== null) {
     const winner = answers[winnerIndex];
     const loser = answers[winnerIndex === 0 ? 1 : 0];
-    // Beating a stock or censored answer, or winning with one, earns no bonus.
-    const bonusEligible = !winner.bailOut && !loser.censored;
     // Tiers, not stacked: a sweep is Silenced!, any other win over half the votes a Mic Drop.
-    if (!bonusEligible) {
+    // A stock Bail Out answer earns no bonus.
+    if (winner.bailOut) {
       // votes only
     } else if (voteCounts[winnerIndex] === totalVotes && totalVotes >= POINTS.SILENCED_MIN_VOTES) {
       addAward(awards, delta, {
@@ -162,18 +154,17 @@ function emptyTally(): FinalTally {
   };
 }
 
-/** Counts audience votes onto tallies and pays the unique favourite (never a censored one). */
+/** Counts audience votes onto tallies and pays the unique favourite. */
 function applyCrowd(
   tallies: Record<string, FinalTally>,
   audienceVotes: Record<string, string>,
   toPlayer: (votedId: string) => string | undefined,
-  censored: ReadonlySet<string>,
   multiplier: number,
 ): void {
   const counts = new Map<string, number>();
   for (const votedId of Object.values(audienceVotes)) {
     const playerId = toPlayer(votedId);
-    if (!playerId || censored.has(playerId) || !tallies[playerId]) continue;
+    if (!playerId || !tallies[playerId]) continue;
     tallies[playerId].crowd += 1;
     counts.set(playerId, (counts.get(playerId) ?? 0) + 1);
   }
@@ -190,13 +181,12 @@ export function scoreFinal(
   multiplier: number,
   options: WallScoringOptions = {},
 ): Record<string, FinalTally> {
-  const censored = options.censoredIds ?? new Set<string>();
   const tallies: Record<string, FinalTally> = {};
   for (const id of playerIds) tallies[id] = emptyTally();
   for (const [first, second] of Object.values(votes)) {
-    const firstTally = censored.has(first) ? undefined : tallies[first];
+    const firstTally = tallies[first];
     if (firstTally) firstTally.first += 1;
-    const secondTally = censored.has(second) ? undefined : tallies[second];
+    const secondTally = tallies[second];
     if (secondTally) secondTally.second += 1;
   }
   for (const [id, tally] of Object.entries(tallies)) {
@@ -205,7 +195,7 @@ export function scoreFinal(
       scaled(POINTS.FINAL_FIRST * tally.first * share, multiplier) +
       scaled(POINTS.FINAL_SECOND * tally.second * share, multiplier);
   }
-  applyCrowd(tallies, options.audienceVotes ?? {}, (id) => id, censored, multiplier);
+  applyCrowd(tallies, options.audienceVotes ?? {}, (id) => id, multiplier);
   return tallies;
 }
 
@@ -227,12 +217,9 @@ export function scorePosts(
   multiplier: number,
   options: WallScoringOptions = {},
 ): Record<string, FinalTally> {
-  const censored = options.censoredIds ?? new Set<string>();
   const tallies: Record<string, FinalTally> = {};
   for (const id of playerIds) tallies[id] = emptyTally();
-  const counts = new Map<string, number>(
-    posts.filter((p) => !censored.has(p.twisterId)).map((p) => [p.id, 0]),
-  );
+  const counts = new Map<string, number>(posts.map((p) => [p.id, 0]));
   for (const [postId] of Object.values(votes)) {
     if (counts.has(postId)) counts.set(postId, counts.get(postId)! + 1);
   }
@@ -258,13 +245,7 @@ export function scorePosts(
     }
   }
   const twisterOf = new Map(posts.map((p) => [p.id, p.twisterId]));
-  applyCrowd(
-    tallies,
-    options.audienceVotes ?? {},
-    (postId) => twisterOf.get(postId),
-    censored,
-    multiplier,
-  );
+  applyCrowd(tallies, options.audienceVotes ?? {}, (postId) => twisterOf.get(postId), multiplier);
   return tallies;
 }
 

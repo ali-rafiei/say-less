@@ -95,8 +95,6 @@ export interface PublicAnswer {
   seed: PublicSeed | null;
   /** a stock Bail Out answer; false until revealed */
   bailOut: boolean;
-  /** the leader censored it: its text is replaced and votes for it do not count */
-  censored: boolean;
   /** wall rounds: the id to vote with (a player id, or an opaque id when anonymous) */
   answerId: string | null;
 }

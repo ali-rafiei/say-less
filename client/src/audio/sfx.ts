@@ -87,6 +87,19 @@ class Sfx {
     this.play(effects.lose);
   }
 
+  /** One answer of the final reveal; `step` counts up so the run climbs toward the winner. */
+  reveal(step: number): void {
+    this.play(effects.reveal(step));
+  }
+
+  fanfare(): void {
+    this.play(effects.fanfare);
+  }
+
+  silenced(): void {
+    this.play(effects.silenced);
+  }
+
   shatter(): void {
     this.play(effects.shatter);
   }

@@ -97,8 +97,8 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
    prompt, everyone answers, everyone ranks their top two (not themselves).
 7. **Final reveal**: after "The votes are in…", the final answers are spotlighted one at a
    time from fewest points to most. Each shows the answer first, then its author, tally
-   and points a beat later. Every answer gets the same 3.5 s, the best answer lands last
-   with a crown and 2.5 s more, and there is no countdown on screen. Revealed answers stack up
+   and points a beat later. Every answer gets the same 2.5 s, the best answer lands last
+   with a crown and 2 s more, and there is no countdown on screen. Revealed answers stack up
    below the spotlight. Final points are added to scores only at the podium, so the
    reveal gives nothing away early.
 8. **Podium**: the top three blocks rise third, second, then first; winner mic-drops on
@@ -121,9 +121,7 @@ All lobby settings belong to the leader. Defaults in `Room.settings` (`server/sr
 
 **In game**, the leader has a row under the header with **Pause** (freezes every clock for
 everyone; nothing can be submitted until **Resume**, and a disconnect cannot end the phase
-meanwhile) and, with timers off, **Move on**. During voting the leader can **Censor** an
-answer in a matchup they are not in, or a final answer that is not theirs: its text becomes
-`[censored]` for everyone and votes for it do not count. In the lobby the leader can
+meanwhile) and, with timers off, **Move on**. In the lobby the leader can
 **remove** a player (✕ on their chip); mid-game the removed player's seat stays for the
 matchups but their phone is shut out.
 
@@ -304,7 +302,7 @@ What the tests pin down:
   clock), pause freezing the clock and holding a phase through a disconnect, Bail Out
   stamped only at the reveal, audience joining mid-game and deciding only the Crowd
   Favourite, a freed lobby seat going to the audience, kick shutting a phone out
-  mid-game, censoring, Initials letters and validation, and a short game into an
+  mid-game, a Doodle drawing refused while paused, Initials letters and validation, and a short game into an
   anonymous final voted by opaque ids.
 - `server/test/roomManager.test.ts`, `clientAddress.test.ts` – per-client room limits and
   which peer's X-Forwarded-For is trusted.
@@ -361,7 +359,6 @@ disconnected players get "[left the chat]".
 | Final 1st-choice vote | 200              |                                                                                                                                                                    |
 | Final 2nd-choice vote | 100              |                                                                                                                                                                    |
 | Bail Out answer       | half vote points | Stock answer: `POINTS.BAIL_OUT_SHARE` of its vote points (matchup or final), never a Mic Drop or Silenced!                                                         |
-| Censored answer       | 0                | Votes for it are ignored; beating it earns votes only, no bonus                                                                                                    |
 | Crowd Favourite       | +100             | The answer the audience preferred (matchups: more audience votes; wall rounds: the single most-voted, ties pay nobody). Audience votes never count as player votes |
 
 Podium ties share a place (1, 1, 3). Superlatives: Most Mic Drops, Wordiest Loser (words
@@ -421,7 +418,7 @@ LOBBY ─start(leader, ≥3; unpicked get random characters)─▶ ROUND_INTRO (
   │                                                                          ROUND_RESULTS (8s)
   │                                                                                         │
   │   round 3:      ROUND_INTRO (4s) ─▶ FINAL_WRITING (60s) ─▶ FINAL_VOTING (25s)           │
-  │                 ─▶ FINAL_REVEAL (finalRevealSchedule: 2s + 3.5s per answer + 2.5s) ─▶ PODIUM
+  │                 ─▶ FINAL_REVEAL (finalRevealSchedule: 1.5s + 2.5s per answer + 2s) ─▶ PODIUM
   │                                                                              │          │
   └────────────────────────── rematch(leader) ───────────────────────────────────┘◀─────────┘
 ```
@@ -459,8 +456,7 @@ Client → server: `create_room {name}`, `join_room {code, name, sessionToken?}`
 the audience sends one id and an empty second), `rematch {}` (leader, PODIUM),
 `advance_phase {}` (leader, timers off), `pause_game {}` / `resume_game {}` (leader),
 `bail_out {promptId}` (WRITING/FINAL_WRITING), `kick_player {playerId}` (leader),
-`censor_answer {matchupIndex, answerIndex}` (leader, VOTING), `censor_final {answerId}`
-(leader, FINAL_VOTING), `leave_room {}`, `ping {}`.
+`leave_room {}`, `ping {}`.
 
 Server → client: `welcome {playerId, sessionToken, code}`, `room_state <PublicRoomState>`
 (on every mutation), `your_prompts {prompts: [{promptId, text, effectiveLimit, mode,
@@ -599,7 +595,7 @@ suppressed outside inputs) and images ignore pointer events and drags.
 - **Hurry-up**: anyone who still owes an answer gets a "15 seconds left!" banner and a tick
   (`TIMERS.HURRY_UP_MS`).
 - **Initials** prompts show letter tiles that light up as each word matches (`LetterTiles`).
-- **Two taps** for anything irreversible (Bail Out, Censor, Remove): `ConfirmButton` arms on
+- **Two taps** for anything irreversible (Bail Out, Remove): `ConfirmButton` arms on
   the first tap and disarms after 4 s.
 - **Accessibility**: an `aria-live` announcer reads one sentence per event (round, matchup,
   winner, scoreboard leader, podium); the sound menu has a **Calm motion** switch
@@ -663,7 +659,9 @@ opaque icon supplies every icon size.
 **Packs.** The host ticks any mix of packs in the lobby (Classic and Group Chat by
 default); `shared/src/packs.ts` is the catalog and `content/packs/<id>.json` the prompts:
 Group Chat (`friends`, every prompt names a player), Food Fight, 9 to 5, Extremely Online,
-Movie Night, Family Friendly, and After Dark (18+, off by default). About 55 prompts each;
+Movie Night, Family Friendly, Road Trip (`travel`), School Daze (`school`), Out of This World
+(`fantasy`), Home Sweet Home (`home`), Love Life (`love`, cheeky but not adult; added
+2026-10-18), and After Dark (18+, off by default). About 55 prompts each;
 `server/test/packs.bank.test.ts` holds them to the classic bank's rules plus the catalog,
 cross-pack uniqueness and the `{player}` rule. `content/doodles.json` (97 drawing
 suggestions) and `content/questions.json` (128 opinion questions for Out of Context) feed the two modes.
@@ -784,8 +782,20 @@ flat-vector art direction, one unique character per player.
 
 ## Decisions log
 
+- **2026-10-18** After the first live session: the per-answer Censor button is gone (feature
+  removed end to end; the profanity filter still masks words). The final reveal is faster
+  (1.5 s lead, 2.5 s per answer, 2 s hold, was 2 / 3.5 / 2.5). Reveal sounds redone: each
+  final answer is a soft pop whose bell climbs a C major scale toward the winner, the winner
+  gets a bell fanfare instead of the mic-drop thud, Silenced! has its own "shh" and bell, and
+  losing a matchup is a soft two-note marimba instead of the brass wah-wah. Offline renders
+  through the real bus (`AudioGraph` on an `OfflineAudioContext`): fanfare -7 dBFS peak / -20
+  RMS, silenced -9 / -21, lose -10 / -21, reveal pop -13 / -22.5, against the voting chime's
+  -10 / -21; no clipping. Mic Drop keeps its thud. Five new packs (Road Trip, School Daze,
+  Out of This World, Home Sweet Home, Love Life; 55 prompts each, 36 to 41 final-tagged),
+  checked against every existing prompt for exact and near duplicates.
+
 - **2026-10-18** Party features: timer speed (Normal / Relaxed / Off with Move on), pause,
-  Bail Out (stock answer for half points), leader censor and remove, audience with a Crowd
+  Bail Out (stock answer for half points), leader remove, audience with a Crowd
   Favourite bonus, seats, short game, anonymous final, Initials mode, round highlights on the
   podium, a hurry-up banner, Calm motion and screen-reader announcements. All names, text and
   art are original. Audience is on by default, so a full room or a game in progress now seats
