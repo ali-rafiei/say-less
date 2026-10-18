@@ -2,16 +2,8 @@
   "id": "fantasy",
   "name": "Out of This World",
   "prompts": [
-    {
-      "id": "fantasy-001",
-      "text": "The dragon's embarrassing middle name.",
-      "rounds": [0, 1, 2]
-    },
-    {
-      "id": "fantasy-002",
-      "text": "The ingredient a wizard always forgets.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "fantasy-001", "text": "The dragon's embarrassing middle name.", "rounds": [0, 1, 2] },
+    { "id": "fantasy-002", "text": "The ingredient a wizard always forgets.", "rounds": [0, 1, 2] },
     {
       "id": "fantasy-003",
       "text": "The first thing aliens say when they land in your backyard.",
@@ -32,11 +24,7 @@
       "text": "The worst thing to say to a time traveler.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "fantasy-007",
-      "text": "The dragon hoards gold, jewels and ___.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "fantasy-007", "text": "The dragon hoards gold, jewels and ___.", "rounds": [0, 1, 2] },
     {
       "id": "fantasy-008",
       "text": "A quest so boring that no hero will take it.",
@@ -47,11 +35,7 @@
       "text": "The real reason the princess did not want to be rescued.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "fantasy-010",
-      "text": "A side effect of a cheap love potion.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "fantasy-010", "text": "A side effect of a cheap love potion.", "rounds": [0, 1, 2] },
     {
       "id": "fantasy-011",
       "text": "What you hear when you call the wizard tower's customer service line.",
@@ -67,16 +51,8 @@
       "text": "The worst thing to find in a treasure chest.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "fantasy-014",
-      "text": "The fine print on a magic wand's warranty.",
-      "rounds": [0, 1]
-    },
-    {
-      "id": "fantasy-015",
-      "text": "A robot's most useless upgrade.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "fantasy-014", "text": "The fine print on a magic wand's warranty.", "rounds": [0, 1] },
+    { "id": "fantasy-015", "text": "A robot's most useless upgrade.", "rounds": [0, 1, 2] },
     {
       "id": "fantasy-016",
       "text": "What the troll under the bridge charges as a toll.",
@@ -87,36 +63,20 @@
       "text": "The spaceship computer's shocking confession.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "fantasy-018",
-      "text": "A terrible flavor for a healing potion.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "fantasy-018", "text": "A terrible flavor for a healing potion.", "rounds": [0, 1, 2] },
     {
       "id": "fantasy-019",
       "text": "What time travelers keep getting wrong about today.",
       "rounds": [0, 1]
     },
-    {
-      "id": "fantasy-020",
-      "text": "The snack goblins bring to a sleepover.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "fantasy-020", "text": "The snack goblins bring to a sleepover.", "rounds": [0, 1, 2] },
     {
       "id": "fantasy-021",
       "text": "The elves went on strike because of ___.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "fantasy-022",
-      "text": "A job nobody wants on a spaceship.",
-      "rounds": [0, 1, 2]
-    },
-    {
-      "id": "fantasy-023",
-      "text": "The unicorn's secret shame.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "fantasy-022", "text": "A job nobody wants on a spaceship.", "rounds": [0, 1, 2] },
+    { "id": "fantasy-023", "text": "The unicorn's secret shame.", "rounds": [0, 1, 2] },
     {
       "id": "fantasy-024",
       "text": "Something you should never ask a ghost at a dinner party.",
@@ -132,36 +92,20 @@
       "text": "The aliens came all this way just for ___.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "fantasy-027",
-      "text": "How the wizard lost the duel.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "fantasy-027", "text": "How the wizard lost the duel.", "rounds": [0, 1, 2] },
     {
       "id": "fantasy-028",
       "text": "A thank-you note from a dragon to the village it burned down.",
       "rounds": [0, 1]
     },
-    {
-      "id": "fantasy-029",
-      "text": "The worst gift to give a mermaid.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "fantasy-029", "text": "The worst gift to give a mermaid.", "rounds": [0, 1, 2] },
     {
       "id": "fantasy-030",
       "text": "The name of a robot butler with an attitude problem.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "fantasy-031",
-      "text": "What the evil sorcerer does on a day off.",
-      "rounds": [0, 1]
-    },
-    {
-      "id": "fantasy-032",
-      "text": "A sign that your sword is cursed.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "fantasy-031", "text": "What the evil sorcerer does on a day off.", "rounds": [0, 1] },
+    { "id": "fantasy-032", "text": "A sign that your sword is cursed.", "rounds": [0, 1, 2] },
     {
       "id": "fantasy-033",
       "text": "The fortune teller's crystal ball only shows ___.",
@@ -197,21 +141,13 @@
       "text": "A one-line pitch for a theme park built by aliens.",
       "rounds": [0, 1]
     },
-    {
-      "id": "fantasy-040",
-      "text": "The overdue book at the wizard library.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "fantasy-040", "text": "The overdue book at the wizard library.", "rounds": [0, 1, 2] },
     {
       "id": "fantasy-041",
       "text": "The werewolf's excuse for missing the full moon.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "fantasy-042",
-      "text": "The vet's diagnosis for a sick dragon.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "fantasy-042", "text": "The vet's diagnosis for a sick dragon.", "rounds": [0, 1, 2] },
     {
       "id": "fantasy-043",
       "text": "A complaint from the lowest-ranking minion in the evil lair.",
@@ -222,16 +158,8 @@
       "text": "Time travel is real, and everyone uses it to ___.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "fantasy-045",
-      "text": "The first emotion a robot ever feels.",
-      "rounds": [0, 1, 2]
-    },
-    {
-      "id": "fantasy-046",
-      "text": "A fairy's very small, very petty revenge.",
-      "rounds": [0, 1]
-    },
+    { "id": "fantasy-045", "text": "The first emotion a robot ever feels.", "rounds": [0, 1, 2] },
+    { "id": "fantasy-046", "text": "A fairy's very small, very petty revenge.", "rounds": [0, 1] },
     {
       "id": "fantasy-047",
       "text": "The genie granted my wish, but now I have ___.",
@@ -247,11 +175,7 @@
       "text": "A spell gone wrong turned the king into ___.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "fantasy-050",
-      "text": "The haunted armor's only complaint.",
-      "rounds": [0, 1, 2]
-    },
+    { "id": "fantasy-050", "text": "The haunted armor's only complaint.", "rounds": [0, 1, 2] },
     {
       "id": "fantasy-051",
       "text": "Something the teleporter accidentally left behind.",
@@ -272,10 +196,6 @@
       "text": "The villain's lair has a gift shop that sells ___.",
       "rounds": [0, 1, 2]
     },
-    {
-      "id": "fantasy-055",
-      "text": "A lullaby they sing to baby dragons.",
-      "rounds": [0, 1]
-    }
+    { "id": "fantasy-055", "text": "A lullaby they sing to baby dragons.", "rounds": [0, 1] }
   ]
 }
