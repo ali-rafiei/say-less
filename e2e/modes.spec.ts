@@ -103,7 +103,10 @@ async function actOnce(page: Page, answer: string): Promise<void> {
   if (await field.isVisible()) {
     // On the CREATING screen the honest answer about yourself; elsewhere the round's answer.
     const creating = (await page.locator('main.create').count()) > 0;
-    await field.fill(creating ? 'juggling badly' : answer);
+    // Initials: one word per dealt letter, the player's answer as each word's tail.
+    const letters = (await page.locator('.winput .letter').allInnerTexts()).join('');
+    const text = letters ? Array.from(letters, (l) => `${l}${answer}`).join(' ') : answer;
+    await field.fill(creating ? 'juggling badly' : text);
     await page.locator('.winput button[type=submit]').click();
     return;
   }
@@ -122,7 +125,7 @@ async function actOnce(page: Page, answer: string): Promise<void> {
 
 async function playMode(
   browser: Browser,
-  mode: 'Doodle' | 'Out of Context',
+  mode: 'Doodle' | 'Out of Context' | 'Initials',
   dir: string,
   answers: Record<string, string>,
 ): Promise<Player[]> {
@@ -146,7 +149,8 @@ async function playMode(
   }
   await ann.page.getByRole('radio', { name: mode }).click();
   await expect(ann.page.getByRole('radio', { name: mode })).toHaveAttribute('aria-checked', 'true');
-  await expect(ann.page.locator('.packs')).toHaveCount(0);
+  // Initials deals pack prompts; the drawing and quote modes make their own.
+  await expect(ann.page.locator('.packs')).toHaveCount(mode === 'Initials' ? 1 : 0);
   await ann.page.locator('.modes').scrollIntoViewIfNeeded();
   await ann.page.screenshot({ path: `${out}/01-lobby-mode.png` });
   await ann.page.getByRole('button', { name: 'Start Game' }).click();
@@ -201,6 +205,18 @@ test('Out of Context: answer honestly, get twisted, vote on the wall of posts', 
     Ann: "Grandma's funeral speech",
     Bob: 'Airport security',
     Cat: 'My wedding vows',
+  });
+  await expect(ann!.page.locator('.podium')).toBeVisible();
+});
+
+test('Initials: every word starts with the dealt letters, shrinking 5, 4, 3', async ({
+  browser,
+}) => {
+  test.setTimeout(9 * 60_000);
+  const [ann] = await playMode(browser, 'Initials', 'initials', {
+    Ann: 'oodle',
+    Bob: 'umpty',
+    Cat: 'izzle',
   });
   await expect(ann!.page.locator('.podium')).toBeVisible();
 });

@@ -49,7 +49,8 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
 1. One player creates a room and gets a 4-letter code (no O or I). Others join with the
    code or the invite link (`/?code=ABCD`). The creator is the **leader** and owns the
    Start button and settings: game mode, prompt packs, profanity filter, word limits,
-   roasts. The four game modes:
+   roasts, timer speed, game length, Bail Outs, anonymous final, audience and seats (see
+   [Room options](#room-options)). The five game modes:
    - **Classic**: prompts from the ticked packs.
    - **Custom**: anyone in the lobby adds prompts. They are dealt first, nobody gets a
      prompt they wrote, the packs fill any shortfall, and a leftover one becomes the final.
@@ -68,6 +69,12 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
      (at least 2 votes) is the **Best Burn**, +150 to its twister and +30 to its victim; all
      × the round multiplier. Each round ends with the one-by-one reveal below and the
      scoreboard. Roasts do not apply (there are no matchups) and the toggle is hidden.
+   - **Initials**: prompts from the ticked packs, each dealt with letters (`shared/src/constants.ts`
+     `INITIALS_LENGTHS`: 5, 4, then 3 in the final). An answer needs exactly one word per
+     letter, each starting with its letter in order ("B T D": "Bring The Drill"); accents
+     and leading punctuation are ignored. Both writers of a matchup get the same letters. A
+     roast keeps only the first two letters. The word-limit toggle and Bail Outs are hidden
+     (the letters are the limit and the challenge).
 
    In Doodle the final replays the drawing that drew the most votes (the crowd favourite),
    captioned by everyone. A player who drew nothing in time leaves a slot that a pack prompt
@@ -95,7 +102,30 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
    below the spotlight. Final points are added to scores only at the podium, so the
    reveal gives nothing away early.
 8. **Podium**: the top three blocks rise third, second, then first; winner mic-drops on
-   loop, superlatives ticker, Rematch (leader) or Leave. A rematch keeps the room and excludes prompts already used.
+   loop, "Best of the game" (each round's most-voted answer), superlatives ticker, Rematch
+   (leader) or Leave. A rematch keeps the room and excludes prompts already used; waiting
+   audience members take any free seats first.
+
+### Room options
+
+All lobby settings belong to the leader. Defaults in `Room.settings` (`server/src/room.ts`).
+
+| Option          | Values (default first) | Effect                                                                                                                                                                                                                                   |
+| --------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Timers          | Normal, Relaxed, Off   | Relaxed doubles every writing, drawing and voting clock (`TIMERS.RELAXED_FACTOR`). Off removes them: the phase waits for everyone, and the leader gets **Move on**, which closes it (stragglers auto-submit). Reveals keep their timing. |
+| Game length     | Full, Short            | Short goes from round 1 straight to the final (no round 2, so no roasts).                                                                                                                                                                |
+| Bail Outs       | On, Off                | A stuck writer taps **Stuck? Bail out** twice and the server files a stock answer from `content/bailouts.json` that fits the limit. Half vote points, no bonuses, stamped BAILED OUT at the reveal. Hidden in Initials.                  |
+| Anonymous final | Off, On                | The final wall hides authors until the reveal; votes use opaque per-final ids. Hidden in Out of Context (posts are anonymous already).                                                                                                   |
+| Audience        | On, Off                | Anyone joining a game in progress or a full room watches and votes instead of being turned away (up to `LIMITS.MAX_AUDIENCE`, 50). Off restores the old refusal.                                                                         |
+| Seats           | 3 to 12 (12)           | Players before the rest join the audience. Lowering it never unseats anyone.                                                                                                                                                             |
+
+**In game**, the leader has a row under the header with **Pause** (freezes every clock for
+everyone; nothing can be submitted until **Resume**, and a disconnect cannot end the phase
+meanwhile) and, with timers off, **Move on**. During voting the leader can **Censor** an
+answer in a matchup they are not in, or a final answer that is not theirs: its text becomes
+`[censored]` for everyone and votes for it do not count. In the lobby the leader can
+**remove** a player (✕ on their chip); mid-game the removed player's seat stays for the
+matchups but their phone is shut out.
 
 ---
 
@@ -270,6 +300,12 @@ What the tests pin down:
   relay latency, offline 40 s mid-write and backgrounded 60 s, two tabs on one session,
   double-tapped Create Room, rejected submits and a wrong room code, clocks 90 s off, and a
   server restart mid-game (starts its own server on port 8093).
+- `server/test/room.party.test.ts` – timers off (leader moves on) and relaxed (double
+  clock), pause freezing the clock and holding a phase through a disconnect, Bail Out
+  stamped only at the reveal, audience joining mid-game and deciding only the Crowd
+  Favourite, a freed lobby seat going to the audience, kick shutting a phone out
+  mid-game, censoring, Initials letters and validation, and a short game into an
+  anonymous final voted by opaque ids.
 - `server/test/roomManager.test.ts`, `clientAddress.test.ts` – per-client room limits and
   which peer's X-Forwarded-For is trusted.
 
@@ -313,17 +349,20 @@ disconnected players get "[left the chat]".
 
 ### Scoring (all points × round multiplier, rounded to nearest 5)
 
-| Event                 | Points           | Condition                                                                                                                                                       |
-| --------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Vote received (R1–R2) | 100 per vote     |                                                                                                                                                                 |
-| Silenced!             | +250             | Winner took 100 % of votes cast, at least 2 votes                                                                                                               |
-| Mic Drop              | +200             | Winner took more than 50 % of votes cast (any outright win), at least 2 votes, not auto-submitted, not a sweep (a sweep is Silenced! instead; they never stack) |
-| Roast backfire        | steal            | Roasted player wins **and** the roaster is the opponent in that matchup → the roaster's points from that matchup move to the winner                             |
-| Great Minds           | flat 100 each    | Both answers normalize to the same text (case, punctuation, spacing ignored); no votes counted, no other bonuses                                                |
-| Tie                   | vote points only | Nobody wins, no bonuses                                                                                                                                         |
-| All abstain           | 0 / 0            |                                                                                                                                                                 |
-| Final 1st-choice vote | 200              |                                                                                                                                                                 |
-| Final 2nd-choice vote | 100              |                                                                                                                                                                 |
+| Event                 | Points           | Condition                                                                                                                                                          |
+| --------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Vote received (R1–R2) | 100 per vote     |                                                                                                                                                                    |
+| Silenced!             | +250             | Winner took 100 % of votes cast, at least 2 votes                                                                                                                  |
+| Mic Drop              | +200             | Winner took more than 50 % of votes cast (any outright win), at least 2 votes, not auto-submitted, not a sweep (a sweep is Silenced! instead; they never stack)    |
+| Roast backfire        | steal            | Roasted player wins **and** the roaster is the opponent in that matchup → the roaster's points from that matchup move to the winner                                |
+| Great Minds           | flat 100 each    | Both answers normalize to the same text (case, punctuation, spacing ignored); no votes counted, no other bonuses                                                   |
+| Tie                   | vote points only | Nobody wins, no bonuses                                                                                                                                            |
+| All abstain           | 0 / 0            |                                                                                                                                                                    |
+| Final 1st-choice vote | 200              |                                                                                                                                                                    |
+| Final 2nd-choice vote | 100              |                                                                                                                                                                    |
+| Bail Out answer       | half vote points | Stock answer: `POINTS.BAIL_OUT_SHARE` of its vote points (matchup or final), never a Mic Drop or Silenced!                                                         |
+| Censored answer       | 0                | Votes for it are ignored; beating it earns votes only, no bonus                                                                                                    |
+| Crowd Favourite       | +100             | The answer the audience preferred (matchups: more audience votes; wall rounds: the single most-voted, ties pay nobody). Audience votes never count as player votes |
 
 Podium ties share a place (1, 1, 3). Superlatives: Most Mic Drops, Wordiest Loser (words
 per point among non-winners), Roast Victim, The Silencer, Fastest Submitter.
@@ -388,7 +427,14 @@ LOBBY ─start(leader, ≥3; unpicked get random characters)─▶ ROUND_INTRO (
 ```
 
 Every phase with a timer schedules a single `setTimeout` in `Room.enterPhase`; early
-completion (everyone submitted / voted) clears it and advances. The roast window is a
+completion (everyone submitted / voted) clears it and advances. Writing, drawing and voting
+clocks go through `phaseClock(ms, settings.timers)`: doubled when relaxed, `null` (no
+timer, `phaseEndsAt: null`) when off, in which case `advance_phase` from the leader runs the
+same transition the timer would have. A short game's `ROUND_RESULTS` leads to round 3.
+**Pause** clears the phase and roast timers and stores what was left; resume reschedules
+them and shifts `phaseStartedAt` by the pause length, so every client's ring and the final
+reveal schedule pick up where they stopped. While paused, intents that change the game are
+refused with `paused` and presence changes do not advance anything. The roast window is a
 second timer inside WRITING. A matchup with no eligible connected voters reveals
 immediately. `Room` uses the global clock so tests drive it with Vitest fake timers.
 
@@ -409,8 +455,12 @@ Client → server: `create_room {name}`, `join_room {code, name, sessionToken?}`
 {targetId}` (WRITING, round 2, first 10 s), `submit_answer {promptId, text}` (also the Out of Context honest answer in CREATING),
 `submit_drawing {promptId, drawing}` (CREATING, Doodle)
 (WRITING/FINAL_WRITING), `cast_vote {matchupIndex, answerIndex}` (VOTING),
-`cast_final_votes {first, second}` (FINAL_VOTING), `rematch {}` (leader, PODIUM),
-`leave_room {}`, `ping {}`.
+`cast_final_votes {first, second}` (FINAL_VOTING; wall answer ids, see `PublicAnswer.answerId`;
+the audience sends one id and an empty second), `rematch {}` (leader, PODIUM),
+`advance_phase {}` (leader, timers off), `pause_game {}` / `resume_game {}` (leader),
+`bail_out {promptId}` (WRITING/FINAL_WRITING), `kick_player {playerId}` (leader),
+`censor_answer {matchupIndex, answerIndex}` (leader, VOTING), `censor_final {answerId}`
+(leader, FINAL_VOTING), `leave_room {}`, `ping {}`.
 
 Server → client: `welcome {playerId, sessionToken, code}`, `room_state <PublicRoomState>`
 (on every mutation), `your_prompts {prompts: [{promptId, text, effectiveLimit, mode,
@@ -421,13 +471,15 @@ message}`, `left {}`, `pong {serverTime}`.
 
 Error codes: `over_limit, already_roasted, char_taken, bad_phase, room_full, not_found,
 rate_limited, invalid, not_leader, bad_name, not_enough_players, too_long, empty,
-self_target, no_token, already_submitted`.
+self_target, no_token, already_submitted, bad_initials, paused`.
 
 `PublicRoomState` (see `shared/src/types.ts`) carries: code, phase, `phaseEndsAt`,
 `phaseStartedAt`, `serverNow`, roundIndex, players (public fields only), leaderId,
 settings, `customPrompts` (id, text, authorId), matchups (redacted, see below), currentMatchupIndex, `roastWindowEndsAt`,
-`submittedIds`, `votedIds`, `final` (prompt, mode, limit, answers, votes, result),
-`podium`, `banner`, `gamesPlayed`.
+`submittedIds`, `votedIds`, `final` (prompt, mode, limit, letters, answers, votes, result),
+`podium`, `banner`, `gamesPlayed`, `paused` (who paused, time left), `audienceCount`,
+`highlights` (podium only) and `viewer` (per recipient: `role` player or audience, and
+`finalAnswerId`, the viewer's own id on the wall so they cannot vote for it).
 
 ---
 
@@ -446,6 +498,9 @@ Implemented in `Room.publicMatchup` / `Room.publicFinal` and covered by
 | Final answers                                     | FINAL_VOTING (author visible because final votes are cast by player id, per spec) |
 | Final individual votes and tallies                | FINAL_REVEAL (the reveal needs them; totals still wait for PODIUM)                |
 | Another player's prompts                          | never sent                                                                        |
+| Bail Out flag                                     | that matchup's MATCHUP_REVEAL (final: FINAL_REVEAL)                               |
+| Final authors with Anonymous final on             | FINAL_REVEAL; the wall uses random per-final ids and is sorted by them            |
+| Audience votes                                    | counts only, in the result at the reveal                                          |
 
 Clients cannot read the payload to learn who wrote what before the reveal. The client
 also cannot copy displayed text (CSS `user-select: none`, `copy`/`contextmenu`/`dragstart`
@@ -489,6 +544,14 @@ suppressed outside inputs) and images ignore pointer events and drags.
 - Leader disconnect: leadership is held through the 15 s grace, so a creator who reloads
   keeps the Start button; then it passes to the longest-connected player and `banner`
   announces it. An explicit leave passes it at once.
+- **Audience** members have no seat, character or score. They rejoin with their session token
+  like players, are held for 3 min when they drop, never hold up a phase, and never lead.
+  In the lobby a freed seat goes to the first connected audience member.
+- **Removed by the leader**: the phone gets `left` and a "The leader removed you" toast. In
+  the lobby or podium the player is removed outright; mid-game the seat is marked `kicked`
+  (`hasPlayer` is false, so their token no longer rejoins) and their unanswered prompts
+  become "[left the chat]" at the phase end. Nothing stops them joining again under a new
+  name in the next lobby.
 - Empty rooms (no connected players) are destroyed after 5 min; an emptied lobby that
   never started a game after 60 s.
 - Room creation is capped per client (IPv4 address or IPv6 /64): 5 live rooms and 10
@@ -531,6 +594,16 @@ suppressed outside inputs) and images ignore pointer events and drags.
   and in the top corner of Home, Lobby and Podium. Nothing plays before the first tap,
   the context suspends when the tab is hidden, and iOS's silent switch is respected.
 - **Scrolling** resets to the top on every phase and matchup change.
+- **Leader row** (`HostControls`) sits under the header, not in it: on a 390 px phone the
+  header has no room for more buttons.
+- **Hurry-up**: anyone who still owes an answer gets a "15 seconds left!" banner and a tick
+  (`TIMERS.HURRY_UP_MS`).
+- **Initials** prompts show letter tiles that light up as each word matches (`LetterTiles`).
+- **Two taps** for anything irreversible (Bail Out, Censor, Remove): `ConfirmButton` arms on
+  the first tap and disarms after 4 s.
+- **Accessibility**: an `aria-live` announcer reads one sentence per event (round, matchup,
+  winner, scoreboard leader, podium); the sound menu has a **Calm motion** switch
+  (`say-less.calm`) that applies the same animation cut as the OS reduced-motion setting.
 
 ---
 
@@ -594,6 +667,10 @@ Movie Night, Family Friendly, and After Dark (18+, off by default). About 55 pro
 `server/test/packs.bank.test.ts` holds them to the classic bank's rules plus the catalog,
 cross-pack uniqueness and the `{player}` rule. `content/doodles.json` (97 drawing
 suggestions) and `content/questions.json` (128 opinion questions for Out of Context) feed the two modes.
+
+**Bail Outs.** `content/bailouts.json`: 148 original stock answers, mostly one to three
+words so a roasted (2) or final (3) answer always has some that fit. Each is dealt once per
+room session before any repeats.
 
 **Classic.** `content/prompts.json`: 407 prompts (a second editorial pass on 2026-09-29
 rewrote 31 flat ones, retired 3 and added 37), `{ id, text, rounds }` where `rounds ⊆ [0,1,2]`.
@@ -707,6 +784,17 @@ flat-vector art direction, one unique character per player.
 
 ## Decisions log
 
+- **2026-10-18** Party features after a study of the Jackbox Party Pack settings and
+  structure (the user's own Steam installs; settings files and identifier names only, no
+  content, art, audio or code copied, and every name and phrase here is original). Added
+  timer speed (Normal / Relaxed / Off with Move on), pause, Bail Out (stock answer for half
+  points), leader censor and remove, audience with a Crowd Favourite bonus, seats, short
+  game, anonymous final, Initials mode, round highlights on the podium, a hurry-up banner,
+  Calm motion and screen-reader announcements. Audience is on by default, so a full room or
+  a game in progress now seats newcomers in the audience instead of refusing them.
+  Not adopted: passwords, hidden room codes and streaming logins (there is no shared
+  screen), and rejecting input for hate speech (needs a vetted word list).
+
 - **2026-09-25** Music is procedural WebAudio like the effects, not audio files: zero
   download, no licensing, and it can react per phase. It was designed, not listened to,
   during development; levels were verified by offline renders (music about -32 dBFS RMS,
@@ -766,7 +854,14 @@ nothing in this list is a regression.
 - **Server restarts kill rooms.** Rooms are in memory, so a deploy ends every game in
   progress. Persisting them (Redis or a JSON snapshot) would allow zero-downtime deploys.
 - **No metrics.** `/healthz` reports room and prompt counts; there are no dashboards.
-- **Spectators / audience mode, accounts, localization** – explicit non-goals for v1.
+- **Accounts, localization** – explicit non-goals for v1. (Audience mode shipped
+  2026-10-18.)
+- **Removed players can come back** under a new name in the next lobby; there is no ban
+  list because players have no identity beyond the session.
+- **`npm start` cannot find `content/`** from the compiled server: `server/src/index.ts`
+  looks for `content` relative to `server/dist/server/src` and misses by one level. The
+  Docker image is unaffected (it sets `PROMPTS_PATH`); locally, set `PROMPTS_PATH` and
+  `CLIENT_DIST`. Found 2026-10-18, not fixed.
 
 ---
 

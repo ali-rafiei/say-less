@@ -48,7 +48,7 @@ export function FinalReveal({ ctl, room, me }: Props) {
   return (
     <main className="screen freveal">
       {/* No countdown: nothing to decide here, and it only rushed the reveal. */}
-      <Header room={room} clockOffset={ctl.clockOffset} showTimer={false} />
+      <Header ctl={ctl} room={room} showTimer={false} />
       {final.seed && <SeedView seed={final.seed} room={room} drawings={ctl.drawings} me={me} />}
       {final.voting === 'rank' && <h2 className="prompt display center">{final.prompt.text}</h2>}
 
@@ -98,6 +98,14 @@ export function FinalReveal({ ctl, room, me }: Props) {
               : `${tally?.first ?? 0}× 1st · ${tally?.second ?? 0}× 2nd`}
           </span>
           <span className="fspot__pts display">+{tally?.points ?? 0}</span>
+          {(current.bailOut || tally?.crowdFavourite) && (
+            <div className="row row--wrap fspot__stamps">
+              {current.bailOut && <span className="stamp stamp--text stamp--bail">BAILED OUT</span>}
+              {tally?.crowdFavourite && (
+                <span className="stamp stamp--text">CROWD FAVOURITE · {tally.crowd}</span>
+              )}
+            </div>
+          )}
           {post && pityHere > 0 && (
             <span className="fspot__tally dim small">
               {victim?.name ?? 'Victim'} gets +{pityHere} pity points

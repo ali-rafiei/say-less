@@ -5,6 +5,7 @@ import { sfx } from '../audio/sfx.ts';
 import { AnswerText } from '../components/AnswerText.tsx';
 import { Character } from '../components/Character.tsx';
 import { Header } from '../components/Header.tsx';
+import { LetterTiles } from '../components/LetterTiles.tsx';
 import { SeedView } from '../components/SeedView.tsx';
 import type { RoomController } from '../net/useRoom.ts';
 
@@ -60,9 +61,10 @@ export function MatchupReveal({ ctl, room, me }: Props) {
 
   return (
     <main className="screen reveal">
-      <Header room={room} clockOffset={ctl.clockOffset} />
+      <Header ctl={ctl} room={room} />
       {matchup.seed && <SeedView seed={matchup.seed} room={room} drawings={ctl.drawings} me={me} />}
       <h2 className="prompt display center">{matchup.promptText}</h2>
+      {matchup.letters && <LetterTiles letters={matchup.letters} />}
       {result.greatMinds && (
         <div className="stamp-banner">
           <UIArt name="greatminds" label="GREAT MINDS" />
@@ -78,6 +80,12 @@ export function MatchupReveal({ ctl, room, me }: Props) {
           const state = won ? 'win' : lost ? 'lose' : 'idle';
           const delta = answer.playerId ? (result.delta[answer.playerId] ?? 0) : 0;
           const share = total === 0 ? 0 : result.voteCounts[index]! / total;
+          const textStamps = [
+            ...(answer.bailOut ? ['BAILED OUT'] : []),
+            ...(result.awards.some((a) => a.kind === 'crowd' && a.playerId === answer.playerId)
+              ? ['CROWD FAVOURITE']
+              : []),
+          ];
           const voters = Object.entries(matchup.votes ?? {})
             .filter(([, choice]) => choice === index)
             .map(([voterId]) => room.players.find((p) => p.id === voterId))
@@ -109,6 +117,15 @@ export function MatchupReveal({ ctl, room, me }: Props) {
                         <UIArt name={stampArt[s]!} label={s} />
                       </span>
                     ))}
+                  {textStamps.map((s, i) => (
+                    <span
+                      key={s}
+                      className={`stamp stamp--text ${s === 'BAILED OUT' ? 'stamp--bail' : ''}`}
+                      style={{ animationDelay: `${2 + i * 0.3}s` }}
+                    >
+                      {s}
+                    </span>
+                  ))}
                 </div>
               </div>
               <AnswerText
@@ -140,6 +157,12 @@ export function MatchupReveal({ ctl, room, me }: Props) {
           );
         })}
       </div>
+
+      {result.audienceCounts[0] + result.audienceCounts[1] > 0 && (
+        <p className="center dim small">
+          Audience: A {result.audienceCounts[0]} · B {result.audienceCounts[1]}
+        </p>
+      )}
 
       {matchup.roast && (
         <p className="center dim small">

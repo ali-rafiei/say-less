@@ -1,6 +1,6 @@
 import { UIArt } from '../components/UIArt.tsx';
 import { SoundControls } from '../components/SoundControls.tsx';
-import { characterMeta, type PublicRoomState } from '@say-less/shared';
+import { ROUNDS, characterMeta, type PublicRoomState } from '@say-less/shared';
 import { sfx } from '../audio/sfx.ts';
 import { AnswerText } from '../components/AnswerText.tsx';
 import { Character } from '../components/Character.tsx';
@@ -102,6 +102,33 @@ export function Podium({ ctl, room, me }: Props) {
                 );
               })}
           </div>
+        </section>
+      )}
+
+      {room.highlights.length > 0 && (
+        <section className="card stack">
+          <h2 className="display">Best of the game</h2>
+          {room.highlights.map((h) => {
+            const author = byId.get(h.playerId);
+            return (
+              <div key={h.roundIndex} className="highlight row">
+                <Character characterId={author?.characterId ?? null} size={40} />
+                <div className="grow">
+                  <span className="dim small">
+                    {ROUNDS[h.roundIndex]!.name} · {h.promptText}
+                  </span>
+                  <AnswerText
+                    text={h.text}
+                    filter={room.settings.profanityFilter && h.playerId !== me}
+                    className="highlight__text"
+                  />
+                  <span className="dim small">
+                    {author?.name ?? '?'} · {h.votes} {h.votes === 1 ? 'vote' : 'votes'}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
         </section>
       )}
 

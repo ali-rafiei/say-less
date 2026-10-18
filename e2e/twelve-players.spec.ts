@@ -112,7 +112,7 @@ test('twelve phones play a full game and reach the podium', async ({ browser }, 
     lapStart = Date.now();
   };
 
-  // --- Create, eleven join, a thirteenth is turned away
+  // --- Create, eleven join, a thirteenth watches; with the audience off a fourteenth is turned away
   await leader.page.getByLabel('Your name').fill(leader.name);
   await leader.page.getByRole('button', { name: 'Create Room' }).click();
   const code = (await leader.page.locator('.roomcode').innerText()).trim();
@@ -131,7 +131,15 @@ test('twelve phones play a full game and reach the podium', async ({ browser }, 
   );
   await expect(leader.page.locator('.pchip__name')).toHaveCount(12);
   await expect(leader.page.getByText('12 / 12')).toBeVisible();
-  const extra = await evidence.openPhone(browser, 'Zed');
+  const watcher = await evidence.openPhone(browser, 'Zed');
+  await join(watcher);
+  await expect(watcher.page.locator('.audience__tag')).toBeVisible();
+  await expect(leader.page.getByText('12 / 12 · 1 watching')).toBeVisible();
+  await expect(leader.page.locator('.pchip__name')).toHaveCount(12);
+  await watcher.page.context().close();
+  await leader.page.getByRole('button', { name: 'Audience' }).click();
+  await expect(leader.page.getByRole('button', { name: 'Audience' })).toHaveText('Off');
+  const extra = await evidence.openPhone(browser, 'Yan');
   await join(extra);
   await expect(extra.page.getByRole('alert')).toHaveText('Room is full');
   await expect(extra.page.locator('.roomcode')).toHaveCount(0);

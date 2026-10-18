@@ -90,6 +90,14 @@ export class PromptDeck {
   }
 }
 
+/** Stock answers for Bail Out (content/bailouts.json). */
+export function loadBailOuts(contentDir: string): string[] {
+  const file = JSON.parse(readFileSync(join(contentDir, 'bailouts.json'), 'utf8')) as {
+    answers: string[];
+  };
+  return file.answers;
+}
+
 export function loadSeedBanks(contentDir: string): SeedBanks {
   const read = <T>(file: string): T =>
     JSON.parse(readFileSync(join(contentDir, file), 'utf8')) as T;

@@ -61,6 +61,14 @@ export interface RoomController {
   castVote: (matchupIndex: number, answerIndex: 0 | 1) => void;
   castFinalVotes: (first: string, second: string) => void;
   rematch: () => void;
+  /** leader, timers off: close the current writing or voting phase */
+  advancePhase: () => void;
+  pauseGame: () => void;
+  resumeGame: () => void;
+  bailOut: (promptId: string) => void;
+  kickPlayer: (playerId: string) => void;
+  censorAnswer: (matchupIndex: number, answerIndex: 0 | 1) => void;
+  censorFinal: (answerId: string) => void;
   dismissError: () => void;
 }
 
@@ -161,6 +169,11 @@ export function useRoom(): RoomController {
             }
             sfx.phase(state.phase);
           }
+          // Pause and resume are once per pause, not once per phase.
+          if ((roomRef.current?.paused == null) !== (state.paused == null)) {
+            inflightRef.current.delete('pause_game');
+            inflightRef.current.delete('resume_game');
+          }
           roomRef.current = state;
           setRoom(state);
           return;
@@ -187,6 +200,14 @@ export function useRoom(): RoomController {
           return;
         case 'left':
           inflightRef.current.clear();
+          // A 'left' we did not ask for (leaveRoom clears the room first) is the leader's kick.
+          if (roomRef.current !== null) {
+            setError({
+              code: 'not_found',
+              message: 'The leader removed you from the room.',
+              at: Date.now(),
+            });
+          }
           clearSession();
           roomRef.current = null;
           setRoom(null);
@@ -297,6 +318,7 @@ export function useRoom(): RoomController {
       leaveRoom: () => {
         send({ type: 'leave_room', payload: {} });
         clearSession();
+        roomRef.current = null;
         setRoom(null);
         setMe(null);
         setPrompts([]);
@@ -316,6 +338,14 @@ export function useRoom(): RoomController {
       castFinalVotes: (first, second) =>
         sendOnce('cast_final_votes', { type: 'cast_final_votes', payload: { first, second } }),
       rematch: () => sendOnce('rematch', { type: 'rematch', payload: {} }),
+      advancePhase: () => sendOnce('advance_phase', { type: 'advance_phase', payload: {} }),
+      pauseGame: () => sendOnce('pause_game', { type: 'pause_game', payload: {} }),
+      resumeGame: () => sendOnce('resume_game', { type: 'resume_game', payload: {} }),
+      bailOut: (promptId) => send({ type: 'bail_out', payload: { promptId } }),
+      kickPlayer: (playerId) => send({ type: 'kick_player', payload: { playerId } }),
+      censorAnswer: (matchupIndex, answerIndex) =>
+        send({ type: 'censor_answer', payload: { matchupIndex, answerIndex } }),
+      censorFinal: (answerId) => send({ type: 'censor_final', payload: { answerId } }),
       dismissError: () => setError(null),
     }),
     [send, sendOnce],

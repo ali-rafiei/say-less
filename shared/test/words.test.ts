@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { countWords, normalizeForComparison, validateAnswer } from '../src/words.ts';
+import {
+  countWords,
+  initialsMatched,
+  normalizeForComparison,
+  validateAnswer,
+} from '../src/words.ts';
 
 describe('countWords', () => {
   it('trims, collapses whitespace and counts tokens', () => {
@@ -74,5 +79,23 @@ describe('validateAnswer', () => {
 describe('normalizeForComparison', () => {
   it('treats case, punctuation and spacing differences as the same answer', () => {
     expect(normalizeForComparison('  Tax  Fraud!')).toBe(normalizeForComparison('tax fraud'));
+  });
+});
+
+describe('validateAnswer with initials', () => {
+  it('accepts one word per letter in order, ignoring case, accents and leading punctuation', () => {
+    expect(validateAnswer('big "Tiny" élan', 3, 'BTE').ok).toBe(true);
+  });
+
+  it('rejects a word that starts with the wrong letter', () => {
+    expect(validateAnswer('big tiny dog', 3, 'BTE').error).toBe('bad_initials');
+  });
+
+  it('rejects too few words', () => {
+    expect(validateAnswer('big tiny', 3, 'BTE').error).toBe('bad_initials');
+  });
+
+  it('reports which letters are matched so far', () => {
+    expect(initialsMatched('bad apple', 'BTE')).toEqual([true, false, false]);
   });
 });

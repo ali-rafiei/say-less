@@ -1,9 +1,11 @@
 import { UIArt } from '../components/UIArt.tsx';
-import { ROUNDS, type PublicRoomState } from '@say-less/shared';
+import { INITIALS_LENGTHS, ROUNDS, roastWindowMs, type PublicRoomState } from '@say-less/shared';
 import { useEffect, useState } from 'react';
 import { sfx } from '../audio/sfx.ts';
 import { Character } from '../components/Character.tsx';
+import { ConfirmButton } from '../components/ConfirmButton.tsx';
 import { Header } from '../components/Header.tsx';
+import { HurryUp } from '../components/HurryUp.tsx';
 import { PlayerChip } from '../components/PlayerChip.tsx';
 import { SeedView } from '../components/SeedView.tsx';
 import { TimerRing } from '../components/TimerRing.tsx';
@@ -47,15 +49,28 @@ export function Writing({ ctl, room, me }: Props) {
     (p) => p.id === me || room.submittedIds.includes(p.id),
   ).length;
 
-  const limit = current ? current.effectiveLimit : room.settings.wordLimits ? round.limit : null;
+  const initials = room.settings.mode === 'initials';
+  const limit = current
+    ? current.effectiveLimit
+    : initials
+      ? INITIALS_LENGTHS[room.roundIndex]
+      : room.settings.wordLimits
+        ? round.limit
+        : null;
+  const canBailOut = room.settings.bailOuts && !initials && current?.kind === 'answer';
 
   return (
     <main className="screen writing">
       <Header
+        ctl={ctl}
         room={room}
-        clockOffset={ctl.clockOffset}
         limit={limit}
-        limitLabel={`${limit} words`}
+        limitLabel={`${limit} ${initials ? 'letters' : 'words'}`}
+      />
+      <HurryUp
+        endsAt={room.phaseEndsAt}
+        clockOffset={ctl.clockOffset}
+        active={pending.length > 0}
       />
 
       {ctl.roastedBy && !roastDismissed && (
@@ -91,7 +106,7 @@ export function Writing({ ctl, room, me }: Props) {
             </h2>
             <TimerRing
               endsAt={room.roastWindowEndsAt}
-              startedAt={(room.roastWindowEndsAt ?? 0) - 10_000}
+              startedAt={(room.roastWindowEndsAt ?? 0) - roastWindowMs(room.settings.timers)}
               clockOffset={ctl.clockOffset}
               size={44}
             />
@@ -165,8 +180,17 @@ export function Writing({ ctl, room, me }: Props) {
               {...(current.seed?.kind === 'post' ? { placeholder: 'Your twist…' } : {})}
               resetToken={ctl.error?.at ?? null}
               autoFocus
+              letters={current.letters}
               onSubmit={(text) => ctl.submitAnswer(current.promptId, text)}
             />
+            {canBailOut && (
+              <ConfirmButton
+                label="Stuck? Bail out"
+                confirmLabel="Send a stock answer (half points)"
+                className="btn btn--small btn--secondary bailout"
+                onConfirm={() => ctl.bailOut(current.promptId)}
+              />
+            )}
           </div>
         </section>
       )}

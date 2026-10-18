@@ -16,7 +16,9 @@ export type ErrorCode =
   | 'empty'
   | 'self_target'
   | 'no_token'
-  | 'already_submitted';
+  | 'already_submitted'
+  | 'bad_initials'
+  | 'paused';
 
 export type ClientMessage =
   | { type: 'create_room'; payload: { name: string } }
@@ -32,6 +34,16 @@ export type ClientMessage =
   | { type: 'cast_vote'; payload: { matchupIndex: number; answerIndex: 0 | 1 } }
   | { type: 'cast_final_votes'; payload: { first: string; second: string } }
   | { type: 'rematch'; payload: Record<string, never> }
+  /** leader, timers off: close the current writing or voting phase */
+  | { type: 'advance_phase'; payload: Record<string, never> }
+  | { type: 'pause_game'; payload: Record<string, never> }
+  | { type: 'resume_game'; payload: Record<string, never> }
+  /** answer with a stock phrase picked by the server */
+  | { type: 'bail_out'; payload: { promptId: string } }
+  | { type: 'kick_player'; payload: { playerId: string } }
+  | { type: 'censor_answer'; payload: { matchupIndex: number; answerIndex: 0 | 1 } }
+  /** wall rounds: the id the answer is voted with */
+  | { type: 'censor_final'; payload: { answerId: string } }
   | { type: 'leave_room'; payload: Record<string, never> }
   | { type: 'ping'; payload: Record<string, never> };
 
@@ -67,6 +79,13 @@ export const CLIENT_MESSAGE_TYPES: readonly ClientMessageType[] = [
   'cast_vote',
   'cast_final_votes',
   'rematch',
+  'advance_phase',
+  'pause_game',
+  'resume_game',
+  'bail_out',
+  'kick_player',
+  'censor_answer',
+  'censor_final',
   'leave_room',
   'ping',
 ];
