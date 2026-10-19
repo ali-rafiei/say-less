@@ -737,7 +737,26 @@ sudo tail -f /var/log/say-less-bootstrap.log
 cd /opt/say-less/deploy && sudo docker compose logs -f
 ```
 
-Health: `curl -6 https://38dcd.yeg.rac.sh/healthz` → `{"ok":true,"rooms":N,"prompts":373}`.
+Health: `curl -6 https://38dcd.yeg.rac.sh/healthz` → `{"ok":true,"rooms":N,"prompts":1075}`.
+
+**Play stats.** `https://38dcd.yeg.rac.sh/stats?key=<STATS_KEY>` (or `/stats.json?key=...`)
+shows online now (players in seats, audience, open rooms), all-time totals and one row per
+day for the last 90 days. Without the right key it answers 404. Definitions: _players_ are
+distinct devices seated in a game that started; _visitors_ are distinct devices that joined
+any room (the audience included); _seats_ add up every started game's human players; peak
+online is sampled every 30 s. A device is an anonymous random id the browser keeps in
+`localStorage` (`say-less.device`); the server stores only a 16-character SHA-256 prefix of
+it, never names or IPs. Bots are never counted. Days follow `STATS_TZ`
+(`America/Edmonton`).
+
+Storage: `server/src/stats.ts` keeps everything in memory and writes `STATS_PATH`
+(`/data/stats.json` on the `app_data` volume, so it survives deploys) at most every 5 s and
+on shutdown, atomically. A file that cannot be read is renamed to
+`stats.json.corrupt-<time>` and counting starts fresh, so history is never overwritten.
+Without `STATS_PATH` (local dev) counts live in memory only. `STATS_KEY` is in
+`/opt/say-less/deploy/stats.env` on the instance (gitignored, loaded by compose); a copy is
+in `cloud/secrets/stats-key`. Change it by editing that file and running
+`cd /opt/say-less/deploy && sudo docker compose up -d app`.
 
 Rollback: `ssh … 'cd /opt/say-less && git reset --hard <sha> && cd deploy && sudo docker compose up -d --build'`.
 
@@ -782,6 +801,11 @@ flat-vector art direction, one unique character per player.
 ---
 
 ## Decisions log
+
+- **2026-10-18** Play stats: a private `/stats` page behind `STATS_KEY` rather than a
+  public counter; players counted by anonymous device id (hashed) so one friend playing five
+  games counts once; totals plus 90 days of daily rows. Stored as one JSON file on a Docker
+  volume rather than a database: a few kilobytes, written a few times a minute at most.
 
 - **2026-10-18** After the first live session: the per-answer Censor button is gone (feature
   removed end to end; the profanity filter still masks words). The final reveal is faster

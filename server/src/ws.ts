@@ -29,6 +29,8 @@ interface Connection {
 export interface GatewayDeps {
   rooms: RoomManager;
   signer: SessionSigner;
+  /** a browser joined a room (for the visitor count); null when it sent no device id */
+  onVisit?: (deviceId: string | null) => void;
   log: (message: string, fields?: Record<string, unknown>) => void;
 }
 
@@ -136,12 +138,13 @@ export class Gateway {
   private dispatch(conn: Connection, message: ClientMessage): void {
     switch (message.type) {
       case 'create_room':
-        this.openRoom(conn, message.payload.name, false);
+        this.openRoom(conn, message.payload.name, false, deviceIdOf(message.payload));
         return;
       case 'join_room': {
         const code = normalizeRoomCode(message.payload.code);
+        const deviceId = deviceIdOf(message.payload);
         if (code === BOT_ROOM_CODE) {
-          this.openRoom(conn, message.payload.name, true);
+          this.openRoom(conn, message.payload.name, true, deviceId);
           return;
         }
         const room = this.deps.rooms.require(code);
@@ -149,7 +152,7 @@ export class Gateway {
         const returning = this.deps.signer.verify(typeof token === 'string' ? token : undefined);
         if (returning && room.hasPlayer(returning)) {
           if (conn.playerId !== returning) this.unbind(conn);
-          this.bind(conn, room.code, returning, true);
+          this.bind(conn, room.code, returning, deviceId);
           return;
         }
         // A token is only sent to rejoin its own room. One that is not a member here is from
@@ -159,9 +162,10 @@ export class Gateway {
           throw new RoomError('not_found', 'That room is gone');
         }
         const playerId = this.deps.signer.newPlayerId();
-        room.addPlayer(playerId, message.payload.name);
+        room.addPlayer(playerId, message.payload.name, false, deviceId);
+        this.deps.onVisit?.(deviceId);
         this.unbind(conn);
-        this.bind(conn, room.code, playerId);
+        this.bind(conn, room.code, playerId, deviceId);
         return;
       }
       case 'leave_room': {
@@ -182,20 +186,26 @@ export class Gateway {
     }
   }
 
-  private openRoom(conn: Connection, name: string, withBots: boolean): void {
+  private openRoom(
+    conn: Connection,
+    name: string,
+    withBots: boolean,
+    deviceId: string | null,
+  ): void {
     if (sanitizeName(name).length === 0) {
       throw new RoomError('bad_name', 'Pick a name between 1 and 12 characters');
     }
     const room = this.deps.rooms.create(conn.clientKey, withBots);
     const playerId = this.deps.signer.newPlayerId();
     try {
-      room.addPlayer(playerId, name);
+      room.addPlayer(playerId, name, false, deviceId);
     } catch (error) {
       this.deps.rooms.destroy(room.code);
       throw error;
     }
+    this.deps.onVisit?.(deviceId);
     this.unbind(conn);
-    this.bind(conn, room.code, playerId);
+    this.bind(conn, room.code, playerId, deviceId);
   }
 
   private dispatchInRoom(
@@ -278,7 +288,7 @@ export class Gateway {
     }
   }
 
-  private bind(conn: Connection, code: string, playerId: string, returning = false): void {
+  private bind(conn: Connection, code: string, playerId: string, deviceId: string | null): void {
     const previous = this.byPlayer.get(playerId);
     if (previous && previous !== conn) {
       // A second tab for the same session takes over; the old one goes quiet.
@@ -295,9 +305,7 @@ export class Gateway {
         payload: { playerId, sessionToken: this.deps.signer.sign(playerId), code },
       } satisfies ServerMessage),
     );
-    const room = this.deps.rooms.require(code);
-    if (returning) room.reconnect(playerId);
-    else room.reconnect(playerId);
+    this.deps.rooms.require(code).reconnect(playerId, deviceId);
   }
 
   private requireBound(conn: Connection): {
@@ -317,6 +325,15 @@ export class Gateway {
       JSON.stringify({ type: 'error', payload: { code, message } } satisfies ServerMessage),
     );
   }
+}
+
+const DEVICE_ID = /^[A-Za-z0-9-]{8,64}$/;
+
+/** An anonymous browser id, or null when missing or malformed (it only feeds play counts). */
+function deviceIdOf(payload: { deviceId?: unknown }): string | null {
+  return typeof payload.deviceId === 'string' && DEVICE_ID.test(payload.deviceId)
+    ? payload.deviceId
+    : null;
 }
 
 /** Payload fields are untrusted: anything that is not a string is treated as empty. */

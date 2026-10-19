@@ -7,7 +7,7 @@ import type {
 } from '@say-less/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { sfx } from '../audio/sfx.ts';
-import { clearSession, loadSession, saveName, saveSession } from './session.ts';
+import { clearSession, deviceId, loadSession, saveName, saveSession } from './session.ts';
 import { GameSocket, defaultSocketUrl, type SocketStatus } from './socket.ts';
 
 const TAB_CHANNEL = 'say-less.seat';
@@ -122,7 +122,12 @@ export function useRoom(): RoomController {
           joiningRef.current = 'rejoin';
           socket.sendNow({
             type: 'join_room',
-            payload: { code: session.code, name: session.name, sessionToken: session.sessionToken },
+            payload: {
+              code: session.code,
+              name: session.name,
+              sessionToken: session.sessionToken,
+              deviceId: deviceId(),
+            },
           });
         }
       }
@@ -288,13 +293,13 @@ export function useRoom(): RoomController {
         nameRef.current = name;
         saveName(name);
         joiningRef.current = 'join';
-        sendOnce('join', { type: 'create_room', payload: { name } });
+        sendOnce('join', { type: 'create_room', payload: { name, deviceId: deviceId() } });
       },
       joinRoom: (code, name) => {
         nameRef.current = name;
         saveName(name);
         joiningRef.current = 'join';
-        sendOnce('join', { type: 'join_room', payload: { code, name } });
+        sendOnce('join', { type: 'join_room', payload: { code, name, deviceId: deviceId() } });
       },
       playHere: () => {
         setDisplaced(false);

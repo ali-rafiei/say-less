@@ -86,12 +86,15 @@ interface Player {
   graceTimer: ReturnType<typeof setTimeout> | null;
   /** removed by the leader mid-game: the seat stays for the matchups, the phone is shut out */
   kicked: boolean;
+  /** the browser's anonymous id, for play counts; null for bots and old clients */
+  deviceId: string | null;
 }
 
 /** Watches and votes; never writes, never scores. */
 interface AudienceMember {
   id: string;
   name: string;
+  deviceId: string | null;
   connected: boolean;
   removalTimer: ReturnType<typeof setTimeout> | null;
 }
@@ -195,6 +198,10 @@ const FALLBACK_BAIL_OUTS = ['Pass', 'No comment', 'Big if true', 'Ask my lawyer'
 /** Initials letters, weighted toward common first letters; no Q, X or Z. */
 const INITIAL_POOL = 'AAABBBBCCCCDDDEEFFFGGGHHHIIJJKLLLMMMMNNOOPPPPRRRSSSSSTTTTTUVWWWY';
 
+/** What the room tells the play counter. */
+export type GameEvent =
+  { type: 'started'; deviceIds: string[]; seats: number } | { type: 'finished' };
+
 export interface RoomDeps {
   deck: PromptDeck;
   seedBanks?: SeedBanks;
@@ -203,6 +210,7 @@ export interface RoomDeps {
   send: (playerId: string, message: ServerMessage) => void;
   random?: () => number;
   onEmpty?: (room: Room) => void;
+  onGameEvent?: (event: GameEvent) => void;
 }
 
 function freshStats(): PlayerStats {
@@ -292,6 +300,10 @@ export class Room {
     return this.players.filter((p) => p.connected && !p.bot).length;
   }
 
+  get connectedAudience(): number {
+    return [...this.audience.values()].filter((m) => m.connected).length;
+  }
+
   get isClosed(): boolean {
     return this.closed;
   }
@@ -321,7 +333,12 @@ export class Room {
   // ------------------------------------------------------------- join / leave
 
   /** Seats a player in the lobby; a game in progress or a full room puts them in the audience. */
-  addPlayer(playerId: string, rawName: string, bot = false): 'player' | 'audience' {
+  addPlayer(
+    playerId: string,
+    rawName: string,
+    bot = false,
+    deviceId: string | null = null,
+  ): 'player' | 'audience' {
     const seated = this.phase === 'LOBBY' && this.players.length < this.settings.maxPlayers;
     if (!seated && (bot || !this.settings.audience)) {
       if (this.phase !== 'LOBBY')
@@ -334,15 +351,21 @@ export class Room {
     if (name.length === 0)
       throw new RoomError('bad_name', 'Pick a name between 1 and 12 characters');
     if (!seated) {
-      this.audience.set(playerId, { id: playerId, name, connected: true, removalTimer: null });
+      this.audience.set(playerId, {
+        id: playerId,
+        name,
+        deviceId,
+        connected: true,
+        removalTimer: null,
+      });
       this.broadcast();
       return 'audience';
     }
-    this.seat(playerId, name, bot);
+    this.seat(playerId, name, bot, deviceId);
     return 'player';
   }
 
-  private seat(playerId: string, name: string, bot: boolean): void {
+  private seat(playerId: string, name: string, bot: boolean, deviceId: string | null): void {
     const now = Date.now();
     this.players.push({
       id: playerId,
@@ -362,6 +385,7 @@ export class Room {
       graceEndsAt: 0,
       graceTimer: null,
       kicked: false,
+      deviceId,
     });
     if (!this.leaderId && !bot) this.leaderId = playerId;
     this.broadcast();
@@ -375,16 +399,17 @@ export class Room {
       if (!member.connected) continue;
       this.audience.delete(member.id);
       if (member.removalTimer) clearTimeout(member.removalTimer);
-      this.seat(member.id, member.name, false);
+      this.seat(member.id, member.name, false, member.deviceId);
       if (!this.players.some((p) => p.id === this.leaderId && p.connected))
         this.leaderId = member.id;
     }
   }
 
   /** Re-attach a returning player (their id was proven by a session token). */
-  reconnect(playerId: string): void {
+  reconnect(playerId: string, deviceId: string | null = null): void {
     const member = this.audience.get(playerId);
     if (member) {
+      member.deviceId ??= deviceId;
       if (member.removalTimer) clearTimeout(member.removalTimer);
       member.removalTimer = null;
       member.connected = true;
@@ -393,6 +418,7 @@ export class Room {
       return;
     }
     const player = this.requirePlayer(playerId);
+    player.deviceId ??= deviceId;
     if (player.removalTimer) {
       clearTimeout(player.removalTimer);
       player.removalTimer = null;
@@ -628,6 +654,12 @@ export class Room {
     this.highlights = [];
     // Characters are picked in the lobby; anyone who did not pick gets a random leftover.
     this.assignMissingCharacters();
+    const humans = this.players.filter((p) => !p.bot);
+    this.deps.onGameEvent?.({
+      type: 'started',
+      deviceIds: humans.flatMap((p) => (p.deviceId ? [p.deviceId] : [])),
+      seats: humans.length,
+    });
     this.beginRound(0);
   }
 
@@ -1371,6 +1403,7 @@ export class Room {
       superlatives: computeSuperlatives(publicPlayers),
     };
     this.enterPhase('PODIUM', null);
+    this.deps.onGameEvent?.({ type: 'finished' });
     this.dropExpiredSlots();
     for (const player of this.players) {
       if (!player.connected && !player.removalTimer) {

@@ -21,7 +21,9 @@ RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 COPY --from=build /app/server/dist server/dist
 COPY --from=build /app/client/dist client/dist
 COPY content/ content/
-ENV CLIENT_DIST=/app/client/dist PROMPTS_PATH=/app/content/prompts.json
+ENV CLIENT_DIST=/app/client/dist PROMPTS_PATH=/app/content/prompts.json STATS_PATH=/data/stats.json
+# Play counts live on a volume mounted here; a fresh volume copies this owner.
+RUN mkdir -p /data && chown node:node /data
 USER node
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s CMD wget -qO- http://127.0.0.1:8080/healthz || exit 1
