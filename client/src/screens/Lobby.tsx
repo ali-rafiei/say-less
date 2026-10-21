@@ -351,8 +351,8 @@ export function Lobby({ ctl, room, me }: Props) {
         />
         {!initials && (
           <Toggle
-            label="Bail Outs"
-            hint="stuck? submit a stock answer for half points"
+            label="Random answers"
+            hint="stuck? send a random answer for half points"
             on={room.settings.bailOuts}
             disabled={!isLeader}
             onChange={(bailOuts) => set({ bailOuts })}

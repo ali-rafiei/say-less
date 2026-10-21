@@ -28,45 +28,39 @@ describe('scoreMatchup', () => {
       answers: [answer({ playerId: 'a' }), answer({ playerId: 'b' })],
       votes: votesFor([2, 1]),
       roast: null,
-      multiplier: 1,
+      multiplier: 2,
     });
-    // a: 200 for votes + 200 Mic Drop
-    expect(result.delta).toEqual({ a: 400, b: 100 });
+    expect(result.delta).toEqual({ a: 400, b: 200 });
     expect(result.winnerIndex).toBe(0);
   });
 
-  it('gives a Mic Drop for a 4-1 win in round 2 (80% of the votes)', () => {
-    // Arrange: ×1.5, 5 voters
+  it('pays votes only, with no bonus, even for a clean sweep', () => {
+    // Arrange: the final-round multiplier and every vote for one answer
     const result = scoreMatchup({
-      answers: [answer({ playerId: 'me' }), answer({ playerId: 'opp' })],
-      votes: votesFor([4, 1]),
+      answers: [answer({ playerId: 'a' }), answer({ playerId: 'b' })],
+      votes: votesFor([3, 0]),
       roast: null,
-      multiplier: 1.5,
+      multiplier: 3,
     });
-    // Assert: 600 votes + 300 mic drop, no Silenced
-    expect(result.delta.me).toBe(900);
-    expect(result.delta.opp).toBe(150);
-    expect(result.awards.some((a) => a.kind === 'silenced')).toBe(false);
-    expect(result.awards.find((a) => a.kind === 'micDrop')).toMatchObject({
-      playerId: 'me',
-      points: 300,
-    });
+    // Assert
+    expect(result.delta).toEqual({ a: 900, b: 0 });
+    expect(result.awards.map((x) => x.kind)).toEqual(['votes']);
   });
 
   it('matches the spec worked example: roast backfire steals the roaster points', () => {
-    // Arrange: roaster loses 2-3 to the player they roasted, ×1.5
+    // Arrange: roaster loses 2-3 to the player they roasted, ×2
     const result = scoreMatchup({
       answers: [answer({ playerId: 'roaster' }), answer({ playerId: 'target' })],
       votes: votesFor([2, 3]),
       roast: { spenderId: 'roaster', targetId: 'target' },
-      multiplier: 1.5,
+      multiplier: 2,
     });
-    // Assert: target 450 votes + 300 Mic Drop (60% of the votes) + 300 stolen
+    // Assert: target 600 for votes + the roaster's 400 stolen
     expect(result.delta.roaster).toBe(0);
-    expect(result.delta.target).toBe(1050);
+    expect(result.delta.target).toBe(1000);
     expect(result.awards.find((a) => a.kind === 'steal')).toMatchObject({
       playerId: 'target',
-      points: 300,
+      points: 400,
     });
   });
 
@@ -76,13 +70,12 @@ describe('scoreMatchup', () => {
       answers: [answer({ playerId: 'roaster' }), answer({ playerId: 'target' })],
       votes: votesFor([0, 2]),
       roast: { spenderId: 'roaster', targetId: 'target' },
-      multiplier: 1.5,
+      multiplier: 2,
     });
-    // Assert: the stamp is there, no points move, nobody is marked robbed
+    // Assert: the tag is there, no points move, nobody is marked robbed
     expect(result.awards).toContainEqual({ playerId: 'target', kind: 'steal', points: 0 });
     expect(result.awards.some((a) => a.kind === 'stolen')).toBe(false);
-    // 300 votes + 375 Silenced
-    expect(result.delta).toEqual({ roaster: 0, target: 675 });
+    expect(result.delta).toEqual({ roaster: 0, target: 400 });
   });
 
   it('does not steal when the roaster is not in the matchup', () => {
@@ -93,32 +86,10 @@ describe('scoreMatchup', () => {
       multiplier: 1,
     });
     expect(result.awards.some((a) => a.kind === 'steal')).toBe(false);
-    // target: 200 for votes + 200 Mic Drop
-    expect(result.delta).toEqual({ x: 100, target: 400 });
+    expect(result.delta).toEqual({ x: 100, target: 200 });
   });
 
-  it('awards Silenced for a 100% sweep with at least 2 votes', () => {
-    const swept = scoreMatchup({
-      answers: [answer({ playerId: 'a' }), answer({ playerId: 'b' })],
-      votes: votesFor([3, 0]),
-      roast: null,
-      multiplier: 2,
-    });
-    expect(swept.awards.find((a) => a.kind === 'silenced')).toMatchObject({
-      playerId: 'a',
-      points: 500,
-    });
-
-    const single = scoreMatchup({
-      answers: [answer({ playerId: 'a' }), answer({ playerId: 'b' })],
-      votes: votesFor([1, 0]),
-      roast: null,
-      multiplier: 1,
-    });
-    expect(single.awards.some((a) => a.kind === 'silenced')).toBe(false);
-  });
-
-  it('splits a tie by vote share with no winner bonuses', () => {
+  it('splits a tie by vote share', () => {
     const result = scoreMatchup({
       answers: [answer({ playerId: 'a' }), answer({ playerId: 'b' })],
       votes: votesFor([2, 2]),
@@ -142,85 +113,6 @@ describe('scoreMatchup', () => {
     expect(result.awards).toEqual([]);
   });
 
-  it('gives a Mic Drop for a 3-1 win', () => {
-    // Given a 3-1 win
-    const result = scoreMatchup({
-      answers: [answer({ playerId: 'a' }), answer({ playerId: 'b' })],
-      votes: votesFor([3, 1]),
-      roast: null,
-      multiplier: 1,
-    });
-    // Then the winner gets 300 for votes and 200 for the Mic Drop
-    expect(result.awards.find((a) => a.kind === 'micDrop')).toMatchObject({
-      playerId: 'a',
-      points: 200,
-    });
-    expect(result.delta.a).toBe(500);
-  });
-
-  it('gives only Silenced for a sweep, never Mic Drop on top', () => {
-    // Given a 3-0 sweep
-    const result = scoreMatchup({
-      answers: [answer({ playerId: 'a' }), answer({ playerId: 'b' })],
-      votes: votesFor([3, 0]),
-      roast: null,
-      multiplier: 1,
-    });
-    // Then the winner gets 300 for votes and 250 for Silenced, nothing more
-    expect(result.awards.some((a) => a.kind === 'micDrop')).toBe(false);
-    expect(result.delta.a).toBe(550);
-  });
-
-  it('gives a Mic Drop for the narrowest win over half the votes', () => {
-    // Given a 4-3 win (57%)
-    const result = scoreMatchup({
-      answers: [answer({ playerId: 'a' }), answer({ playerId: 'b' })],
-      votes: votesFor([4, 3]),
-      roast: null,
-      multiplier: 1,
-    });
-    // Then it is a Mic Drop
-    expect(result.awards.some((a) => a.kind === 'micDrop' && a.playerId === 'a')).toBe(true);
-  });
-
-  it('gives no Mic Drop at exactly half the votes', () => {
-    // Given a 2-2 tie
-    const result = scoreMatchup({
-      answers: [answer({ playerId: 'a' }), answer({ playerId: 'b' })],
-      votes: votesFor([2, 2]),
-      roast: null,
-      multiplier: 1,
-    });
-    // Then nobody gets a Mic Drop
-    expect(result.awards.some((a) => a.kind === 'micDrop')).toBe(false);
-  });
-
-  it('gives no Mic Drop for a single vote', () => {
-    // Given a three-player game, where each matchup has one voter
-    const result = scoreMatchup({
-      answers: [answer({ playerId: 'a' }), answer({ playerId: 'b' })],
-      votes: votesFor([1, 0]),
-      roast: null,
-      multiplier: 1,
-    });
-    // Then winning that vote is not a Mic Drop
-    expect(result.awards.some((a) => a.kind === 'micDrop')).toBe(false);
-  });
-
-  it('never gives a Mic Drop to an auto-submitted "…" that wins', () => {
-    const result = scoreMatchup({
-      answers: [
-        answer({ playerId: 'a', text: '…', autoSubmitted: true }),
-        answer({ playerId: 'b' }),
-      ],
-      votes: votesFor([2, 0]),
-      roast: null,
-      multiplier: 1,
-    });
-    expect(result.awards.some((a) => a.kind === 'micDrop')).toBe(false);
-    expect(result.delta.a).toBe(450);
-  });
-
   it('pays a flat GREAT MINDS bonus for identical answers and ignores votes', () => {
     const result = scoreMatchup({
       answers: [
@@ -229,10 +121,10 @@ describe('scoreMatchup', () => {
       ],
       votes: votesFor([2, 0]),
       roast: null,
-      multiplier: 1.5,
+      multiplier: 2,
     });
     expect(result.greatMinds).toBe(true);
-    expect(result.delta).toEqual({ a: 150, b: 150 });
+    expect(result.delta).toEqual({ a: 200, b: 200 });
   });
 });
 
@@ -310,7 +202,7 @@ describe('scorePosts (Out of Context)', () => {
 });
 
 describe('Bail Out and the crowd', () => {
-  it('pays a Bail Out answer half its vote points and no Mic Drop', () => {
+  it('pays a random answer half its vote points', () => {
     // Arrange: the stock answer wins 3-1
     const result = scoreMatchup({
       answers: [answer({ playerId: 'a', bailOut: true }), answer({ playerId: 'b' })],
@@ -318,7 +210,7 @@ describe('Bail Out and the crowd', () => {
       roast: null,
       multiplier: 1,
     });
-    // Assert: 3 × 50, no bonus; the loser keeps full vote points
+    // Assert: 3 × 50; the loser keeps full vote points
     expect(result.delta).toEqual({ a: 150, b: 100 });
     expect(result.awards.map((a) => a.kind)).toEqual(['votes', 'votes']);
   });

@@ -45,66 +45,6 @@ export const typewriter: Effect = (g, t) => {
   });
 };
 
-/** A falling whoosh, a boomy thud with a touch of feedback ring, then a smaller bounce. */
-export const micDrop: Effect = (g, t) => {
-  noise(g, g.fx, t, {
-    gain: 0.18,
-    duration: 0.22,
-    env: { attack: 0.15, decay: 0, sustain: 1, release: 0.03 },
-    filter: { type: 'bandpass', freq: 2500, to: 350, time: 0.22, q: 1.2 },
-  });
-  const hitAt = t + 0.2;
-  tone(g, g.fx, hitAt, {
-    notes: [48],
-    pitchFrom: 3,
-    pitchTime: 0.1,
-    gain: 0.6,
-    duration: 0.4,
-    env: { attack: 0.002, decay: 0.4, sustain: 0, release: 0.05 },
-    send: 0.25,
-  });
-  tone(g, g.fx, hitAt, {
-    notes: [220],
-    layers: [{ type: 'triangle' }],
-    pitchFrom: 1,
-    pitchTo: 0.4,
-    pitchTime: 0.2,
-    gain: 0.25,
-    duration: 0.2,
-    env: { attack: 0.002, decay: 0.2, sustain: 0, release: 0.05 },
-  });
-  noise(g, g.fx, hitAt, {
-    gain: 0.4,
-    duration: 0.3,
-    env: { attack: 0.001, decay: 0.3 },
-    filter: { type: 'lowpass', freq: 900, to: 200, time: 0.3 },
-    send: 0.3,
-  });
-  tone(g, g.fx, hitAt + 0.04, {
-    notes: [2093],
-    gain: 0.02,
-    duration: 0.25,
-    env: { attack: 0.05, decay: 0.1, sustain: 1, release: 0.2 },
-    send: 0.3,
-  });
-  const bounceAt = t + 0.52;
-  tone(g, g.fx, bounceAt, {
-    notes: [60],
-    pitchFrom: 2.5,
-    pitchTime: 0.08,
-    gain: 0.3,
-    duration: 0.2,
-    env: { attack: 0.002, decay: 0.2, sustain: 0, release: 0.05 },
-  });
-  return noise(g, g.fx, bounceAt, {
-    gain: 0.2,
-    duration: 0.12,
-    env: { attack: 0.001, decay: 0.12 },
-    filter: { type: 'lowpass', freq: 700 },
-    send: 0.2,
-  });
-};
-
 /** A flame whoosh with crackles under a sliding, filtered sting. */
 export const roast: Effect = (g, t) => {
   noise(g, g.fx, t, {
@@ -228,24 +168,6 @@ export const fanfare: Effect = (g, t) => {
     duration: 0.55,
     env: { attack: 0.02, decay: 0.3, sustain: 0.5, release: 0.6 },
     send: 0.45,
-  });
-};
-
-/** Silenced!: a quick "shh" that lands on one clear, ringing bell. */
-export const silenced: Effect = (g, t) => {
-  noise(g, g.fx, t, {
-    gain: 0.05,
-    duration: 0.28,
-    env: { attack: 0.06, decay: 0.1, sustain: 0.6, release: 0.1 },
-    filter: { type: 'bandpass', freq: 4200, q: 1.4 },
-  });
-  return tone(g, g.fx, t + 0.34, {
-    notes: [midiToHz(79), midiToHz(86)],
-    layers: BELL,
-    gain: 0.11,
-    duration: 0.25,
-    env: { attack: 0.004, decay: 0.5, sustain: 0.25, release: 0.7 },
-    send: 0.4,
   });
 };
 

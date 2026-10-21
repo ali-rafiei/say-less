@@ -16,12 +16,12 @@ function top<T>(items: readonly T[], metric: (item: T) => number): T | null {
 export function computeSuperlatives(players: readonly PublicPlayer[]): Superlative[] {
   const list: Superlative[] = [];
 
-  const micDropper = top(players, (p) => p.stats.micDrops);
-  if (micDropper) {
+  const magnet = top(players, (p) => p.stats.votesReceived);
+  if (magnet) {
     list.push({
-      title: 'Most Mic Drops',
-      playerId: micDropper.id,
-      detail: `${micDropper.stats.micDrops} mic drop${micDropper.stats.micDrops === 1 ? '' : 's'}`,
+      title: 'Vote Magnet',
+      playerId: magnet.id,
+      detail: `${magnet.stats.votesReceived} vote${magnet.stats.votesReceived === 1 ? '' : 's'} received`,
     });
   }
 
@@ -40,15 +40,6 @@ export function computeSuperlatives(players: readonly PublicPlayer[]): Superlati
   const victim = top(players, (p) => p.stats.roasted);
   if (victim) {
     list.push({ title: 'Roast Victim', playerId: victim.id, detail: 'Got roasted and lived' });
-  }
-
-  const silencer = top(players, (p) => p.stats.silenced);
-  if (silencer) {
-    list.push({
-      title: 'The Silencer',
-      playerId: silencer.id,
-      detail: `Swept ${silencer.stats.silenced} matchup${silencer.stats.silenced === 1 ? '' : 's'}`,
-    });
   }
 
   const withSubmissions = players.filter((p) => p.stats.submissions > 0);

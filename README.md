@@ -49,7 +49,7 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
 1. One player creates a room and gets a 4-letter code (no O or I). Others join with the
    code or the invite link (`/?code=ABCD`). The creator is the **leader** and owns the
    Start button and settings: game mode, prompt packs, profanity filter, word limits,
-   roasts, timer speed, game length, Bail Outs, anonymous final, audience and seats (see
+   roasts, timer speed, game length, random answers, anonymous final, audience and seats (see
    [Room options](#room-options)). The five game modes:
    - **Classic**: prompts from the ticked packs.
    - **Custom**: anyone in the lobby adds prompts. They are dealt first, nobody gets a
@@ -73,7 +73,7 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
      `INITIALS_LENGTHS`: 5, 4, then 3 in the final). An answer needs exactly one word per
      letter, each starting with its letter in order ("B T D": "Bring The Drill"); accents
      and leading punctuation are ignored. Both writers of a matchup get the same letters. A
-     roast keeps only the first two letters. The word-limit toggle and Bail Outs are hidden
+     roast keeps only the first two letters. The word-limit toggle and random answers are hidden
      (the letters are the limit and the challenge).
 
    In Doodle the final replays the drawing that drew the most votes (the crowd favourite),
@@ -86,14 +86,14 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
    each prompt is answered by exactly two players (ring pairing).
 4. **Voting** per matchup (20 s): the two answers are shown anonymously; the players who
    did not write them vote. Then a 6 s **reveal**: characters slide in, vote bars fill,
-   bonus stamps slam in.
-5. **Round 2 "Say Less"** – 6 words, 120 s, ×1.5. The first 10 s of the writing phase is
+   any tags (Great Minds, Backfire!, Robbed, Crowd Favourite, Random answer) pop in as text.
+5. **Round 2 "Say Less"** – 6 words, 120 s, ×2. The first 10 s of the writing phase is
    the **roast window**: each player holds one roast token for the whole game and may
    spend it on one opponent, cutting that opponent's next answer to 2 words. If the
    roasted player wins the matchup anyway, they steal the roaster's points from it. Roasts
    are off by default; the leader switches them on in the lobby (`settings.roasts`).
    Without them round 2 has no window.
-6. **Final round "Say Nothing… Almost"** – 3 words, 60 s, ×2. One shared
+6. **Final round "Say Nothing… Almost"** – 3 words, 60 s, ×3. One shared
    prompt, everyone answers, everyone ranks their top two (not themselves).
 7. **Final reveal**: after "The votes are in…", the final answers are spotlighted one at a
    time from fewest points to most. Each shows the answer first, then its author, tally
@@ -115,7 +115,7 @@ All lobby settings belong to the leader. Defaults in `Room.settings` (`server/sr
 | --------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Timers          | Normal, Relaxed, Off   | Relaxed doubles every writing, drawing and voting clock (`TIMERS.RELAXED_FACTOR`). Off removes them: the phase waits for everyone, and the leader gets **Move on**, which closes it (stragglers auto-submit). Reveals keep their timing. |
 | Game length     | Full, Short            | Short goes from round 1 straight to the final (no round 2, so no roasts).                                                                                                                                                                |
-| Bail Outs       | On, Off                | A stuck writer taps **Stuck? Bail out** twice and the server files a stock answer from `content/bailouts.json` that fits the limit. Half vote points, no bonuses, stamped BAILED OUT at the reveal. Hidden in Initials.                  |
+| Random answers  | On, Off                | A stuck writer taps **Stuck? Send a random answer** twice and the server files a stock answer from `content/bailouts.json` that fits the limit. Half vote points, labelled "Random answer" at the reveal. Hidden in Initials.            |
 | Anonymous final | Off, On                | The final wall hides authors until the reveal; votes use opaque per-final ids. Hidden in Out of Context (posts are anonymous already).                                                                                                   |
 | Audience        | On, Off                | Anyone joining a game in progress or a full room watches and votes instead of being turned away (up to `LIMITS.MAX_AUDIENCE`, 50). Off restores the old refusal.                                                                         |
 | Seats           | 3 to 12 (12)           | Players before the rest join the audience. Lowering it never unseats anyone.                                                                                                                                                             |
@@ -264,14 +264,13 @@ npm run format:check   # prettier
 
 What the tests pin down:
 
-- `shared/test/scoring.test.ts` – Mic Drop for any win over half the votes (not a tie),
-  not on a single vote, not for an auto-submitted "…"; roast backfire steal, Silenced
-  min-2-votes rule, tie split, abstain → 0, Great Minds, final top-2 scoring, shared
-  placements.
+- `shared/test/scoring.test.ts` – votes × multiplier with no bonus even for a sweep,
+  roast backfire steal, tie split, abstain → 0, Great Minds, random answers at half points,
+  Crowd Favourite, final top-2 scoring, shared placements.
 - `shared/test/words.test.ts` – hyphen/apostrophe counting, punctuation-only tokens,
   120-char cap, roasted limit of 2, no limit when word limits are off.
 - `server/test/room.game.test.ts` – a scripted 3-player game LOBBY → PODIUM whose final
-  scores (1300 / 850 / 400) are hand-computed in the file header, with the final reveal
+  scores (1800 / 1200 / 600) and votes received are hand-computed in the file header, with the final reveal
   timed by `finalRevealSchedule` and totals held back until the podium; matchup generation
   invariants for 5 players.
 - `server/test/room.rules.test.ts` – redaction per phase, over-limit rejection,
@@ -284,7 +283,7 @@ What the tests pin down:
   human leaves.
 - `e2e/full-game.spec.ts` – three iPhone-sized Chromium contexts: create/join, settings,
   character race, refresh during writing lands back on the prompt, roast overlay and
-  2-word counter, all votes, final card wall, podium (no Mic Drops with one voter), rematch
+  2-word counter, all votes, final card wall, podium (Vote Magnet superlative), rematch
   returns to the same room code, and a check that the painted sprites are animating.
   Screenshots per phase land in `e2e/shots/` (gitignored).
 - `e2e/twelve-players.spec.ts` – twelve contexts play a full game; every player's round
@@ -300,8 +299,8 @@ What the tests pin down:
   double-tapped Create Room, rejected submits and a wrong room code, clocks 90 s off, and a
   server restart mid-game (starts its own server on port 8093).
 - `server/test/room.party.test.ts` – timers off (leader moves on) and relaxed (double
-  clock), pause freezing the clock and holding a phase through a disconnect, Bail Out
-  stamped only at the reveal, audience joining mid-game and deciding only the Crowd
+  clock), pause freezing the clock and holding a phase through a disconnect, a random
+  answer labelled only at the reveal, audience joining mid-game and deciding only the Crowd
   Favourite, a freed lobby seat going to the audience, kick shutting a phone out
   mid-game, a Doodle drawing refused while paused, Initials letters and validation, and a short game into an
   anonymous final voted by opaque ids.
@@ -322,8 +321,8 @@ Source of truth: `shared/src/constants.ts` and `shared/src/scoring.ts`.
 | Round     | Name                | Limit    | Writing timer                                          | Multiplier |
 | --------- | ------------------- | -------- | ------------------------------------------------------ | ---------- |
 | 1         | Say Some            | 12 words | 120 s                                                  | ×1         |
-| 2         | Say Less            | 6 words  | 120 s (first 10 s = roast window, prompts dealt after) | ×1.5       |
-| 3 (final) | Say Nothing… Almost | 3 words  | 60 s                                                   | ×2         |
+| 2         | Say Less            | 6 words  | 120 s (first 10 s = roast window, prompts dealt after) | ×2         |
+| 3 (final) | Say Nothing… Almost | 3 words  | 60 s                                                   | ×3         |
 
 `settings.wordLimits = false` (lobby toggle, default on) lifts every limit: prompts are
 dealt with `effectiveLimit: null`, the round intro reads "No word limit", the counter
@@ -351,19 +350,19 @@ disconnected players get "[left the chat]".
 | Event                 | Points           | Condition                                                                                                                                                          |
 | --------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Vote received (R1–R2) | 100 per vote     |                                                                                                                                                                    |
-| Silenced!             | +250             | Winner took 100 % of votes cast, at least 2 votes                                                                                                                  |
-| Mic Drop              | +200             | Winner took more than 50 % of votes cast (any outright win), at least 2 votes, not auto-submitted, not a sweep (a sweep is Silenced! instead; they never stack)    |
 | Roast backfire        | steal            | Roasted player wins **and** the roaster is the opponent in that matchup → the roaster's points from that matchup move to the winner                                |
 | Great Minds           | flat 100 each    | Both answers normalize to the same text (case, punctuation, spacing ignored); no votes counted, no other bonuses                                                   |
 | Tie                   | vote points only | Nobody wins, no bonuses                                                                                                                                            |
 | All abstain           | 0 / 0            |                                                                                                                                                                    |
 | Final 1st-choice vote | 200              |                                                                                                                                                                    |
 | Final 2nd-choice vote | 100              |                                                                                                                                                                    |
-| Bail Out answer       | half vote points | Stock answer: `POINTS.BAIL_OUT_SHARE` of its vote points (matchup or final), never a Mic Drop or Silenced!                                                         |
+| Random answer         | half vote points | Stock answer: `POINTS.BAIL_OUT_SHARE` of its vote points (matchup or final)                                                                                        |
 | Crowd Favourite       | +100             | The answer the audience preferred (matchups: more audience votes; wall rounds: the single most-voted, ties pay nobody). Audience votes never count as player votes |
 
-Podium ties share a place (1, 1, 3). Superlatives: Most Mic Drops, Wordiest Loser (words
-per point among non-winners), Roast Victim, The Silencer, Fastest Submitter.
+A win pays its votes and nothing more: there are no bonuses for a clear win or a sweep.
+Podium ties share a place (1, 1, 3). Superlatives: Vote Magnet (most votes received across
+matchups and walls), Wordiest Loser (words per point among non-winners), Roast Victim,
+Fastest Submitter.
 
 ### Matchups
 
@@ -495,7 +494,7 @@ Implemented in `Room.publicMatchup` / `Room.publicFinal` and covered by
 | Final answers                                     | FINAL_VOTING (author visible because final votes are cast by player id, per spec) |
 | Final individual votes and tallies                | FINAL_REVEAL (the reveal needs them; totals still wait for PODIUM)                |
 | Another player's prompts                          | never sent                                                                        |
-| Bail Out flag                                     | that matchup's MATCHUP_REVEAL (final: FINAL_REVEAL)                               |
+| Random answer flag                                | that matchup's MATCHUP_REVEAL (final: FINAL_REVEAL)                               |
 | Final authors with Anonymous final on             | FINAL_REVEAL; the wall uses random per-final ids and is sorted by them            |
 | Audience votes                                    | counts only, in the result at the reveal                                          |
 
@@ -596,7 +595,7 @@ suppressed outside inputs) and images ignore pointer events and drags.
 - **Hurry-up**: anyone who still owes an answer gets a "15 seconds left!" banner and a tick
   (`TIMERS.HURRY_UP_MS`).
 - **Initials** prompts show letter tiles that light up as each word matches (`LetterTiles`).
-- **Two taps** for anything irreversible (Bail Out, Remove): `ConfirmButton` arms on
+- **Two taps** for anything irreversible (Random answer, Remove): `ConfirmButton` arms on
   the first tap and disarms after 4 s.
 - **Accessibility**: an `aria-live` announcer reads one sentence per event (round, matchup,
   winner, scoreboard leader, podium); the sound menu has a **Calm motion** switch
@@ -667,7 +666,7 @@ Movie Night, Family Friendly, Road Trip (`travel`), School Daze (`school`), Out 
 cross-pack uniqueness and the `{player}` rule. `content/doodles.json` (97 drawing
 suggestions) and `content/questions.json` (128 opinion questions for Out of Context) feed the two modes.
 
-**Bail Outs.** `content/bailouts.json`: 148 original stock answers, mostly one to three
+**Random answers.** `content/bailouts.json`: 148 original stock answers, mostly one to three
 words so a roasted (2) or final (3) answer always has some that fit. Each is dealt once per
 room session before any repeats.
 
@@ -782,18 +781,18 @@ until the new record resolves and its certificate is issued.
 
 Recorded so nobody re-derives them.
 
-| Spec                                          | Implemented                                                                                                                       | Why                                                                                                                                                 |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ROUND_RESULTS → FINAL_WRITING` directly      | `ROUND_RESULTS → ROUND_INTRO → FINAL_WRITING`                                                                                     | The shattering 6 → 3 tiles is the signature motif; skipping it for the final felt wrong. 4 s cost.                                                  |
-| Final voting anonymity unspecified            | Authors visible on the final card wall                                                                                            | `cast_final_votes` is keyed by player id per the spec's protocol; matchup voting stays anonymous.                                                   |
-| Mic Drop: "≤ half the limit and won"          | won with > 50 % of the votes (≥ 2 votes), not a sweep, not auto-submitted                                                         | Owner's call: it rewards winning rather than brevity, so it still works with word limits off. A sweep is Silenced! instead, so the two never stack. |
-| `stats: {micDrops, silenced, wordsUsedTotal}` | plus `roasted, submissions, submitMsTotal`                                                                                        | Needed for the Roast Victim and Fastest Submitter superlatives.                                                                                     |
-| Error codes list                              | plus `rate_limited, invalid, not_leader, bad_name, not_enough_players, too_long, empty, self_target, no_token, already_submitted` | Distinct client messages.                                                                                                                           |
-| Profanity masking "in displayed answers only" | done on the client from the shared list                                                                                           | Keeps one broadcast per mutation instead of per-player payloads; the author is identified by comparing against their own submitted text.            |
-| Roast window "R2+"                            | round 2 only                                                                                                                      | The spec's protocol table says `spend_roast` is valid in `WRITING` only, and the final has no matchups for the backfire rule.                       |
-| Disconnected mid-write → "[left the chat]"    | applied at phase end, not at disconnect                                                                                           | Lets a quick reconnect still answer.                                                                                                                |
-| Sounds: "typewriter, mic drop, roast sting"   | synthesized with WebAudio                                                                                                         | No asset licensing; swap for samples later if wanted.                                                                                               |
-| Characters: hand-built SVG                    | placeholder SVGs drawn by the agent; raster override pipeline                                                                     | User is generating final art in ChatGPT; see `ASSETS.md`.                                                                                           |
+| Spec                                          | Implemented                                                                                                                       | Why                                                                                                                                      |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `ROUND_RESULTS → FINAL_WRITING` directly      | `ROUND_RESULTS → ROUND_INTRO → FINAL_WRITING`                                                                                     | The shattering 6 → 3 tiles is the signature motif; skipping it for the final felt wrong. 4 s cost.                                       |
+| Final voting anonymity unspecified            | Authors visible on the final card wall                                                                                            | `cast_final_votes` is keyed by player id per the spec's protocol; matchup voting stays anonymous.                                        |
+| Mic Drop: "≤ half the limit and won"          | no Mic Drop (nor Silenced!)                                                                                                       | Owner's call, 2026-10-20: a win pays its votes only; the round multipliers carry the drama.                                              |
+| `stats: {micDrops, silenced, wordsUsedTotal}` | plus `roasted, submissions, submitMsTotal`                                                                                        | Needed for the Roast Victim and Fastest Submitter superlatives.                                                                          |
+| Error codes list                              | plus `rate_limited, invalid, not_leader, bad_name, not_enough_players, too_long, empty, self_target, no_token, already_submitted` | Distinct client messages.                                                                                                                |
+| Profanity masking "in displayed answers only" | done on the client from the shared list                                                                                           | Keeps one broadcast per mutation instead of per-player payloads; the author is identified by comparing against their own submitted text. |
+| Roast window "R2+"                            | round 2 only                                                                                                                      | The spec's protocol table says `spend_roast` is valid in `WRITING` only, and the final has no matchups for the backfire rule.            |
+| Disconnected mid-write → "[left the chat]"    | applied at phase end, not at disconnect                                                                                           | Lets a quick reconnect still answer.                                                                                                     |
+| Sounds: "typewriter, mic drop, roast sting"   | synthesized with WebAudio                                                                                                         | No asset licensing; swap for samples later if wanted.                                                                                    |
+| Characters: hand-built SVG                    | placeholder SVGs drawn by the agent; raster override pipeline                                                                     | User is generating final art in ChatGPT; see `ASSETS.md`.                                                                                |
 
 Nothing in the spec's _locked decisions_ was changed: fully online, player voting only,
 flat-vector art direction, one unique character per player.
@@ -801,6 +800,15 @@ flat-vector art direction, one unique character per player.
 ---
 
 ## Decisions log
+
+- **2026-10-20** Simpler scoring: Mic Drop and Silenced! are gone, along with the
+  full-screen mic drop and its sound, so a win pays 100 per vote × the round multiplier.
+  Multipliers are now ×1 / ×2 / ×3 (were ×1 / ×1.5 / ×2) so the final can still swing the
+  game. Great Minds, Backfire!/Robbed, Crowd Favourite and the random answer stay, drawn by
+  the game as text tags rather than painted stamps. Bail Out is renamed "Random answer"
+  everywhere players see it (internal names keep `bailOut`). The Most Mic Drops and The
+  Silencer superlatives became one, Vote Magnet. The art is being redone (see
+  `art/new-art-prompts.md`, local); the stamp images and the mic icon are unused until then.
 
 - **2026-10-18** Play stats: a private `/stats` page behind `STATS_KEY` rather than a
   public counter; players counted by anonymous device id (hashed) so one friend playing five

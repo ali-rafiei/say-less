@@ -83,7 +83,6 @@ export function scoreMatchup(input: MatchupScoringInput): MatchupResult {
 
   const voteCounts: [number, number] = [0, 0];
   for (const choice of Object.values(votes)) voteCounts[choice] += 1;
-  const totalVotes = voteCounts[0] + voteCounts[1];
 
   answers.forEach((answer, index) => {
     addAward(awards, delta, {
@@ -99,27 +98,6 @@ export function scoreMatchup(input: MatchupScoringInput): MatchupResult {
   if (winnerIndex !== null) {
     const winner = answers[winnerIndex];
     const loser = answers[winnerIndex === 0 ? 1 : 0];
-    // Tiers, not stacked: a sweep is Silenced!, any other win over half the votes a Mic Drop.
-    // A stock Bail Out answer earns no bonus.
-    if (winner.bailOut) {
-      // votes only
-    } else if (voteCounts[winnerIndex] === totalVotes && totalVotes >= POINTS.SILENCED_MIN_VOTES) {
-      addAward(awards, delta, {
-        playerId: winner.playerId,
-        kind: 'silenced',
-        points: scaled(POINTS.SILENCED, multiplier),
-      });
-    } else if (
-      !winner.autoSubmitted &&
-      totalVotes >= POINTS.MIC_DROP_MIN_VOTES &&
-      voteCounts[winnerIndex] > POINTS.MIC_DROP_VOTE_SHARE * totalVotes
-    ) {
-      addAward(awards, delta, {
-        playerId: winner.playerId,
-        kind: 'micDrop',
-        points: scaled(POINTS.MIC_DROP, multiplier),
-      });
-    }
     if (roast && roast.targetId === winner.playerId && roast.spenderId === loser.playerId) {
       const stolen = delta[loser.playerId] ?? 0;
       addAward(awards, delta, { playerId: loser.playerId, kind: 'stolen', points: -stolen });
@@ -225,7 +203,7 @@ export function scorePosts(
   }
   const most = Math.max(0, ...counts.values());
   const leaders = posts.filter((p) => counts.get(p.id) === most);
-  const burn = most >= POINTS.SILENCED_MIN_VOTES && leaders.length === 1 ? leaders[0]! : null;
+  const burn = most >= POINTS.BEST_BURN_MIN_VOTES && leaders.length === 1 ? leaders[0]! : null;
   for (const post of posts) {
     const n = counts.get(post.id) ?? 0;
     const twister = tallies[post.twisterId];

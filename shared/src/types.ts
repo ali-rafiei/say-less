@@ -63,8 +63,8 @@ export interface CustomPrompt {
 }
 
 export interface PlayerStats {
-  micDrops: number;
-  silenced: number;
+  /** votes this player's answers received (matchups and walls); for Vote Magnet */
+  votesReceived: number;
   roasted: number;
   wordsUsedTotal: number;
   submissions: number;
@@ -101,8 +101,6 @@ export interface PublicAnswer {
 
 export type AwardKind =
   | 'votes'
-  | 'silenced'
-  | 'micDrop'
   | 'greatMinds'
   | 'steal'
   | 'stolen'

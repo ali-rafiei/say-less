@@ -216,8 +216,10 @@ test('three phones play a full game, survive a refresh, and reach the podium', a
   await expect(bob.page.getByText('Waiting for the leader')).toBeVisible();
   const scores = await ann.page.locator('.board__score').allInnerTexts();
   expect(scores.length).toBe(3);
-  // One voter per matchup is never a Mic Drop (it needs at least 2 votes).
-  await expect(ann.page.locator('.ticker__item', { hasText: 'Most Mic Drops' })).toHaveCount(0);
+  // Every matchup had a vote, so somebody received the most.
+  await expect(
+    ann.page.locator('.ticker__item', { hasText: 'Vote Magnet' }).first(),
+  ).toBeAttached();
 
   // --- Rematch returns everyone to the lobby with the same code
   await ann.page.getByRole('button', { name: 'Rematch' }).click();

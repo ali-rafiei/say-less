@@ -185,8 +185,8 @@ export function Writing({ ctl, room, me }: Props) {
             />
             {canBailOut && (
               <ConfirmButton
-                label="Stuck? Bail out"
-                confirmLabel="Send a stock answer (half points)"
+                label="Stuck? Send a random answer"
+                confirmLabel="Send it (half points)"
                 className="btn btn--small btn--secondary bailout"
                 onConfirm={() => ctl.bailOut(current.promptId)}
               />

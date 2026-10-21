@@ -98,10 +98,10 @@ export function FinalReveal({ ctl, room, me }: Props) {
           </span>
           <span className="fspot__pts display">+{tally?.points ?? 0}</span>
           {(current.bailOut || tally?.crowdFavourite) && (
-            <div className="row row--wrap fspot__stamps">
-              {current.bailOut && <span className="stamp stamp--text stamp--bail">BAILED OUT</span>}
+            <div className="row row--wrap fspot__tags">
+              {current.bailOut && <span className="tag tag--random display">Random answer</span>}
               {tally?.crowdFavourite && (
-                <span className="stamp stamp--text">CROWD FAVOURITE · {tally.crowd}</span>
+                <span className="tag tag--crowd display">CROWD FAVOURITE · {tally.crowd}</span>
               )}
             </div>
           )}

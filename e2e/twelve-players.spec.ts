@@ -281,8 +281,8 @@ test('twelve phones play a full game and reach the podium', async ({ browser }, 
     const who = (await row.locator('.dim.small').innerText()).split(' · ')[0]!.trim();
     finalPoints.set(who, Number(await row.locator('.fanswer__pts').innerText()));
   }
-  // 12 voters × (200 + 100) × 2
-  expect([...finalPoints.values()].reduce((a, b) => a + b, 0)).toBe(7_200);
+  // 12 voters × (200 + 100) × 3
+  expect([...finalPoints.values()].reduce((a, b) => a + b, 0)).toBe(10_800);
   const podiumNames: string[] = [];
   for (const row of await podiumRows.all()) {
     const name = cleanName(await row.locator('.board__name').innerText());
@@ -334,8 +334,6 @@ test('twelve phones play a full game and reach the podium', async ({ browser }, 
         await expect(faces).toHaveCount(NAMES.length - 2);
         await leader.page.waitForTimeout(1_500);
         await both(`06-r${round}-reveal-sweep`);
-        await leader.page.waitForTimeout(1_000); // the mic drop overlay fades out at 3 s
-        await both(`06-r${round}-reveal-sweep-settled`);
       }
       if (m === 1) await both(`06-r${round}-reveal-tie`);
       await expect(leader.page.getByText(label)).toHaveCount(0, { timeout: 15_000 });

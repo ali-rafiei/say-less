@@ -215,8 +215,7 @@ export interface RoomDeps {
 
 function freshStats(): PlayerStats {
   return {
-    micDrops: 0,
-    silenced: 0,
+    votesReceived: 0,
     roasted: 0,
     wordsUsedTotal: 0,
     submissions: 0,
@@ -1330,10 +1329,9 @@ export class Room {
     for (const [playerId, delta] of Object.entries(result.delta)) {
       this.requirePlayer(playerId).score += delta;
     }
-    for (const award of result.awards) {
-      if (award.kind === 'micDrop') this.requirePlayer(award.playerId).stats.micDrops += 1;
-      if (award.kind === 'silenced') this.requirePlayer(award.playerId).stats.silenced += 1;
-    }
+    [a, b].forEach((answer, slot) => {
+      this.requirePlayer(answer.playerId).stats.votesReceived += result.voteCounts[slot]!;
+    });
     if (matchup.roast) {
       this.requirePlayer(matchup.roast.targetId).stats.roasted += 1;
       const spender = this.players.find((p) => p.id === matchup.roast!.spenderId);
@@ -1341,8 +1339,7 @@ export class Room {
     }
     for (const id of matchup.playerIds) {
       const player = this.requirePlayer(id);
-      player.publicStats.micDrops = player.stats.micDrops;
-      player.publicStats.silenced = player.stats.silenced;
+      player.publicStats.votesReceived = player.stats.votesReceived;
       player.publicStats.roasted = player.stats.roasted;
     }
     matchup.result = result;
@@ -1390,7 +1387,9 @@ export class Room {
     if (!result) throw new Error('afterWallReveal before the wall was tallied');
     for (const [playerId, tally] of Object.entries(result)) {
       const player = this.players.find((p) => p.id === playerId);
-      if (player) player.score += tally.points + tally.pity;
+      if (!player) continue;
+      player.score += tally.points + tally.pity;
+      player.stats.votesReceived += tally.first + tally.second;
     }
     this.publishStats();
     if (this.roundIndex !== FINAL_ROUND) {

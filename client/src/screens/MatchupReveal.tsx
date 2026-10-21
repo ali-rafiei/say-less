@@ -1,5 +1,10 @@
 import { UIArt } from '../components/UIArt.tsx';
-import { characterMeta, type PublicMatchup, type PublicRoomState } from '@say-less/shared';
+import {
+  characterMeta,
+  type PublicAnswer,
+  type PublicMatchup,
+  type PublicRoomState,
+} from '@say-less/shared';
 import { useEffect } from 'react';
 import { sfx } from '../audio/sfx.ts';
 import { AnswerText } from '../components/AnswerText.tsx';
@@ -9,13 +14,11 @@ import { LetterTiles } from '../components/LetterTiles.tsx';
 import { SeedView } from '../components/SeedView.tsx';
 import type { RoomController } from '../net/useRoom.ts';
 
-const stampArt = {
-  'MIC DROP!': 'micdrop',
-  'SILENCED!': 'silenced',
-  'GREAT MINDS': 'greatminds',
-  'BACKFIRE!': 'backfire',
-  ROBBED: 'robbed',
-} as const;
+/** Text tags under a revealed answer; the modifier picks the colour. */
+interface Tag {
+  label: string;
+  modifier: 'backfire' | 'robbed' | 'crowd' | 'random';
+}
 
 interface Props {
   ctl: RoomController;
@@ -23,26 +26,21 @@ interface Props {
   me: string;
 }
 
-function stampsFor(matchup: PublicMatchup, playerId: string | null): (keyof typeof stampArt)[] {
-  if (!matchup.result || !playerId) return [];
-  const stamps: (keyof typeof stampArt)[] = [];
-  for (const award of matchup.result.awards) {
-    if (award.playerId !== playerId) continue;
-    if (award.kind === 'silenced') stamps.push('SILENCED!');
-    if (award.kind === 'micDrop') stamps.push('MIC DROP!');
-    if (award.kind === 'greatMinds') stamps.push('GREAT MINDS');
-    if (award.kind === 'steal') stamps.push('BACKFIRE!');
-    if (award.kind === 'stolen') stamps.push('ROBBED');
+function tagsFor(matchup: PublicMatchup, answer: PublicAnswer): Tag[] {
+  const tags: Tag[] = [];
+  if (answer.bailOut) tags.push({ label: 'Random answer', modifier: 'random' });
+  for (const award of matchup.result?.awards ?? []) {
+    if (award.playerId !== answer.playerId) continue;
+    if (award.kind === 'steal') tags.push({ label: 'BACKFIRE!', modifier: 'backfire' });
+    if (award.kind === 'stolen') tags.push({ label: 'ROBBED', modifier: 'robbed' });
+    if (award.kind === 'crowd') tags.push({ label: 'CROWD FAVOURITE', modifier: 'crowd' });
   }
-  return stamps;
+  return tags;
 }
 
 export function MatchupReveal({ ctl, room, me }: Props) {
   const matchup = room.matchups[room.currentMatchupIndex];
   const result = matchup?.result;
-  const crushingWin = result?.awards.find((a) => a.kind === 'micDrop' || a.kind === 'silenced');
-  const micDropper = crushingWin?.playerId ?? null;
-  const micDropCharacter = room.players.find((p) => p.id === micDropper)?.characterId ?? null;
 
   const myIndex = matchup?.answers.findIndex((a) => a.playerId === me) ?? -1;
   const iLost = result?.winnerIndex != null && myIndex >= 0 && result.winnerIndex !== myIndex;
@@ -50,12 +48,10 @@ export function MatchupReveal({ ctl, room, me }: Props) {
     if (!result) return;
     const t = setTimeout(() => {
       if (iLost) sfx.lose();
-      else if (crushingWin?.kind === 'silenced') sfx.silenced();
-      else if (micDropper) sfx.micDrop();
       else if (result.winnerIndex !== null) sfx.win();
     }, 1200);
     return () => clearTimeout(t);
-  }, [result, micDropper, iLost, crushingWin?.kind]);
+  }, [result, iLost]);
 
   if (!matchup || !result) return null;
   const total = result.voteCounts[0] + result.voteCounts[1];
@@ -66,11 +62,7 @@ export function MatchupReveal({ ctl, room, me }: Props) {
       {matchup.seed && <SeedView seed={matchup.seed} room={room} drawings={ctl.drawings} me={me} />}
       <h2 className="prompt display center">{matchup.promptText}</h2>
       {matchup.letters && <LetterTiles letters={matchup.letters} />}
-      {result.greatMinds && (
-        <div className="stamp-banner">
-          <UIArt name="greatminds" label="GREAT MINDS" />
-        </div>
-      )}
+      {result.greatMinds && <div className="tag-banner display">GREAT MINDS</div>}
 
       <div className="rcards">
         {matchup.answers.map((answer, index) => {
@@ -81,12 +73,7 @@ export function MatchupReveal({ ctl, room, me }: Props) {
           const state = won ? 'win' : lost ? 'lose' : 'idle';
           const delta = answer.playerId ? (result.delta[answer.playerId] ?? 0) : 0;
           const share = total === 0 ? 0 : result.voteCounts[index]! / total;
-          const textStamps = [
-            ...(answer.bailOut ? ['BAILED OUT'] : []),
-            ...(result.awards.some((a) => a.kind === 'crowd' && a.playerId === answer.playerId)
-              ? ['CROWD FAVOURITE']
-              : []),
-          ];
+          const tags = tagsFor(matchup, answer);
           const voters = Object.entries(matchup.votes ?? {})
             .filter(([, choice]) => choice === index)
             .map(([voterId]) => room.players.find((p) => p.id === voterId))
@@ -107,24 +94,13 @@ export function MatchupReveal({ ctl, room, me }: Props) {
                   {player?.name ?? '?'}
                 </span>
                 <div className="stamps">
-                  {stampsFor(matchup, answer.playerId)
-                    .filter((s) => !(result.greatMinds && s === 'GREAT MINDS'))
-                    .map((s, i) => (
-                      <span
-                        key={s}
-                        className="stamp stamp--art"
-                        style={{ animationDelay: `${1.4 + i * 0.3}s` }}
-                      >
-                        <UIArt name={stampArt[s]!} label={s} />
-                      </span>
-                    ))}
-                  {textStamps.map((s, i) => (
+                  {tags.map((tag, i) => (
                     <span
-                      key={s}
-                      className={`stamp stamp--text ${s === 'BAILED OUT' ? 'stamp--bail' : ''}`}
-                      style={{ animationDelay: `${2 + i * 0.3}s` }}
+                      key={tag.label}
+                      className={`tag tag--${tag.modifier} display`}
+                      style={{ animationDelay: `${1.4 + i * 0.3}s` }}
                     >
-                      {s}
+                      {tag.label}
                     </span>
                   ))}
                 </div>
@@ -171,16 +147,6 @@ export function MatchupReveal({ ctl, room, me }: Props) {
           roasted {room.players.find((p) => p.id === matchup.roast!.targetId)?.name} down to 2
           words.
         </p>
-      )}
-
-      {micDropper && (
-        <div className="micdrop-overlay" aria-hidden="true">
-          <Character characterId={micDropCharacter} state="win" size={220} />
-          <UIArt name="mic" className="micdrop-mic" />
-          <span className="micdrop-stamp">
-            <UIArt name={crushingWin?.kind === 'silenced' ? 'silenced' : 'micdrop'} />
-          </span>
-        </div>
       )}
     </main>
   );

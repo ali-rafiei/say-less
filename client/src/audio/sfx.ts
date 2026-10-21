@@ -71,10 +71,6 @@ class Sfx {
     this.play(effects.typewriter);
   }
 
-  micDrop(): void {
-    this.play(effects.micDrop);
-  }
-
   roast(): void {
     this.play(effects.roast);
   }
@@ -94,10 +90,6 @@ class Sfx {
 
   fanfare(): void {
     this.play(effects.fanfare);
-  }
-
-  silenced(): void {
-    this.play(effects.silenced);
   }
 
   shatter(): void {

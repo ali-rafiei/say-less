@@ -10,8 +10,8 @@ export interface RoundSpec {
 
 export const ROUNDS: readonly RoundSpec[] = [
   { index: 0, name: 'Say Some', limit: 12, writingMs: 120_000, multiplier: 1 },
-  { index: 1, name: 'Say Less', limit: 6, writingMs: 120_000, multiplier: 1.5 },
-  { index: 2, name: 'Say Nothing… Almost', limit: 3, writingMs: 60_000, multiplier: 2 },
+  { index: 1, name: 'Say Less', limit: 6, writingMs: 120_000, multiplier: 2 },
+  { index: 2, name: 'Say Nothing… Almost', limit: 3, writingMs: 60_000, multiplier: 3 },
 ];
 
 export const FINAL_ROUND: RoundIndex = 2;
@@ -62,12 +62,6 @@ export const LIMITS = {
 
 export const POINTS = {
   VOTE: 100,
-  SILENCED: 250,
-  SILENCED_MIN_VOTES: 2,
-  MIC_DROP: 200,
-  /** a Mic Drop needs strictly more than this share of the votes */
-  MIC_DROP_VOTE_SHARE: 0.5,
-  MIC_DROP_MIN_VOTES: 2,
   GREAT_MINDS: 100,
   FINAL_FIRST: 200,
   FINAL_SECOND: 100,
@@ -76,6 +70,8 @@ export const POINTS = {
   PITY_PER_VOTE: 20,
   BEST_BURN: 150,
   BEST_BURN_PITY: 30,
+  /** the Best Burn needs at least this many votes */
+  BEST_BURN_MIN_VOTES: 2,
   /** the answer the audience preferred, × the round multiplier */
   CROWD_FAVOURITE: 100,
   /** a Bail Out answer earns this share of its vote points and no bonuses */

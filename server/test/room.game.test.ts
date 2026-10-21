@@ -6,12 +6,12 @@ import { advanceToPhaseEnd, answerAll, makeRoom, startToWriting, type Harness } 
  * Scripted 3-player game. Author-revealing answers let the single voter always
  * pick the alphabetically-first author, so every matchup is hand-computable:
  *  - A answers with 1 word, B and C fill the limit.
- *  - One voter per matchup, so no Mic Drop or Silenced (both need at least 2 votes).
+ *  - One voter per matchup; a win pays votes only.
  *  - Ring of 3 => pairs (A,B), (B,C), (C,A) each appear exactly once per round.
  *  R1 (x1):   A beats B: 100 | B beats C: 100 | A beats C: 100 => A 200, B 100, C 0
- *  R2 (x1.5): same shape scaled                 => A +300, B +150 => A 500, B 250, C 0
- *  Final (x2): A->[B,C], B->[A,C], C->[A,B]: A 2x400=800, B 400+200=600, C 2x200=400
- *  Totals: A 1300, B 850, C 400
+ *  R2 (x2):   same shape doubled               => A +400, B +200 => A 600, B 300, C 0
+ *  Final (x3): A->[B,C], B->[A,C], C->[A,B]: A 2x600=1200, B 600+300=900, C 2x300=600
+ *  Totals: A 1800, B 1200, C 600. Votes received: A 2+2+2=6, B 1+1+2=4, C 0+0+2=2.
  */
 function answerText(playerId: string, limit: number): string {
   if (playerId === 'a') return 'a';
@@ -75,8 +75,8 @@ describe('a full 3-player game', () => {
     answerAll(h, answerText);
     playMatchupRound(h);
     expect(Object.fromEntries(h.state().players.map((p) => [p.id, p.score]))).toEqual({
-      a: 500,
-      b: 250,
+      a: 600,
+      b: 300,
       c: 0,
     });
     vi.advanceTimersByTime(8_000);
@@ -100,25 +100,29 @@ describe('a full 3-player game', () => {
     // The final is revealed answer by answer before the podium; totals wait for the podium.
     expect(h.room.phase).toBe('FINAL_REVEAL');
     expect(h.room.phaseEndsAt! - Date.now()).toBe(finalRevealSchedule(3).totalMs);
-    expect(h.state().final!.result!.a!.points).toBe(800);
+    expect(h.state().final!.result!.a!.points).toBe(1200);
     expect(h.state().final!.votes).not.toBeNull();
-    expect(h.state().players.find((p) => p.id === 'a')!.score).toBe(500);
+    expect(h.state().players.find((p) => p.id === 'a')!.score).toBe(600);
     advanceToPhaseEnd(h);
 
     expect(h.room.phase).toBe('PODIUM');
     const state = h.state();
     expect(Object.fromEntries(state.players.map((p) => [p.id, p.score]))).toEqual({
-      a: 1300,
-      b: 850,
-      c: 400,
+      a: 1800,
+      b: 1200,
+      c: 600,
     });
     expect(state.podium!.placements.map((p) => [p.playerId, p.place])).toEqual([
       ['a', 1],
       ['b', 2],
       ['c', 3],
     ]);
-    expect(state.players.find((p) => p.id === 'a')!.stats.micDrops).toBe(0);
-    expect(state.podium!.superlatives.map((s) => s.title)).not.toContain('Most Mic Drops');
+    expect(state.players.map((p) => p.stats.votesReceived)).toEqual([6, 4, 2]);
+    expect(state.podium!.superlatives[0]).toEqual({
+      title: 'Vote Magnet',
+      playerId: 'a',
+      detail: '6 votes received',
+    });
 
     // Rematch returns to the lobby with scores reset on next start
     h.room.rematch('a');
