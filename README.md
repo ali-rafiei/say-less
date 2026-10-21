@@ -101,8 +101,9 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
    with a crown and 2 s more, and there is no countdown on screen. Revealed answers stack up
    below the spotlight. Final points are added to scores only at the podium, so the
    reveal gives nothing away early.
-8. **Podium**: the top three blocks rise third, second, then first; winner mic-drops on
-   loop. Under them, **Final scores** (everyone's total, in order), the superlatives ticker,
+8. **Podium**: the top three blocks rise third, second, then first; the winner cheers and
+   second and third stand proud (no losing pose on the podium). Under them, **Final
+   scores** (everyone's total, in order), the superlatives ticker,
    "Best of the game" (each round's most-voted answer), then the last question's answers
    with the points that question alone gave, and Rematch (leader) or Leave. A rematch keeps the room and excludes prompts already used; waiting
    audience members take any free seats first.
@@ -162,7 +163,7 @@ matchups but their phone is shut out.
 | Server   | Node 22+, TypeScript, Express 5                                             | Express only serves static files and `/healthz`                                                          |
 | Tests    | Vitest (unit + state machine with fake timers), Playwright (3-phone e2e)    |                                                                                                          |
 | Fonts    | `@fontsource-variable/fredoka` (display), `@fontsource/nunito` (body)       | Self-hosted, OFL licensed; no runtime dependency on Google Fonts                                         |
-| Sounds   | WebAudio synthesis in `client/src/audio/`                                   | Ships no audio assets; per-phase procedural music plus typewriter, mic drop, roast, win/lose effects     |
+| Sounds   | WebAudio synthesis in `client/src/audio/`                                   | Ships no audio assets; per-phase procedural music plus typewriter, roast, win/lose, fanfare effects      |
 | Filter   | `obscenity` (MIT)                                                           | Display-only profanity masking, catches leetspeak spellings such as "sh1t"                               |
 | Deploy   | Docker multi-stage image + Caddy (auto Let's Encrypt) on an Ubuntu 24.04 VM | See [Hosting](#hosting-on-cybera)                                                                        |
 
@@ -786,7 +787,7 @@ Recorded so nobody re-derives them.
 | `ROUND_RESULTS → FINAL_WRITING` directly      | `ROUND_RESULTS → ROUND_INTRO → FINAL_WRITING`                                                                                     | The shattering 6 → 3 tiles is the signature motif; skipping it for the final felt wrong. 4 s cost.                                       |
 | Final voting anonymity unspecified            | Authors visible on the final card wall                                                                                            | `cast_final_votes` is keyed by player id per the spec's protocol; matchup voting stays anonymous.                                        |
 | Mic Drop: "≤ half the limit and won"          | no Mic Drop (nor Silenced!)                                                                                                       | Owner's call, 2026-10-20: a win pays its votes only; the round multipliers carry the drama.                                              |
-| `stats: {micDrops, silenced, wordsUsedTotal}` | plus `roasted, submissions, submitMsTotal`                                                                                        | Needed for the Roast Victim and Fastest Submitter superlatives.                                                                          |
+| `stats: {micDrops, silenced, wordsUsedTotal}` | `votesReceived` in place of the first two, plus `roasted, submissions, submitMsTotal`                                             | Needed for the Roast Victim and Fastest Submitter superlatives.                                                                          |
 | Error codes list                              | plus `rate_limited, invalid, not_leader, bad_name, not_enough_players, too_long, empty, self_target, no_token, already_submitted` | Distinct client messages.                                                                                                                |
 | Profanity masking "in displayed answers only" | done on the client from the shared list                                                                                           | Keeps one broadcast per mutation instead of per-player payloads; the author is identified by comparing against their own submitted text. |
 | Roast window "R2+"                            | round 2 only                                                                                                                      | The spec's protocol table says `spend_roast` is valid in `WRITING` only, and the final has no matchups for the backfire rule.            |

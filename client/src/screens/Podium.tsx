@@ -39,7 +39,7 @@ export function Podium({ ctl, room, me }: Props) {
                     <div key={p.playerId} className="block__who">
                       <Character
                         characterId={player?.characterId ?? null}
-                        state={place === 1 ? 'win' : place === 3 ? 'lose' : 'idle'}
+                        state={place === 1 ? 'win' : 'idle'}
                         size={place === 1 ? 110 : 84}
                       />
                       <span
