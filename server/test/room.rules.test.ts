@@ -259,24 +259,24 @@ describe('character select in the lobby', () => {
 
   it('resolves a race for the same character to exactly one owner', () => {
     const h = makeRoom();
-    h.room.pickCharacter('a', 'cat');
-    expect(() => h.room.pickCharacter('b', 'cat')).toThrowError(
+    h.room.pickCharacter('a', 'bigfoot');
+    expect(() => h.room.pickCharacter('b', 'bigfoot')).toThrowError(
       expect.objectContaining({ code: 'char_taken' }),
     );
-    expect(h.state().players.filter((p) => p.characterId === 'cat')).toHaveLength(1);
+    expect(h.state().players.filter((p) => p.characterId === 'bigfoot')).toHaveLength(1);
   });
 
   it('lets a player swap to a free character and frees the old one', () => {
     const h = makeRoom();
-    h.room.pickCharacter('a', 'cat');
-    h.room.pickCharacter('a', 'blob');
-    h.room.pickCharacter('b', 'cat');
-    expect(h.state().players.map((p) => p.characterId)).toEqual(['blob', 'cat', null]);
+    h.room.pickCharacter('a', 'bigfoot');
+    h.room.pickCharacter('a', 'nessie');
+    h.room.pickCharacter('b', 'bigfoot');
+    expect(h.state().players.map((p) => p.characterId)).toEqual(['nessie', 'bigfoot', null]);
   });
 
   it('assigns random unclaimed characters to anyone who did not pick when the game starts', () => {
     const h = makeRoom();
-    h.room.pickCharacter('a', 'blob');
+    h.room.pickCharacter('a', 'nessie');
     h.room.startGame('a');
     expect(h.room.phase).toBe('ROUND_INTRO');
     const ids = h.state().players.map((p) => p.characterId);

@@ -16,7 +16,7 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
   Cybera published the AAAA record about 50 minutes after the instance was created; the
   bare address `http://[2605:fd00:4:1001:f816:3eff:fe02:e97f]/` also works over plain HTTP.
 - **Repo:** https://github.com/ali-rafiei/say-less (public; contains no secrets)
-- **Status:** v1 complete through milestone M6 of the spec; placeholder art; see [Roadmap](#roadmap--known-gaps)
+- **Status:** v1 complete through milestone M6 of the spec; painted art (the Cryptids); see [Roadmap](#roadmap--known-gaps)
 
 ---
 
@@ -80,7 +80,7 @@ fresh session, read this file first, then `ASSETS.md` if you are touching art.
    captioned by everyone. A player who drew nothing in time leaves a slot that a pack prompt
    fills; an Out of Context player who wrote nothing is quoted as "No comment."
 
-2. **Pick a character in the lobby**: twelve characters, first tap locks it for everyone.
+2. **Pick a character in the lobby**: eighteen characters, first tap locks it for everyone.
    Anyone who hasn't picked when the leader presses Start gets a random leftover.
 3. **Round 1 "Say Some"** – 12 words, 120 s, ×1 points. Each player gets two prompts;
    each prompt is answered by exactly two players (ring pairing).
@@ -158,7 +158,7 @@ matchups but their phone is shut out.
 
 | Layer    | Choice                                                                      | Why                                                                                                      |
 | -------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Client   | React 19 + Vite 6, plain CSS                                                | No canvas engine needed; SVG + CSS keyframes animate the characters                                      |
+| Client   | React 19 + Vite 6, plain CSS                                                | No canvas engine needed; CSS keyframes animate the painted character sprites                             |
 | Realtime | native `ws` (server) / browser `WebSocket`                                  | JSON `{type, payload}` messages exactly as the spec's protocol table; socket.io's extras were not needed |
 | Server   | Node 22+, TypeScript, Express 5                                             | Express only serves static files and `/healthz`                                                          |
 | Tests    | Vitest (unit + state machine with fake timers), Playwright (3-phone e2e)    |                                                                                                          |
@@ -200,9 +200,8 @@ say-less/
 │   ├── src/components/    Backdrop, Character, TimerRing, LimitChips, WordInput, AnswerText, PlayerChip, Header, profanity (obscenity masking)
 │   ├── src/screens/       Home, Lobby, CharSelect, RoundIntro, Writing, Voting, MatchupReveal, RoundResults, FinalVoting, FinalReveal, Podium
 │   ├── src/styles/        global.css (tokens, palettes, no-select), characters.css (5 states), screens.css
-│   ├── src/characters/svg Ten placeholder SVGs following the group contract in its README.md
 │   ├── src/audio/         Synthesized music (sequencer, songs) and sound effects
-│   └── public/sprites/    Optional PNG sprite overrides + manifest.json (see ASSETS.md)
+│   └── public/sprites/    Painted WebP sprites, one per character and pose (see ASSETS.md)
 ├── content/prompts.json   373 prompts tagged by round
 ├── e2e/full-game.spec.ts  Playwright: three phone browsers play a whole game
 ├── deploy/                Dockerfile, docker-compose.yml, Caddyfile, cloud-init.yaml, provision.sh, deploy.sh
@@ -293,8 +292,8 @@ What the tests pin down:
 - `e2e/devices.spec.ts` – home to first answer on each device project; `e2e/helpers.ts`
   records layout issues (overflow, clipped text, small tap targets, low contrast, blank
   space) per screenshot into `layout-issues.json` without failing the run.
-- `client/test/` – the base-path prefix on UI images, song data, sound settings and the
-  sound controls.
+- `client/test/` – the base-path prefix on UI images, a sprite for every character and
+  pose, song data, sound settings and the sound controls.
 - `e2e/resilience.spec.ts` (~3.3 min) – reload and double-tap in every phase with 150 ms of
   relay latency, offline 40 s mid-write and backgrounded 60 s, two tabs on one session,
   double-tapped Create Room, rejected submits and a wrong room code, clocks 90 s off, and a
@@ -573,10 +572,10 @@ suppressed outside inputs) and images ignore pointer events and drags.
   (`AnswerText`), with an optional typewriter effect where shorter answers type slower
   per character. Profanity masking applies for everyone but the author when the filter
   is on.
-- **Character component** renders the painted WebP sprite for every character/state
-  listed in `client/public/sprites/manifest.json` (all of them today) and falls back to
-  the inline SVG; `characters.css` animates either. The full-game test fails if a sprite
-  is not animating.
+- **Character component** renders the painted WebP sprite for the character and state
+  straight away, with nothing to load first; `characters.css` animates it. A unit test
+  fails if any character lacks a pose, and the full-game test fails if a sprite is not
+  animating.
 - **Audio** is all WebAudio, no files: `client/src/audio/` holds a look-ahead sequencer
   (`music.ts`, 25 ms tick, 100 ms horizon), song data per phase (`songs.ts`: lobby F major
   92 bpm, writing A minor 96 bpm with a clock tick, voting C major 124 bpm, results D
@@ -606,21 +605,15 @@ suppressed outside inputs) and images ignore pointer events and drags.
 
 ## Characters and art pipeline
 
-Roster and accent colors: `shared/src/characters.ts`. Placeholder art:
-`client/src/characters/svg/*.svg`, drawn to a strict group contract
-(`c-shadow, c-body > c-face > c-eyes/c-mouth, c-arm-l, c-arm-r, c-pencil,
-c-sweat, c-gag`) so CSS can pose them: idle breathe, writing scribble + pencil + sweat,
-waiting glance, win arm-up + bounce, lose deflate with per-character gags
-(rabbit ears and axolotl gills droop, blob puddles, fish blows bubbles, bird head-bobs).
-
-The roster is the Reel Town cast (cat, monkey, bird, axolotl, bear, rabbit, fish, blob)
-plus duck, otter, penguin and hedgehog, so most of the animals appear in both games. The
-duck replaced the Reel Town frog; only the How to play "gather" picture still shows the
-frog (the share card was recast with the cat, monkey, bird and rabbit). Twelve
-characters because the room holds twelve players and every player needs a unique one.
-Every character and pose now has painted art, so the SVGs are only a fallback for a pose
-missing from `client/public/sprites/manifest.json`. Raster sprites are animated as a whole
-(`.char-sprite img` in `characters.css`) since they have no named groups. UI images render
+Roster and accent colors: `shared/src/characters.ts`. The cast is **the Cryptids**,
+eighteen legendary creatures drawn as lovable cartoon characters: Bigfoot, Yeti, Nessie,
+Mothman, Jackalope, Kraken, Kappa, Alien, Ghost, Chupacabra, Flatwoods, Werewolf, Vampire,
+Skeleton, Phoenix, Unicorn, Gargoyle and Cerberus. A room still seats twelve; the other six
+widen the choice. Each has five painted poses (`idle`, `writing`, `waiting`, `win`, `lose`)
+in `client/public/sprites/<id>/<pose>.webp`. `Character.tsx` shows them directly and
+`characters.css` animates the whole image per state (`.char-sprite img`): breathe,
+scribble, fidget, hop, sulk. The accents for name chips and vote bars are measured from
+the cut sprites, not taken from the prompts, because the painted colours drifted. UI images render
 through `client/src/components/UIArt.tsx`, which crops each one to its painted bounds from
 `client/public/ui/manifest.json` and prefixes `import.meta.env.BASE_URL` so the same build
 works at the domain root (Cybera) and under `/say-less/` (GitHub Pages). Each phase palette
@@ -636,22 +629,24 @@ background**), drop files under `art/raw/`, then:
 uv run tools/dechroma.py
 ```
 
-This keys out the magenta, despills edges, cuts sheets into cells, trims, squares, resizes
-to 512 and writes WebP (quality 88, about a fifth of the PNG size: 2.2 MB for all 83
-images instead of 12 MB) plus both manifests. Backgrounds under `art/raw/backgrounds/` are
+This keys out the magenta (only patches that hold true key colour, so pink walled in by
+the outline stays), despills edges, gives each separate piece of art to its grid cell (so
+a wide pose can reach over its neighbour's space without being clipped), trims, squares,
+resizes to 512 and writes WebP (quality 88, about a fifth of the PNG size) plus the UI
+manifest. Backgrounds under `art/raw/backgrounds/` are
 converted to WebP without keying (about 150 KB for all six). Commit the outputs under `client/public/`; the whole
 `art/` folder is gitignored.
 
-**Art provenance.** Generated on 2026-09-24 with ChatGPT's built-in image tool from the
-prompts in `ASSETS.md`, using the two Reel Town reference sheets. Sheets came back at
-1254 x 1254 rather than the requested 2048 (podium 1774 x 887, share card 1536 x 1024);
-cells are enlarged slightly on the 512 export. Revisions on 2026-09-25: new faces for the
-bear, bird, blob and monkey `waiting` poses (the bird had grown a human mouth under its
-beak; the others had zigzag grimaces) and a recast share card (cat, monkey, bird, rabbit).
-The originals of those five are kept locally in `art/raw/revisions-before/`, and the edit
-prompts in `art/revision-prompts.json`. `art/raw/final/icon-rounded-original.png` is not
-used: the generator punched blotchy transparent holes through its background, so the
-opaque icon supplies every icon size.
+**Art provenance.** The Cryptids, their icons, podium stands, how-to pictures and the share
+card were generated on 2026-10-20 with ChatGPT's built-in image tool from the prompts in
+`ASSETS.md`, after two cast lineups that every later prompt attached. They replaced the
+first cast of twelve animals, which feedback found too "AI-looking" and out of place; that
+set, a rejected speech-bubble draft and the lineup drafts are kept locally under
+`art/archive/`. Sheets came back at 1254 x 1254 (podium 1774 x 887, share card 1536 x 1024).
+The how-to "vote" cell was redone as a single portrait image. The logo, app icons and the
+six phase backgrounds come from the first set (2026-09-24 and 2026-09-25) and were kept.
+`art/raw/final/icon-rounded-original.png` is not used: the generator punched blotchy
+transparent holes through its background, so the opaque icon supplies every icon size.
 
 ---
 
@@ -793,7 +788,7 @@ Recorded so nobody re-derives them.
 | Roast window "R2+"                            | round 2 only                                                                                                                      | The spec's protocol table says `spend_roast` is valid in `WRITING` only, and the final has no matchups for the backfire rule.            |
 | Disconnected mid-write → "[left the chat]"    | applied at phase end, not at disconnect                                                                                           | Lets a quick reconnect still answer.                                                                                                     |
 | Sounds: "typewriter, mic drop, roast sting"   | synthesized with WebAudio                                                                                                         | No asset licensing; swap for samples later if wanted.                                                                                    |
-| Characters: hand-built SVG                    | placeholder SVGs drawn by the agent; raster override pipeline                                                                     | User is generating final art in ChatGPT; see `ASSETS.md`.                                                                                |
+| Characters: hand-built SVG                    | painted raster sprites only (the placeholder SVGs were removed on 2026-10-21)                                                     | The owner generated the final art in ChatGPT; see `ASSETS.md`.                                                                           |
 
 Nothing in the spec's _locked decisions_ was changed: fully online, player voting only,
 flat-vector art direction, one unique character per player.
@@ -801,6 +796,16 @@ flat-vector art direction, one unique character per player.
 ---
 
 ## Decisions log
+
+- **2026-10-21** New cast: the twelve animals became eighteen Cryptids, with new icons,
+  podium stands, how-to pictures (one more, for "Rounds get bigger") and share card. The
+  placeholder SVGs and the sprite manifest are gone: every character has every pose, so
+  `Character` shows the sprite on the first render, and a unit test guards the set. The
+  art cutter now cuts by piece instead of by row and column bands, because the new poses
+  sit close and the wide lose poses reach past their cell; it also only keys magenta
+  patches that hold true key colour, so the Unicorn's pink inner ears stay opaque. The
+  stamp images and the mic icon were deleted. Third place on the podium no longer shows the
+  losing pose.
 
 - **2026-10-20** Simpler scoring: Mic Drop and Silenced! are gone, along with the
   full-screen mic drop and its sound, so a win pays 100 per vote × the round multiplier.
@@ -879,8 +884,9 @@ nothing in this list is a regression.
 
 **Next up**
 
-- **Core art is complete.** All 60 poses, 23 UI images, app icons and share card are wired.
-  Generation prompts, the phase backgrounds and the optional confetti are in `ASSETS.md`.
+- **Core art is complete.** All 90 poses, 17 UI images, app icons and share card are wired.
+  Generation prompts, the phase backgrounds and the wanted extras (game-mode pictures,
+  confetti) are in `ASSETS.md`.
 - **Manual phone test.** The e2e suite drives Chromium and desktop WebKit at phone sizes,
   up to twelve players; a real session on real phones over the public URL has not
   happened yet. That is the only way to catch iOS Safari's keyboard, audio unlock, silent

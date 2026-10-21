@@ -104,7 +104,9 @@ describe('pause', () => {
     // Assert: held until the leader resumes
     expect(h.room.phase).toBe('WRITING');
     h.room.resumeGame('a');
-    expect(h.room.phase).toBe('VOTING');
+    // Writing closes on resume. A first matchup of a against b has no one left to vote
+    // (c is gone), so it goes straight to its reveal; one with c in it waits for votes.
+    expect(['VOTING', 'MATCHUP_REVEAL']).toContain(h.room.phase);
   });
 });
 

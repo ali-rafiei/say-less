@@ -111,22 +111,22 @@ test('three phones play a full game, survive a refresh, and reach the podium', a
   // Playwright waits for enabled buttons; the loser's button gets disabled mid-race, so force both.
   await Promise.all([
     ann.page
-      .locator('.ccell', { hasText: 'Cat' })
+      .locator('.ccell', { hasText: 'Yeti' })
       .click({ force: true, noWaitAfter: true, timeout: 5_000 })
       .catch(() => {}),
     bob.page
-      .locator('.ccell', { hasText: 'Cat' })
+      .locator('.ccell', { hasText: 'Yeti' })
       .click({ force: true, noWaitAfter: true, timeout: 5_000 })
       .catch(() => {}),
   ]);
   await ann.page.waitForTimeout(500);
-  const catOwners = await Promise.all(
-    players.map((p) => p.page.locator('.ccell--mine', { hasText: 'Cat' }).count()),
+  const yetiOwners = await Promise.all(
+    players.map((p) => p.page.locator('.ccell--mine', { hasText: 'Yeti' }).count()),
   );
-  expect(catOwners.reduce((a, b) => a + b, 0)).toBe(1);
-  const loser = catOwners[0] === 1 ? bob : ann;
-  await loser.page.locator('.ccell:not([disabled])', { hasText: 'Monkey' }).click();
-  await cat.page.locator('.ccell:not([disabled])', { hasText: 'Duck' }).click();
+  expect(yetiOwners.reduce((a, b) => a + b, 0)).toBe(1);
+  const loser = yetiOwners[0] === 1 ? bob : ann;
+  await loser.page.locator('.ccell:not([disabled])', { hasText: 'Kraken' }).click();
+  await cat.page.locator('.ccell:not([disabled])', { hasText: 'Ghost' }).click();
   await expect(cat.page.locator('.ccell--mine')).toHaveCount(1);
   // The painted characters must actually move; a selector slip once froze every sprite.
   const myPick = cat.page.locator('.ccell--mine .char-sprite img');

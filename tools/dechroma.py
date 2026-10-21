@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["pillow>=10"]
+# dependencies = ["pillow>=10", "numpy>=1.26", "scipy>=1.11"]
 # ///
 """Turn magenta-background PNGs (single images or sheets) into transparent, trimmed, square sprites.
 
@@ -19,17 +19,14 @@ Input layout (see ASSETS.md):
     art/raw/backgrounds/<nn>-<palette>-*.png       full-bleed phase background, no keying
                                                    -> client/public/backgrounds/<palette>.webp
 
-Sheets are cut by projection: key out the magenta, find bands of rows holding any
-opaque pixel, then runs of columns inside each band. Runs closer than 4% of the sheet
-size are merged so a detached sweat drop or falling mic stays with its character. If
-the cells found do not match the expected grid, the sheet is split evenly instead and a
+Sheets are cut by piece: key out the magenta, then give every separate piece of art (a
+character, a detached sweat drop, a prop) to the grid cell its centre falls in, or to the
+nearest named cell when it falls in an empty one. Each cell keeps only its own pieces, so
+a wide pose whose box overlaps a neighbour's still comes out whole and clean. If a named
+cell gets nothing (art touching across cells), the sheet is split evenly instead and a
 warning is printed.
 
-The painted win pose holds a microphone the game does not show; remove_mic erases it from
-every win sprite after scaling, so the character keeps its size and baseline.
-
-Also rewrites client/public/sprites/manifest.json so the game knows which
-character/state pairs have a raster sprite and should skip the SVG placeholder.
+Also rewrites client/public/ui/manifest.json with each UI image's opaque bounds.
 """
 
 from __future__ import annotations
@@ -43,7 +40,9 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
 from PIL import Image, ImageDraw
+from scipy import ndimage
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW_CHARACTERS = ROOT / "art" / "raw" / "characters"
@@ -55,36 +54,34 @@ RAW_BACKGROUNDS = ROOT / "art" / "raw" / "backgrounds"
 OUT_BACKGROUNDS = ROOT / "client" / "public" / "backgrounds"
 PALETTES = ["home", "lobby", "writing", "voting", "results", "podium"]
 CHARACTER_IDS = [
-    "cat",
-    "monkey",
-    "duck",
-    "bird",
-    "axolotl",
-    "bear",
-    "rabbit",
-    "fish",
-    "blob",
-    "otter",
-    "penguin",
-    "hedgehog",
+    "bigfoot",
+    "yeti",
+    "nessie",
+    "mothman",
+    "jackalope",
+    "kraken",
+    "kappa",
+    "alien",
+    "ghost",
+    "chupacabra",
+    "flatwoods",
+    "werewolf",
+    "vampire",
+    "skeleton",
+    "phoenix",
+    "unicorn",
+    "gargoyle",
+    "cerberus",
 ]
 STATES = ["idle", "writing", "waiting", "win", "lose"]
 
 KEY = (255, 0, 255)
 # WebP with alpha is about a fifth of the PNG size at no visible cost, which matters on a
-# phone's data plan: the lobby alone shows twelve characters. iOS Safari 14+ and every
+# phone's data plan: the lobby alone shows eighteen characters. iOS Safari 14+ and every
 # Android Chrome decode it.
 OUTPUT_SUFFIX = ".webp"
 WEBP_QUALITY = 88
 OPAQUE_ALPHA = 128
-MERGE_GAP_RATIO = 0.04
-MIC_POSE = "win"
-MIC_MAX_CHROMA = 24
-MIC_MIN_PIXELS = 500
-MIC_MIN_OUTLINE_PIXELS = 50
-MIC_EDGE_PX = 4
-MIC_EDGE_MAX_VALUE = 150
-NEIGHBOURS = ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1))
 SELF_TEST_COLOURS = [
     (30, 120, 200),
     (40, 170, 80),
@@ -109,23 +106,15 @@ class SheetLayout:
     def names(self) -> list[str]:
         return [name for name in self.cells if name is not None]
 
-    @property
-    def names_per_row(self) -> list[list[str]]:
-        """Named cells grouped by grid row; rows with no named cell are left out."""
-        rows = [self.cells[r * self.columns : (r + 1) * self.columns] for r in range(self.rows)]
-        named = [[name for name in row if name is not None] for row in rows]
-        return [row for row in named if row]
-
 
 CHARACTER_SHEET = SheetLayout(3, 2, (*STATES, None), shared_scale=True)
 SHEETS = {
-    "stamps": SheetLayout(3, 2, ("micdrop", "silenced", "greatminds", "backfire", "robbed", None)),
-    "icons": SheetLayout(4, 2, ("flame", "crown", "sound-on", "sound-off", "mic", "pencil", "tile", "seat")),
+    "icons": SheetLayout(4, 2, ("flame", "crown", "sound-on", "sound-off", "pencil", "tile", "seat", None)),
     "podium": SheetLayout(3, 1, ("stand-1", "stand-2", "stand-3"), shared_scale=True),
     "howto": SheetLayout(
         3,
         2,
-        ("howto-gather", "howto-answer", "howto-vote", "howto-micdrop", "howto-roast", "howto-final"),
+        ("howto-gather", "howto-answer", "howto-vote", "howto-rounds", "howto-roast", "howto-final"),
     ),
 }
 
@@ -139,15 +128,11 @@ def main() -> int:
     if args.self_test:
         return self_test()
 
-    manifest: dict[str, list[str]] = {}
-    processed = convert_characters(args.size, args.dry_run, manifest)
+    processed = convert_characters(args.size, args.dry_run)
     processed += convert_ui(args.size, args.dry_run)
     processed += convert_backgrounds(args.dry_run)
 
     if not args.dry_run:
-        OUT_SPRITES.mkdir(parents=True, exist_ok=True)
-        (OUT_SPRITES / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
-        print(f"wrote {OUT_SPRITES.relative_to(ROOT)}/manifest.json")
         if OUT_UI.exists():
             bounds = {}
             for path in sorted(OUT_UI.glob(f"*{OUTPUT_SUFFIX}")):
@@ -165,7 +150,7 @@ def main() -> int:
     return 0
 
 
-def convert_characters(size: int, dry_run: bool, manifest: dict[str, list[str]]) -> int:
+def convert_characters(size: int, dry_run: bool) -> int:
     if not RAW_CHARACTERS.exists():
         return 0
     processed = 0
@@ -181,22 +166,14 @@ def convert_characters(size: int, dry_run: bool, manifest: dict[str, list[str]])
             with Image.open(sheet) as raw:
                 frames = cut_sheet(raw, CHARACTER_SHEET, size, str(sheet.relative_to(ROOT)))
         for state, source in singles.items():
-            _convert_single(
-                source,
-                out_dir / f"{state}{OUTPUT_SUFFIX}",
-                size,
-                dry_run,
-                frame=frames.get(state),
-                strip_mic=state == MIC_POSE,
-            )
+            _convert_single(source, out_dir / f"{state}{OUTPUT_SUFFIX}", size, dry_run, frame=frames.get(state))
         written = set(singles)
         if sheet.exists():
-            written |= _convert_sheet(
-                sheet, CHARACTER_SHEET, out_dir, size, dry_run, skip=set(singles), strip_mic=True
-            )
+            written |= _convert_sheet(sheet, CHARACTER_SHEET, out_dir, size, dry_run, skip=set(singles))
         processed += len(written)
-        if written:
-            manifest[character_id] = [state for state in STATES if state in written]
+        missing = [state for state in STATES if state not in written]
+        if missing:
+            print(f"warning: {character_id} has no {', '.join(missing)} sprite", file=sys.stderr)
     return processed
 
 
@@ -265,6 +242,21 @@ def self_test() -> int:
     assert "even 3x2 grid" in warnings.getvalue(), f"bridged sheet did not fall back: {warnings.getvalue()!r}"
     _check_cells("bridged characters", CHARACTER_SHEET, sprites, colours, size, same_baseline=True)
     print(f"ok bridged characters (even-grid fallback): {' '.join(sprites)}")
+    sheet, colours, boxes = _synthetic_sheet(CHARACTER_SHEET, rng)
+    left, top, right, _ = boxes["win"]
+    row_above = max(boxes[name][3] for name in ("idle", "writing", "waiting"))
+    middle = (left + right) // 2
+    draw = ImageDraw.Draw(sheet)
+    # Up to just under the row above, then across over the lose pose without touching it.
+    draw.rectangle((middle - 4, row_above + 6, middle + 4, top), fill=colours["win"])
+    draw.rectangle((middle - 4, row_above + 6, boxes["lose"][0] + 20, row_above + 12), fill=colours["win"])
+    warnings = io.StringIO()
+    with contextlib.redirect_stderr(warnings):
+        sprites = cut_sheet(sheet, CHARACTER_SHEET, size, "synthetic reaching arm")
+    assert not warnings.getvalue(), f"reaching arm: {warnings.getvalue()!r}"
+    _check_cells("reaching arm", CHARACTER_SHEET, sprites, colours, size, same_baseline=True)
+    assert not _has_colour(sprites["lose"], colours["win"]), "reaching arm: the win arm leaked into lose"
+    print("ok an arm reaching under the row above and over its neighbour stays in its own cell")
     narrow = Image.new("RGB", (600, 400), KEY)
     draw = ImageDraw.Draw(narrow)
     colours = dict(zip(STATES, SELF_TEST_COLOURS))
@@ -272,19 +264,26 @@ def self_test() -> int:
              (30, 230, 210, 375), (225, 230, 385, 375)]
     for name, box in zip(STATES, boxes):
         draw.rectangle(box, fill=colours[name])
-    keyed = key_out_magenta(narrow)
-    cells = _find_cells(keyed, CHARACTER_SHEET, "narrow gaps")
-    assert cells["idle"][2] == 211, "narrow-gap cut clipped art at the even-grid boundary"
-    for name, box in cells.items():
-        crop = keyed.crop(box)
+    crops = _cell_crops(key_out_magenta(narrow), CHARACTER_SHEET, "narrow gaps")
+    assert crops["idle"].width == 181, "narrow-gap cut clipped art at the even-grid boundary"
+    for name, crop in crops.items():
         opaque_colours = {rgba[:3] for _, rgba in crop.getcolors(crop.width * crop.height) if rgba[3]}
         assert opaque_colours == {colours[name]}, f"narrow-gap {name}: neighbouring art leaked in"
     for colour in ((232, 128, 122, 255), (160, 130, 150, 255), (125, 125, 125, 255), (255, 61, 104, 255)):
         assert key_out_magenta(Image.new("RGBA", (1, 1), colour)).getpixel((0, 0)) == colour
-    dark_edge = key_out_magenta(Image.new("RGBA", (1, 1), (80, 24, 100, 255))).getpixel((0, 0))
+    edge = Image.new("RGBA", (2, 1), (*KEY, 255))
+    edge.putpixel((1, 0), (80, 24, 100, 255))
+    dark_edge = key_out_magenta(edge).getpixel((1, 0))
     assert dark_edge == (24, 24, 44, 255), f"dark edge still has a magenta cast: {dark_edge}"
     assert key_out_magenta(Image.new("RGB", (1, 1), KEY)).getpixel((0, 0))[3] == 0
-    print("ok narrow-gap crops and opaque coral colours")
+    pink = (220, 90, 210)
+    ear = Image.new("RGB", (20, 20), KEY)
+    ImageDraw.Draw(ear).rectangle((4, 4, 15, 15), fill=(26, 26, 46))
+    ImageDraw.Draw(ear).rectangle((7, 7, 12, 12), fill=pink)
+    keyed_ear = key_out_magenta(ear)
+    assert keyed_ear.getpixel((10, 10)) == (*pink, 255), "a pink patch inside the outline was keyed"
+    assert keyed_ear.getpixel((0, 0))[3] == 0, "the background around the outline was not keyed"
+    print("ok narrow-gap crops, opaque coral colours, and pink walled in by the outline")
     body = (200, 120, 80, 255)
     frame = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
     ImageDraw.Draw(frame).rectangle((156, 60, 355, 479), fill=body)
@@ -299,31 +298,14 @@ def self_test() -> int:
         f"faint specks shrank the revision: {fitted_box} vs {frame_box}"
     )
     print("ok revised pose keeps its sheet scale despite faint specks")
-    mic_grey = (70, 72, 70, 255)
-    for label, mic_box in (("detached", (140, 40, 180, 90)), ("touching", (118, 40, 158, 90))):
-        pose = Image.new("RGBA", (200, 200), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(pose)
-        draw.rectangle((40, 30, 120, 190), fill=body)
-        draw.rectangle(mic_box, fill=mic_grey)
-        cleaned = remove_mic(pose)
-        assert not _has_colour(cleaned, mic_grey[:3]), f"{label} mic survived"
-        assert _opaque_bbox(cleaned) == (40, 30, 121, 191), f"{label} mic removal hurt the body"
-    face = Image.new("RGBA", (200, 200), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(face)
-    draw.rectangle((40, 30, 120, 190), fill=body)
-    draw.rectangle((60, 60, 95, 95), fill=mic_grey)
-    assert _has_colour(remove_mic(face), mic_grey[:3]), "a dark face feature inside the body was erased"
-    print("ok win-pose mic removed, detached or touching; face features kept")
     print("self-test passed")
     return 0
 
 
 def cut_sheet(sheet: Image.Image, layout: SheetLayout, size: int, label: str) -> dict[str, Image.Image]:
     """Key a sheet and return one square sprite per named cell; empty cells are left out with a warning."""
-    keyed = key_out_magenta(sheet)
     crops = {}
-    for name, box in _find_cells(keyed, layout, label).items():
-        crop = keyed.crop(box)
+    for name, crop in _cell_crops(key_out_magenta(sheet), layout, label).items():
         if crop.getbbox() is None:
             print(f"warning: {label}: cell {name} is empty, skipped", file=sys.stderr)
             continue
@@ -334,32 +316,32 @@ def cut_sheet(sheet: Image.Image, layout: SheetLayout, size: int, label: str) ->
 
 
 def key_out_magenta(image: Image.Image, soft_lo: int = 40, soft_hi: int = 170) -> Image.Image:
-    """Alpha from distance to pure magenta; despill the pink fringe on soft edges."""
-    rgba = image.convert("RGBA")
-    pixels = rgba.load()
-    width, height = rgba.size
-    for y in range(height):
-        for x in range(width):
-            r, g, b, a = pixels[x, y]
-            # Only key colours with a magenta cast. Distance alone also catches
-            # opaque coral, dusty lavender and medium grey inside the artwork.
-            excess = min(r, b) - g
-            if excess <= 30 or b < r * 0.75:
-                continue
-            distance = max(abs(r - KEY[0]), abs(g - KEY[1]), abs(b - KEY[2]))
-            if distance <= soft_lo:
-                pixels[x, y] = (0, 0, 0, 0)
-            elif distance < soft_hi:
-                alpha = int(255 * (distance - soft_lo) / (soft_hi - soft_lo))
-                # Despill: pull R/B toward G so the edge does not glow pink.
-                r2 = max(0, r - excess)
-                b2 = max(0, b - excess)
-                pixels[x, y] = (r2, g, b2, min(a, alpha))
-            else:
-                # Dark antialiased ink edges may be far from the bright key
-                # while retaining a visible magenta fringe.
-                pixels[x, y] = (max(0, r - excess), g, max(0, b - excess), a)
-    return rgba
+    """Alpha from distance to pure magenta; despill the pink fringe on soft edges.
+
+    Only colours with a magenta cast are keyed (distance alone also catches opaque coral,
+    dusty lavender and medium grey), and only in a connected patch that holds true key
+    colour somewhere. A pink inner ear or tongue walled in by the outline is art, not
+    background, and keeps its colour.
+    """
+    rgba = np.array(image.convert("RGBA")).astype(np.int32)
+    r, g, b, a = rgba[..., 0], rgba[..., 1], rgba[..., 2], rgba[..., 3]
+    excess = np.minimum(r, b) - g
+    cast = (excess > 30) & (b >= r * 0.75)
+    distance = np.maximum.reduce([np.abs(r - KEY[0]), np.abs(g - KEY[1]), np.abs(b - KEY[2])])
+    patches, count = ndimage.label(cast, structure=np.ones((3, 3)))
+    background = np.zeros(count + 1, dtype=bool)
+    background[np.unique(patches[cast & (distance <= soft_lo)])] = True
+    background[0] = False
+    keyed = background[patches]
+    # Despill: pull R/B toward G so the edge does not glow pink. Dark antialiased ink
+    # edges past soft_hi keep their alpha but lose the magenta fringe too.
+    out = rgba.copy()
+    out[..., 0] = np.where(keyed, np.maximum(0, r - excess), r)
+    out[..., 2] = np.where(keyed, np.maximum(0, b - excess), b)
+    soft = keyed & (distance < soft_hi)
+    out[..., 3] = np.where(soft, np.minimum(a, 255 * (distance - soft_lo) // (soft_hi - soft_lo)), a)
+    out[keyed & (distance <= soft_lo)] = 0
+    return Image.fromarray(out.astype(np.uint8), "RGBA")
 
 
 def trim_and_square(image: Image.Image, size: int, padding_ratio: float = 0.06) -> Image.Image:
@@ -390,22 +372,13 @@ def _single_poses(folder: Path) -> dict[str, Path]:
     return poses
 
 
-def _convert_single(
-    source: Path,
-    target: Path,
-    size: int,
-    dry_run: bool,
-    frame: Image.Image | None = None,
-    strip_mic: bool = False,
-) -> None:
+def _convert_single(source: Path, target: Path, size: int, dry_run: bool, frame: Image.Image | None = None) -> None:
     print(f"{source.relative_to(ROOT)} -> {target.relative_to(ROOT)}")
     if dry_run:
         return
     with Image.open(source) as raw:
         keyed = key_out_magenta(raw)
     sprite = fit_replacement(keyed, frame) if frame is not None else trim_and_square(keyed, size)
-    if strip_mic:
-        sprite = remove_mic(sprite)
     target.parent.mkdir(parents=True, exist_ok=True)
     _save(sprite, target)
 
@@ -430,105 +403,6 @@ def fit_replacement(image: Image.Image, frame: Image.Image) -> Image.Image:
     return result
 
 
-def remove_mic(sprite: Image.Image) -> Image.Image:
-    """Erase the neutral-grey microphone from a win pose.
-
-    A detached mic is erased whole, band and all. A mic touching the body is found by
-    colour instead (the animals are never neutral grey), then its dark antialiased rim.
-    """
-    image = sprite.convert("RGBA")
-    pixels = image.load()
-    width = image.width
-
-    def point(index: int) -> tuple[int, int]:
-        return index % width, index // width
-
-    def neutral(index: int) -> bool:
-        r, g, b, a = pixels[point(index)]
-        return a > 0 and max(r, g, b) - min(r, g, b) <= MIC_MAX_CHROMA
-
-    blobs = _components(image, lambda index: pixels[point(index)][3] > 0)
-    if not blobs:
-        return image
-    erase: list[int] = []
-    for blob in blobs[1:]:
-        opaque = [index for index in blob if pixels[point(index)][3] >= OPAQUE_ALPHA]
-        if len(opaque) >= MIC_MIN_PIXELS and sum(map(neutral, opaque)) * 2 >= len(opaque):
-            erase += blob
-    if not erase:
-        body = set(blobs[0])
-        greys = _components(image, lambda index: index in body and neutral(index))
-        # Dark eyes and mouths are grey too, but only a held mic reaches the silhouette.
-        mics = [grey for grey in greys if len(grey) >= MIC_MIN_PIXELS and _borders_transparency(image, grey)]
-        if mics:
-            erase = _grow_dark_rim(image, mics[0])
-    for index in erase:
-        pixels[point(index)] = (0, 0, 0, 0)
-    return image
-
-
-def _components(image: Image.Image, include) -> list[list[int]]:
-    """8-connected groups of pixel indices where include(index) holds, largest first."""
-    width, height = image.size
-    seen = bytearray(width * height)
-    groups = []
-    for start in range(width * height):
-        if seen[start] or not include(start):
-            continue
-        seen[start] = 1
-        queue, group = [start], []
-        while queue:
-            index = queue.pop()
-            group.append(index)
-            x, y = index % width, index // width
-            for dx, dy in NEIGHBOURS:
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < width and 0 <= ny < height:
-                    neighbour = ny * width + nx
-                    if not seen[neighbour] and include(neighbour):
-                        seen[neighbour] = 1
-                        queue.append(neighbour)
-        groups.append(group)
-    return sorted(groups, key=len, reverse=True)
-
-
-def _borders_transparency(image: Image.Image, group: list[int]) -> bool:
-    width, height = image.size
-    pixels = image.load()
-    touching = 0
-    for index in group:
-        x, y = index % width, index // width
-        if any(
-            0 <= x + dx < width and 0 <= y + dy < height and pixels[x + dx, y + dy][3] == 0 for dx, dy in NEIGHBOURS
-        ):
-            touching += 1
-            if touching >= MIC_MIN_OUTLINE_PIXELS:
-                return True
-    return False
-
-
-def _grow_dark_rim(image: Image.Image, seed: list[int]) -> list[int]:
-    width, height = image.size
-    pixels = image.load()
-    region = set(seed)
-    frontier = list(seed)
-    for _ in range(MIC_EDGE_PX):
-        grown = []
-        for index in frontier:
-            x, y = index % width, index // width
-            for dx, dy in NEIGHBOURS:
-                nx, ny = x + dx, y + dy
-                if not (0 <= nx < width and 0 <= ny < height):
-                    continue
-                neighbour = ny * width + nx
-                r, g, b, a = pixels[nx, ny]
-                if neighbour not in region and a > 0 and max(r, g, b) < MIC_EDGE_MAX_VALUE:
-                    region.add(neighbour)
-                    grown.append(neighbour)
-        frontier = grown
-    return list(region)
-
-
 def _convert_sheet(
     source: Path,
     layout: SheetLayout,
@@ -536,7 +410,6 @@ def _convert_sheet(
     size: int,
     dry_run: bool,
     skip: set[str],
-    strip_mic: bool = False,
 ) -> set[str]:
     with Image.open(source) as raw:
         sprites = cut_sheet(raw, layout, size, str(source.relative_to(ROOT)))
@@ -549,56 +422,50 @@ def _convert_sheet(
         print(f"{source.relative_to(ROOT)} [{name}] -> {target.relative_to(ROOT)}")
         written.add(name)
         if not dry_run:
-            if strip_mic and name == MIC_POSE:
-                sprite = remove_mic(sprite)
             target.parent.mkdir(parents=True, exist_ok=True)
             _save(sprite, target)
     return written
 
 
-def _find_cells(keyed: Image.Image, layout: SheetLayout, label: str) -> dict[str, tuple[int, int, int, int]]:
-    mask = keyed.getchannel("A").point(lambda a: 255 if a >= OPAQUE_ALPHA else 0)
-    expected_per_row = [len(row) for row in layout.names_per_row]
-    # Narrow inter-cell gaps can be smaller than the default prop-merging radius.
-    # Retry conservatively, accepting a cut only when every row matches the layout.
-    for ratio in (MERGE_GAP_RATIO, 0.03, 0.025, 0.02, 0.015, 0.01, 0.005):
-        column_gap = int(keyed.width * ratio)
-        found = []
-        for top, bottom in _runs(_occupied_rows(mask), int(keyed.height * MERGE_GAP_RATIO)):
-            band = mask.crop((0, top, mask.width, bottom)).transpose(Image.Transpose.TRANSPOSE)
-            found.append([(left, top, right, bottom) for left, right in _runs(_occupied_rows(band), column_gap)])
-        found_per_row = [len(row) for row in found]
-        if found_per_row == expected_per_row:
-            return dict(zip(layout.names, (box for row in found for box in row)))
-    print(
-        f"warning: {label}: found {sum(found_per_row)} cells (rows of {found_per_row}), "
-        f"expected {sum(expected_per_row)} (rows of {expected_per_row}); "
-        f"cutting an even {layout.columns}x{layout.rows} grid instead",
-        file=sys.stderr,
-    )
-    return _even_grid(keyed.size, layout)
+def _cell_crops(keyed: Image.Image, layout: SheetLayout, label: str) -> dict[str, Image.Image]:
+    rgba = np.array(keyed)
+    alpha = rgba[..., 3]
+    pieces, count = ndimage.label(alpha > 0, structure=np.ones((3, 3)))
+    index = np.arange(1, count + 1)
+    peaks = ndimage.maximum(alpha, pieces, index) if count else []
+    centres = ndimage.center_of_mass(alpha > 0, pieces, index) if count else []
+    cell_width, cell_height = keyed.width / layout.columns, keyed.height / layout.rows
+    named = {cell: name for cell, name in enumerate(layout.cells) if name is not None}
 
+    def distance_to(cell: int, x: float, y: float) -> float:
+        column, row = cell % layout.columns, cell // layout.columns
+        return ((column + 0.5) * cell_width - x) ** 2 + ((row + 0.5) * cell_height - y) ** 2
 
-def _occupied_rows(mask: Image.Image) -> list[bool]:
-    data = mask.tobytes()
-    width = mask.width
-    return [bool(data[y * width : (y + 1) * width].strip(b"\0")) for y in range(mask.height)]
-
-
-def _runs(flags: list[bool], merge_gap: int) -> list[tuple[int, int]]:
-    """Half-open [start, end) spans of consecutive True flags, joining spans separated by less than merge_gap."""
-    runs: list[tuple[int, int]] = []
-    start = None
-    for index, flag in enumerate([*flags, False]):
-        if flag and start is None:
-            start = index
-        elif not flag and start is not None:
-            if runs and start - runs[-1][1] < merge_gap:
-                runs[-1] = (runs[-1][0], index)
-            else:
-                runs.append((start, index))
-            start = None
-    return runs
+    # owner[piece] is the cell index + 1; 0 drops faint haze with no solid pixel.
+    owner = np.zeros(count + 1, dtype=np.int32)
+    for piece, (y, x), peak in zip(index, centres, peaks):
+        if peak < OPAQUE_ALPHA:
+            continue
+        cell = min(int(y // cell_height), layout.rows - 1) * layout.columns + min(int(x // cell_width), layout.columns - 1)
+        if cell not in named:
+            cell = min(named, key=lambda candidate: distance_to(candidate, x, y))
+        owner[piece] = cell + 1
+    empty = [name for cell, name in named.items() if not (owner == cell + 1).any()]
+    if empty:
+        print(
+            f"warning: {label}: no separate art for {', '.join(empty)}; "
+            f"cutting an even {layout.columns}x{layout.rows} grid instead",
+            file=sys.stderr,
+        )
+        return {name: keyed.crop(box) for name, box in _even_grid(keyed.size, layout).items()}
+    pixel_owner = owner[pieces]
+    crops = {}
+    for cell, name in named.items():
+        mine = pixel_owner == cell + 1
+        rows, columns = np.nonzero(mine)
+        box = (slice(rows.min(), rows.max() + 1), slice(columns.min(), columns.max() + 1))
+        crops[name] = Image.fromarray(np.where(mine[box][..., None], rgba[box], 0).astype(np.uint8), "RGBA")
+    return crops
 
 
 def _even_grid(sheet_size: tuple[int, int], layout: SheetLayout) -> dict[str, tuple[int, int, int, int]]:

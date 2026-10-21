@@ -178,6 +178,7 @@ export function HowToPlay({ onClose }: { onClose: () => void }) {
             </span>
           </li>
           <li className="howto__step">
+            <UIArt name="howto-rounds" className="howto__art" />
             <span>
               <b>Rounds get bigger.</b> Votes are worth ×1 in round 1, ×2 in round 2 and ×3 in the
               final, so nobody is out of it until the end. Stuck? Send a random answer for half

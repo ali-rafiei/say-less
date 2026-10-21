@@ -1,4 +1,4 @@
-import type { Prompt, RoundIndex, ServerMessage } from '../src/shared.ts';
+import { CHARACTER_IDS, type Prompt, type RoundIndex, type ServerMessage } from '../src/shared.ts';
 import { PromptDeck } from '../src/prompts.ts';
 import { Room } from '../src/room.ts';
 
@@ -55,21 +55,7 @@ export function makeRoom(playerIds: string[] = ['a', 'b', 'c'], seed = 42): Harn
 
 export function startToWriting(h: Harness, round: RoundIndex = 0): void {
   const leader = h.room.leaderId;
-  const chars = [
-    'cat',
-    'monkey',
-    'duck',
-    'bird',
-    'axolotl',
-    'bear',
-    'rabbit',
-    'fish',
-    'blob',
-    'otter',
-    'penguin',
-    'hedgehog',
-  ];
-  h.room.players.forEach((p, i) => h.room.pickCharacter(p.id, chars[i]!));
+  h.room.players.forEach((p, i) => h.room.pickCharacter(p.id, CHARACTER_IDS[i]!));
   h.room.startGame(leader);
   expect(h.room.phase).toBe('ROUND_INTRO');
   vi.advanceTimersByTime(4_000);
