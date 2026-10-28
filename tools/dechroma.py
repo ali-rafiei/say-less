@@ -101,13 +101,15 @@ class SheetLayout:
     rows: int
     cells: tuple[str | None, ...]
     shared_scale: bool = False
+    # With shared_scale: the cell that sets the scale; None uses the tallest.
+    reference: str | None = None
 
     @property
     def names(self) -> list[str]:
         return [name for name in self.cells if name is not None]
 
 
-CHARACTER_SHEET = SheetLayout(3, 2, (*STATES, None), shared_scale=True)
+CHARACTER_SHEET = SheetLayout(3, 2, (*STATES, None), shared_scale=True, reference="idle")
 SHEETS = {
     "icons": SheetLayout(4, 2, ("flame", "crown", "sound-on", "sound-off", "pencil", "tile", "seat", None)),
     "podium": SheetLayout(3, 1, ("stand-1", "stand-2", "stand-3"), shared_scale=True),
@@ -305,6 +307,18 @@ def self_test() -> int:
     assert idle_height >= size * 0.85, f"a wide lying pose shrank the standing pose to {idle_height}px"
     assert _opaque_size(poses["lose"])[0] <= size, "the lying pose overflows the square"
     print("ok a wide lying pose does not shrink the character's other poses")
+    cheering = Image.new("RGBA", (50, 125), body)
+    poses = _square_together({"idle": standing, "win": cheering}, size, reference="idle")
+    idle_height = _opaque_size(poses["idle"])[1]
+    assert idle_height >= size * 0.85, f"a tall win pose shrank the idle pose to {idle_height}px"
+    assert poses["win"].getbbox()[1] >= 0 and _opaque_size(poses["win"])[1] <= size, "the win pose overflows"
+    print("ok a tall arms-up pose does not shrink the idle pose")
+    raw = {"stand-1": (210, 120), "stand-2": (200, 90), "stand-3": (196, 60)}
+    stands = {name: Image.new("RGBA", box, body) for name, box in raw.items()}
+    widths = {name: _opaque_size(stand)[0] for name, stand in _square_together(stands, size).items()}
+    ratios = [widths[name] / raw[name][0] for name in raw]
+    assert max(ratios) - min(ratios) < 0.02, f"stands wider than tall lost their shared scale: {widths}"
+    print("ok stands wider than they are tall keep one scale")
     print("self-test passed")
     return 0
 
@@ -318,7 +332,7 @@ def cut_sheet(sheet: Image.Image, layout: SheetLayout, size: int, label: str) ->
             continue
         crops[name] = crop
     if layout.shared_scale:
-        return _square_together(crops, size)
+        return _square_together(crops, size, reference=layout.reference)
     return {name: trim_and_square(crop, size) for name, crop in crops.items()}
 
 
@@ -491,24 +505,30 @@ def _even_grid(sheet_size: tuple[int, int], layout: SheetLayout) -> dict[str, tu
     return boxes
 
 
-def _square_together(crops: dict[str, Image.Image], size: int, padding_ratio: float = 0.06) -> dict[str, Image.Image]:
+def _square_together(
+    crops: dict[str, Image.Image], size: int, padding_ratio: float = 0.06, reference: str | None = None
+) -> dict[str, Image.Image]:
     """Trim every crop, scale them all by one factor and stand them on one shared baseline.
 
-    The factor fits the tallest crop, so a character lying flat in one pose does not shrink
-    its other poses; a crop wider than that is shrunk on its own.
+    The reference crop (a character's idle pose; otherwise the tallest crop, which keeps the
+    podium stands equal) fills the square, so every character stands the same height. A
+    taller or wider crop (arms up or out) may use the padding around it; a crop that still
+    does not fit (a character lying down) is shrunk on its own.
     """
     trimmed = {name: crop.crop(crop.getbbox()) for name, crop in crops.items()}
     if not trimmed:
         return {}
-    # The tallest crop fits whole, so equal-width crops (the podium stands) stay equal.
-    tallest = max(trimmed.values(), key=lambda image: image.height)
-    room = max(tallest.size)
+    anchor = trimmed.get(reference) if reference else None
+    anchor = anchor or max(trimmed.values(), key=lambda image: image.height)
+    # The anchor fills the height, or the width with its share of the padding if it is wide.
+    room = max(anchor.height, round(anchor.width / (1 + padding_ratio)))
     side = int(room * (1 + 2 * padding_ratio))
     baseline = side - (side - room) // 2
     squared = {}
     for name, image in trimmed.items():
-        if image.width > room:
-            image = image.resize((room, max(1, round(image.height * room / image.width))), Image.LANCZOS)
+        fit = min(1.0, baseline / image.width, baseline / image.height)
+        if fit < 1:
+            image = image.resize((max(1, round(image.width * fit)), max(1, round(image.height * fit))), Image.LANCZOS)
         canvas = Image.new("RGBA", (side, side), (0, 0, 0, 0))
         canvas.paste(image, ((side - image.width) // 2, baseline - image.height))
         squared[name] = canvas.resize((size, size), Image.LANCZOS)

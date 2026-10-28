@@ -91,25 +91,25 @@
     "y": 28
   },
   "stand-1": {
-    "height": 424,
+    "height": 449,
     "size": 512,
-    "width": 457,
-    "x": 27,
-    "y": 61
+    "width": 485,
+    "x": 14,
+    "y": 36
   },
   "stand-2": {
-    "height": 343,
+    "height": 364,
     "size": 512,
-    "width": 436,
-    "x": 38,
-    "y": 142
+    "width": 462,
+    "x": 24,
+    "y": 121
   },
   "stand-3": {
-    "height": 294,
+    "height": 311,
     "size": 512,
-    "width": 430,
-    "x": 41,
-    "y": 191
+    "width": 456,
+    "x": 28,
+    "y": 174
   },
   "tile": {
     "height": 457,

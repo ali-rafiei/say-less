@@ -1560,9 +1560,10 @@ Nothing to generate: every sound is synthesized at runtime in `client/src/audio/
    - Every file holds the item its name says (the right pose, the right icon), and wide
      poses (the Skeleton, Ghost and Kraken lying down in `lose`) come out whole.
    - The five poses of one character are at the same scale and stand on the same baseline.
-     The tool scales them together to fit the tallest pose and aligns their feet; only a
-     pose wider than that (a character lying down) is shrunk on its own. A standing pose
-     that looks tiny means another pose in the sheet is oversized.
+     The tool scales them together so the `idle` pose fills the square (every character
+     stands the same height) and aligns their feet. A taller or wider pose (arms up) uses
+     the padding around it; only one that still does not fit (a character lying down) is
+     shrunk on its own.
 5. **See them in the game:** `npm run dev`, open http://localhost:5173, create a room. The
    lobby grid shows every character in `idle`, and your pick in `win`. The other poses show
    during a game (open three windows: one normal and two private).
