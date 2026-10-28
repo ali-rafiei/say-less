@@ -8,8 +8,9 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    # The browser suite plays a 3-player and a 12-player game plus the resilience specs.
-    timeout-minutes: 30
+    # The browser suite plays a 3-player and a 12-player game, the mode games and the
+    # resilience specs: 25-30 minutes on a hosted runner.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

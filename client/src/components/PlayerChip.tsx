@@ -1,5 +1,5 @@
 import { UIArt } from './UIArt.tsx';
-import { characterMeta, type PublicPlayer } from '@say-less/shared';
+import type { PublicPlayer } from '@say-less/shared';
 import { Character, type CharacterState } from './Character.tsx';
 
 interface Props {
@@ -12,12 +12,11 @@ interface Props {
 }
 
 export function PlayerChip({ player, isLeader, state = 'idle', size = 64, badge, muted }: Props) {
-  const meta = characterMeta(player.characterId);
   return (
     <div
       className={`pchip ${muted ? 'pchip--muted' : ''} ${player.connected ? '' : 'pchip--offline'}`}
     >
-      <div className="pchip__avatar" style={{ background: meta?.accent ?? 'var(--bg-2)' }}>
+      <div className={`pchip__avatar ${player.characterId ? '' : 'pchip__avatar--initial'}`}>
         {player.characterId ? (
           <Character characterId={player.characterId} state={state} size={size} />
         ) : (
