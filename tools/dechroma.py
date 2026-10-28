@@ -298,6 +298,13 @@ def self_test() -> int:
         f"faint specks shrank the revision: {fitted_box} vs {frame_box}"
     )
     print("ok revised pose keeps its sheet scale despite faint specks")
+    standing = Image.new("RGBA", (50, 100), body)
+    lying = Image.new("RGBA", (200, 40), body)
+    poses = _square_together({"idle": standing, "lose": lying}, size)
+    idle_height = _opaque_size(poses["idle"])[1]
+    assert idle_height >= size * 0.85, f"a wide lying pose shrank the standing pose to {idle_height}px"
+    assert _opaque_size(poses["lose"])[0] <= size, "the lying pose overflows the square"
+    print("ok a wide lying pose does not shrink the character's other poses")
     print("self-test passed")
     return 0
 
@@ -485,15 +492,23 @@ def _even_grid(sheet_size: tuple[int, int], layout: SheetLayout) -> dict[str, tu
 
 
 def _square_together(crops: dict[str, Image.Image], size: int, padding_ratio: float = 0.06) -> dict[str, Image.Image]:
-    """Trim every crop, then scale them all by the same factor and stand them on one shared baseline."""
+    """Trim every crop, scale them all by one factor and stand them on one shared baseline.
+
+    The factor fits the tallest crop, so a character lying flat in one pose does not shrink
+    its other poses; a crop wider than that is shrunk on its own.
+    """
     trimmed = {name: crop.crop(crop.getbbox()) for name, crop in crops.items()}
     if not trimmed:
         return {}
-    longest = max(max(image.size) for image in trimmed.values())
-    side = int(longest * (1 + 2 * padding_ratio))
-    baseline = side - (side - longest) // 2
+    # The tallest crop fits whole, so equal-width crops (the podium stands) stay equal.
+    tallest = max(trimmed.values(), key=lambda image: image.height)
+    room = max(tallest.size)
+    side = int(room * (1 + 2 * padding_ratio))
+    baseline = side - (side - room) // 2
     squared = {}
     for name, image in trimmed.items():
+        if image.width > room:
+            image = image.resize((room, max(1, round(image.height * room / image.width))), Image.LANCZOS)
         canvas = Image.new("RGBA", (side, side), (0, 0, 0, 0))
         canvas.paste(image, ((side - image.width) // 2, baseline - image.height))
         squared[name] = canvas.resize((size, size), Image.LANCZOS)
